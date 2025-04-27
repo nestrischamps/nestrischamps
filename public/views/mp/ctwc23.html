@@ -4,14 +4,19 @@
 		<link rel="stylesheet" type="text/css" href="/views/tetris.css" />
 		<style>
 			#stream_bg {
+				--width: 100vw;
+
 				container-type: inline-size;
 				container-name: stream_bg;
-				width: 100vw;
+				width: var(--width);
 				height: 1080px;
 			}
 
 			.match {
 				--scale: 1;
+				--board-offset: 357px;
+				--player-width: calc(var(--width) / 2 / var(--scale));
+
 				position: absolute;
 				left: 50%;
 				top: 0;
@@ -163,7 +168,7 @@
 			.tetris_rate,
 			.drought,
 			.flag {
-				--offset: 357px;
+				--offset: var(--board-offset);
 			}
 
 			.hearts {
@@ -322,6 +327,11 @@
 
 			.match.small {
 				--scale: 0.7245042492917847; /* (1080-57)/706/2 */
+				--score-width: 326px;
+				--score-offset: calc(
+					var(--board-offset) + var(--score-width) + (var(--border-size) * 1px) +
+						9px
+				); /* why 9px??? */
 				transform: scale(var(--scale));
 			}
 			#match2.small {
@@ -335,7 +345,7 @@
 			.match.small .score,
 			.match.small .lines,
 			.match.small .next_piece {
-				--offset: 357px;
+				--offset: var(--board-offset);
 			}
 
 			.match.small .next_piece {
@@ -366,7 +376,7 @@
 				z-index: 8;
 			}
 			.match.small .score {
-				width: 326px;
+				width: var(--score-width);
 				z-index: 7;
 			}
 			.match.small .hearts {
@@ -387,9 +397,10 @@
 			.heartpos3 .match.small .hearts,
 			.heartpos4 .match.small .hearts {
 				--border-size: 14;
+				--offset: var(--score-offset);
+
 				width: unset;
 				top: 91px;
-				--offset: 707px;
 				height: 29px;
 				padding: 0 6px 0 9px;
 				gap: 2px;
@@ -401,14 +412,17 @@
 				right: unset;
 			}
 
+			.match.small .flag,
 			.heartpos4 .match.small .hearts {
-				left: calc(-1 * 100vw / 2 / var(--scale));
+				--offset: calc(-1 * var(--player-width));
+				left: var(--offset);
 				right: unset;
 			}
 
+			.match.small .p2 .flag,
 			.heartpos4 .match.small .p2 .hearts {
 				left: unset;
-				right: calc(-1 * 100vw / 2 / var(--scale));
+				right: var(--offset);
 			}
 
 			.match.small .flag,
@@ -417,11 +431,8 @@
 				top: 0;
 			}
 			.match.small .name {
-				--offset: 707px;
-				width: calc((100vw / var(--scale) / 2) - var(--offset) - 51px - 105px);
-			}
-			.match.small .flag {
-				--offset: calc((100vw / var(--scale) / 2) - 30px - 105px);
+				--offset: var(--score-offset);
+				width: calc(var(--player-width) - var(--offset) - 51px - 105px);
 			}
 			.match.small .player_vid {
 				top: 96px;
@@ -441,10 +452,10 @@
 			@container stream_bg (max-width: 1800px) {
 				.match.small .name {
 					z-index: 7;
-					width: calc((100vw / var(--scale) / 2) - 707px - 30px);
+					width: calc(var(--player-width) - var(--offset) - 30px);
 				}
 				.match.small .flag {
-					--offset: 707px;
+					--offset: var(--score-offset);
 					top: 91px;
 					width: 43px;
 					height: 27px;
