@@ -11,6 +11,7 @@ if (QueryString.get('bg') === '0') {
 	bg.classList.add('bg');
 
 	const bounds = parent.getBoundingClientRect();
+	console.log(bounds);
 
 	const spacer_w = 160;
 	const spacer_h = 40;
@@ -114,22 +115,11 @@ if (QueryString.get('bg') === '0') {
 	parent.prepend(bg);
 } else {
 	// bg=1 (default pieces)
-	const bounds = parent.getBoundingClientRect();
-
-	const width = bounds.width;
-	const height = bounds.height;
-
-	const border = 100;
-
+	const pieces = [];
 	const grid_x = 8;
 	const grid_y = 5;
-
-	const span_x = (width - border * 2) / (grid_x - 1);
-	const span_y = (height - border * 2) / (grid_y - 1);
-
+	const border = 100;
 	const spread = 1 / 3;
-
-	const pieces = [];
 
 	let num_bags = Math.ceil((grid_x * grid_y) / PIECES.length);
 
@@ -138,37 +128,55 @@ if (QueryString.get('bg') === '0') {
 	}
 
 	const bg = document.createElement('div');
-
 	bg.classList.add('bg');
 
-	for (let x = grid_x; x--; ) {
-		for (let y = grid_y; y--; ) {
-			const piece = pieces.pop();
-			const img = new Image();
+	const pieceImages = pieces.map(piece => {
+		const img = new Image();
+		img.src = `/views/bg_pieces/${piece}.png`;
 
-			img.src = `/views/bg_pieces/${piece}.png`;
+		Object.assign(img.style, {
+			position: 'absolute',
+			transform: `rotate(${90 * Math.floor(Math.random() * 4)}deg)`,
+		});
 
-			const pos_x = Math.round(
-				border / 2 + span_x * (x - spread + 2 * spread * Math.random())
-			);
-			const pos_y = Math.round(
-				border + span_y * (y - spread + 2 * spread * Math.random())
-			);
+		return img;
+	});
 
-			Object.assign(img.style, {
-				left: `${pos_x}px`,
-				top: `${pos_y}px`,
-				position: 'absolute',
-				transform: `rotate(${90 * Math.floor(Math.random() * 4)}deg)`,
-			});
+	const positionPieceImages = () => {
+		const bounds = parent.getBoundingClientRect();
+		const { width, height } = bounds;
+		const span_x = (width - border * 2) / (grid_x - 1);
+		const span_y = (height - border * 2) / (grid_y - 1);
 
-			bg.appendChild(img);
+		for (let x = grid_x; x--; ) {
+			for (let y = grid_y; y--; ) {
+				const imgIdx = y * grid_x + x;
+				const img = pieceImages[imgIdx];
+
+				const pos_x = Math.round(
+					border / 2 + span_x * (x - spread + 2 * spread * Math.random())
+				);
+				const pos_y = Math.round(
+					border + span_y * (y - spread + 2 * spread * Math.random())
+				);
+
+				Object.assign(img.style, {
+					left: `${pos_x}px`,
+					top: `${pos_y}px`,
+				});
+			}
 		}
-	}
+	};
+
+	positionPieceImages();
+
+	pieceImages.forEach(img => bg.appendChild(img));
 
 	parent.style.backgroundColor = 'black';
 
 	parent.prepend(bg);
+
+	window.addEventListener('resize', positionPieceImages);
 }
 
 export default {};
