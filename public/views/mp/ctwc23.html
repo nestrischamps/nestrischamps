@@ -15,6 +15,7 @@
 			.match {
 				--scale: 1;
 				--board-offset: 357px;
+				--score-width: 333px;
 				--player-width: calc(var(--width) / 2 / var(--scale));
 
 				position: absolute;
@@ -41,7 +42,7 @@
 			}
 
 			.score {
-				width: 333px; /* can reduce to 300px for score <10M */
+				width: var(--score-width);
 				padding-right: 0;
 				height: 112px;
 				top: 0;
@@ -377,7 +378,6 @@
 				z-index: 8;
 			}
 			.match.small .score {
-				width: var(--score-width);
 				z-index: 7;
 			}
 			.match.small .hearts {
