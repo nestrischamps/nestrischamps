@@ -4,13 +4,16 @@
 		<link rel="stylesheet" type="text/css" href="/views/tetris.css" />
 		<style>
 			#stream_bg {
-				width: 1920px;
+				container-type: inline-size;
+				container-name: stream_bg;
+				width: 100vw;
 				height: 1080px;
 			}
 
 			.match {
+				--scale: 1;
 				position: absolute;
-				left: 960px;
+				left: 50%;
 				top: 0;
 			}
 
@@ -33,7 +36,7 @@
 			}
 
 			.score {
-				width: 333px;
+				width: 333px; /* can reduce to 300px for score <10M */
 				padding-right: 0;
 				height: 112px;
 				top: 0;
@@ -124,6 +127,7 @@
 				padding: 3px 0;
 				height: 64px;
 				text-transform: uppercase;
+				white-space: nowrap;
 			}
 
 			.name .header {
@@ -317,7 +321,8 @@
 			}
 
 			.match.small {
-				transform: scale(0.7245042492917847); /* (1080-57)/706/2 */
+				--scale: 0.7245042492917847; /* (1080-57)/706/2 */
+				transform: scale(var(--scale));
 			}
 			#match2.small {
 				top: 511px;
@@ -412,11 +417,11 @@
 				top: 0;
 			}
 			.match.small .name {
-				width: 462px;
 				--offset: 707px;
+				width: calc((100vw / var(--scale) / 2) - var(--offset) - 51px - 105px);
 			}
 			.match.small .flag {
-				--offset: 1190px;
+				--offset: calc((100vw / var(--scale) / 2) - 30px - 105px);
 			}
 			.match.small .player_vid {
 				top: 96px;
@@ -431,6 +436,19 @@
 
 			.match.small .p2 > * {
 				left: var(--offset);
+			}
+
+			@container stream_bg (max-width: 1800px) {
+				.match.small .name {
+					z-index: 7;
+					width: calc((100vw / var(--scale) / 2) - 707px - 30px);
+				}
+				.match.small .flag {
+					--offset: 707px;
+					top: 91px;
+					width: 43px;
+					height: 27px;
+				}
 			}
 		</style>
 	</head>
