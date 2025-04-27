@@ -460,6 +460,18 @@
 					width: 43px;
 					height: 27px;
 				}
+
+				.heartpos3 .match.small .hearts {
+					--offset: calc(
+						var(--score-offset) + 64px
+					); /* accounts for flag width */
+				}
+			}
+
+			@container stream_bg (max-width: 1580px) {
+				.match.small {
+					--score-width: 300px;
+				}
 			}
 		</style>
 	</head>
