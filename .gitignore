@@ -4,3 +4,5 @@ docker/postgresql/pgdata
 node_modules
 .env
 .DS_Store
+
+.codegpt
