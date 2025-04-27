@@ -98,8 +98,6 @@ if (QueryString.get('bg') === '0') {
 	Object.assign(bg.style, {
 		position: 'absolute',
 		width: '119%',
-		height: '133%',
-		top: '-15%',
 		left: '-14%',
 		background: `url(/views/${bg_file}) 0 0 repeat`,
 		transform: 'rotate(-11deg)',
@@ -111,6 +109,29 @@ if (QueryString.get('bg') === '0') {
 		pos = ++pos % img_width;
 		bg.style.backgroundPositionX = `${pos}px`;
 	}, 1000 / 30);
+
+	function interpolator(x0, v0, x1, v1) {
+		return function (x) {
+			return v0 + ((x - x0) * (v1 - v0)) / (x1 - x0);
+		};
+	}
+
+	const interpolateTop = interpolator(1920, -15, 4096, -32);
+	const interpolateHeight = interpolator(1920, 133, 4096, 171);
+
+	const adjustSize = () => {
+		const bounds = parent.getBoundingClientRect();
+		const { width } = bounds;
+
+		Object.assign(bg.style, {
+			top: `${interpolateTop(width)}%`,
+			height: `${interpolateHeight(width)}%`,
+		});
+	};
+
+	adjustSize();
+
+	window.addEventListener('resize', adjustSize);
 
 	parent.prepend(bg);
 } else {
