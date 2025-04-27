@@ -21,6 +21,8 @@ td {
 }
 
 #stream_bg {
+	--border-size: 15; /* should rename to box-border-size */
+
 	position: absolute;
 	top: 0;
 	left: 0;
@@ -44,7 +46,6 @@ td {
 	text-align: center;
 
 	/* css magic to handle borders 💪 */
-	--border-size: 15;
 	border: solid calc(var(--border-size) * 1px) transparent;
 	border-image-source: url('/views/border_3px.png');
 	border-image-slice: var(--border-size) var(--border-size) var(--border-size)
