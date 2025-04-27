@@ -646,6 +646,23 @@
 				<!-- Player 2 -->
 			</div>
 			<!-- End Playing Fields -->
+			<div
+				id="log"
+				style="
+					position: absolute;
+					bottom: 150px;
+					left: 0px;
+					width: 1000px;
+					height: 200px;
+					overflow-y: auto;
+					overflow-x: hidden;
+					white-space: pre-wrap;
+					border: 1px solid #ccc;
+					padding: 8px;
+					background: white;
+					color: black;
+				"
+			></div>
 		</div>
 		<!-- End Stream BG -->
 
@@ -660,6 +677,28 @@
 			});
 		</script>
 		<script src="/vendor/peerjs.1.5.4.min.js"></script>
+		<script type="module">
+			function addLogLine(text) {
+				const logDiv = document.getElementById('log');
+				const line = document.createElement('div');
+				line.textContent = text;
+				logDiv.appendChild(line);
+
+				// Auto-scroll to the bottom
+				logDiv.scrollTop = logDiv.scrollHeight;
+			}
+
+			const width = window.innerWidth;
+			const height = window.innerHeight;
+			addLogLine(`Viewport size: ${width} x ${height}`);
+
+			window.addEventListener('resize', () => {
+				addLogLine(
+					`Resized viewport: ${window.innerWidth} x ${window.innerHeight}`
+				);
+				document.querySelector('.match');
+			});
+		</script>
 		<script type="module">
 			import '/views/bg.js';
 			import { peerServerOptions } from '/views/constants.js';
