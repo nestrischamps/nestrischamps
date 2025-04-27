@@ -304,15 +304,16 @@
 			}
 
 			.player_vid {
+				--offset: 360px;
+
 				position: absolute;
 				top: 0;
-				width: 600px;
+				width: calc(var(--player-width) - var(--offset));
 				height: 1023px;
 				padding: 0;
 				object-fit: cover;
 				/* background: yellow; /**/
 
-				--offset: 360px;
 				right: var(--offset);
 			}
 
@@ -436,7 +437,6 @@
 			}
 			.match.small .player_vid {
 				top: 96px;
-				width: 965px;
 				height: 609px;
 			}
 
