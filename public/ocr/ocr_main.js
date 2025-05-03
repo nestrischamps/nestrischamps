@@ -1116,7 +1116,8 @@ async function playVideoFromDevice(device_id, fps) {
 		const constraints = {
 			audio: false,
 			video: {
-				height: { ideal: 480 },
+				width: { ideal: 720 },
+				height: { ideal: 486 },
 				frameRate: { ideal: fps }, // Should we always try to get the highest the card can support?
 			},
 		};
