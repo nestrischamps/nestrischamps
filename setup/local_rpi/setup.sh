@@ -10,7 +10,7 @@ DB_URL="postgres://nestrischamps:nestrischamps@localhost:5432/nestrischamps?sslm
 
 mkdir -p src
 cd src
-git clone https://github.com/timotheeg/nestrischamps.git
+git clone https://github.com/nestrischamps/nestrischamps.git
 cd nestrischamps
 mkdir -p logs
 git checkout main

@@ -18,12 +18,12 @@ echo "CREATE USER nestrischamps with encrypted password 'nestrischamps'; CREATE 
 
 DB_URL="postgres://nestrischamps:nestrischamps@localhost:5432/nestrischamps?sslmode=disable"
 
-curl -q "https://raw.githubusercontent.com/timotheeg/nestrischamps/main/setup/db.sql" | psql "${DB_URL}"
+curl -q "https://raw.githubusercontent.com/nestrischamps/nestrischamps/main/setup/db.sql" | psql "${DB_URL}"
 
 su - ubuntu
 mkdir -p /home/ubuntu/src
 cd /home/ubuntu/src
-git clone https://github.com/timotheeg/nestrischamps.git
+git clone https://github.com/nestrischamps/nestrischamps.git
 cd nestrischamps
 mkdir -p logs
 git checkout main

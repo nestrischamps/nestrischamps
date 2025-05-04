@@ -108,7 +108,7 @@ Nestrischamps is a [nodejs](https://nodejs.org/en/) server application and UI. I
 
 #### Clone the project locally from git:
 ```bash
-git clone https://github.com/timotheeg/nestrischamps.git
+git clone https://github.com/nestrischamps/nestrischamps.git
 ```
 
 #### Install nodejs dependencies
@@ -213,7 +213,7 @@ Note that you can specify which language you want the voices to be in by adding 
 
 To contribute, make sure you first set project to run locally (see previous sections), such you can test your code before opening up PRs.
 
-Many issues and ideas for improvements are listed in the [github issues](https://github.com/timotheeg/nestrischamps/issues).
+Many issues and ideas for improvements are listed in the [github issues](https://github.com/nestrischamps/nestrischamps/issues).
 
 The code is sort of messy, and yet, I have some standards hidden in this mess. Until I document them, please ask on [the discord server](https://discord.gg/Wzr4YdQWa4) before submitting PRs.
 
