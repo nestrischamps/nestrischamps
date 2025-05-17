@@ -11,6 +11,7 @@
 		"prepare": "husky install",
 		"concat": "node -r dotenv/config scripts/concat_games.js",
 		"rerun": "node -r dotenv/config scripts/rerun.js",
+		"ctwc-ingest": "node -r dotenv/config scripts/ctwc_reg_to_local_users.js",
 		"lint": "npm run lint-be && npm run lint-fe",
 		"lint-be": "eslint ./",
 		"lint-fe": "eslint ./public"

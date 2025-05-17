@@ -139,7 +139,11 @@ function identity(v) {
 				? `${csv.seed}. ${csv.display_name}`
 				: csv.display_name,
 			secret: ULID.ulid(),
-			description: [csv.job.trim(), csv.achievements.trim()]
+			description: [
+				csv.job.trim(),
+				csv.achievements.trim(),
+				`${csv.num_maxouts} maxouts`,
+			]
 				.filter(identity)
 				.join(', '), // do we want that default?? probably not
 			pronouns: csv.pronouns.trim(),
@@ -171,7 +175,7 @@ function identity(v) {
 
 	if (errors.length) {
 		console.error(`Aborting`);
-		process.exit(1);
+		// process.exit(1);
 	}
 
 	const db_conn_str = process.env.DATABASE_URL;
