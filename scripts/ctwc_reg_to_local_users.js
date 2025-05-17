@@ -11,8 +11,6 @@ import pg from 'pg';
 import { parse } from 'csv-parse/sync';
 import ULID from 'ulid';
 import got from 'got';
-import assert from 'assert';
-import { pbkdf2 } from 'crypto';
 
 // replace this URL by the sheet that contains your data
 // get the url by doing: File > Share > Publish to web > Sheet 1 > CSV
@@ -122,14 +120,15 @@ function identity(v) {
 				)
 				.join('\n')
 		);
-		process.exit(1);
+		// process.exit(1);
 	}
 
-	process.exit(2);
-
-	// 2. Derive NTC values
+	// 2. Transform data and Derive NTC values
 	players.forEach(player => {
 		const { id, csv } = player;
+
+		const controller = (csv._controller = csv.controller);
+		csv.controller = /NES/.test(controller) ? 'Original NES' : controller;
 
 		// prep ntc mapped values
 		const ntc = {
@@ -140,16 +139,18 @@ function identity(v) {
 				? `${csv.seed}. ${csv.display_name}`
 				: csv.display_name,
 			secret: ULID.ulid(),
-			description: [csv.job, csv.achievements].filter(identity).join(', '), // do we want that default?? probably not
+			description: [csv.job.trim(), csv.achievements.trim()]
+				.filter(identity)
+				.join(', '), // do we want that default?? probably not
 			pronouns: csv.pronouns.trim(),
 			profile_image_url: '',
 			dob: new Date(),
 			country_code: 'US',
 			city: '',
 			interests: [
-				csv.hobbies,
-				csv.favourite_other_game,
-				csv.favourite_sport_team,
+				csv.hobbies.trim(),
+				csv.favourite_other_game.trim(),
+				csv.favourite_sport_team.trim(),
 			]
 				.filter(identity)
 				.join(', '),
@@ -167,18 +168,26 @@ function identity(v) {
 	});
 
 	console.log(players);
-	process.exit(1);
+
+	if (errors.length) {
+		console.error(`Aborting`);
+		process.exit(1);
+	}
+
+	const db_conn_str = process.env.DATABASE_URL;
+	const pool = new pg.Pool({
+		connectionString: db_conn_str,
+	});
 
 	// 3. Inject NTC record into DB!
-	for (const [index, { id, csv, ntc }] of records.entries()) {
-		if (index === 0) continue; // header row
-
+	for (const { ntc, csv } of players) {
 		const {
-			seed,
+			id,
 			login,
+			email,
+			secret,
 			display_name,
 			pronouns,
-			personal_best,
 			elo_rank,
 			elo_rating,
 			description,
@@ -198,11 +207,11 @@ function identity(v) {
 			`,
 			[
 				id,
-				/^\s*$/.test(login) ? `__user${id}` : login,
-				`__user${id}@nestrischamps.io`,
-				ULID.ulid(),
+				login,
+				email,
+				secret,
 				description,
-				seed ? `${seed}. ${display_name}` : display_name,
+				display_name,
 				pronouns,
 				profile_image_url,
 				dob,
@@ -215,40 +224,61 @@ function identity(v) {
 			]
 		);
 
-		await pool.query(
-			`
-			INSERT INTO scores
-			(
-				datetime,
+		const pbs = [
+			{
+				start: 18,
+				pb: csv.pb18,
+			},
+			{
+				start: 19,
+				pb: csv.pb19,
+			},
+			{
+				start: 29,
+				pb: csv.pb29,
+			},
+		];
 
-				player_id,
-				start_level,
-				end_level,
-				score,
+		for (const { start, pb } of pbs) {
+			if (!pb.trim()) continue;
 
-				competition,
-                manual,
-				lines,
-				tetris_rate,
-				num_droughts,
-				max_drought,
-				das_avg,
-				duration,
-				clears,
-				pieces,
-				transition,
-				num_frames,
-				frame_file
-			)
-			VALUES
-			(
-				NOW(),
-                $1, $2, $3, $4,
-                false, true, 0, 0, 0, 0, -1, 0, '', '', 0, 0, ''
-			)
-			`,
-			[id, 18, 18, parseInt(personal_best, 10)]
-		);
+			const pb_score = parseInt(pb, 10);
+
+			await pool.query(
+				`
+                INSERT INTO scores
+                (
+                    datetime,
+
+                    player_id,
+                    start_level,
+                    end_level,
+                    score,
+
+                    competition,
+                    manual,
+                    lines,
+                    tetris_rate,
+                    num_droughts,
+                    max_drought,
+                    das_avg,
+                    duration,
+                    clears,
+                    pieces,
+                    transition,
+                    num_frames,
+                    frame_file
+                )
+                VALUES
+                (
+                    NOW(),
+                    $1, $2, $3, $4,
+                    false, true, 0, 0, 0, 0, -1, 0, '', '', 0, 0, ''
+                )
+                `,
+				[id, start, start, pb_score]
+			);
+		}
 	}
 
 	process.exit(0);
