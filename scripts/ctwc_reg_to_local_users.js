@@ -86,6 +86,17 @@ function getMaxouts(num) {
 		'hobbies',
 	];
 
+	const NUMERIC_FIELDS = [
+		'seed',
+		'pb18',
+		'pb19',
+		'pb29',
+		'lines29',
+		'highest_level',
+		'num_maxouts',
+		'age',
+	];
+
 	// 1. we extract all records from the sheet and convert that in NTC-compatible player data
 	const players = records.slice(1).map((record, index) => {
 		const id = START_ID + index;
@@ -94,19 +105,7 @@ function getMaxouts(num) {
 		);
 
 		// verify numeric fields
-		const numeric_fields = [
-			'seed',
-			'pb18',
-			'pb19',
-			'pb29',
-			'lines29',
-			'highest_level',
-			'num_maxouts',
-			'age',
-		];
-
-		// verify numeric values
-		for (const field of numeric_fields) {
+		for (const field of NUMERIC_FIELDS) {
 			if (!/^([1-9]\d*(\.\d*[1-9])?(E\+\d+)?|)$/.test(csv[field].trim())) {
 				errors.push({
 					index,
