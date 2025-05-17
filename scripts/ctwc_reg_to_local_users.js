@@ -154,7 +154,13 @@ function getMaxouts(num) {
 		const { id, csv } = player;
 
 		const controller = (csv._controller = csv.controller);
-		csv.controller = /NES/.test(controller) ? 'Original NES' : controller;
+		csv.controller = /goof/i.test(controller)
+			? 'Goofy Foot'
+			: /hyperkin|cadet/i.test(controller)
+			? 'Hyperkin Cadet'
+			: /nes|original|standard|oem|stock/i.test(controller)
+			? 'Original NES'
+			: controller;
 
 		// prep ntc mapped values
 		const ntc = {
