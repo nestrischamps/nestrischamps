@@ -201,14 +201,22 @@ function getMaxouts(num) {
 		player.ntc = ntc;
 	});
 
-	console.log(players);
-
 	if (errors.length) {
 		console.error(`Aborting`);
 		// process.exit(1);
 	}
 
 	const db_conn_str = process.env.DATABASE_URL;
+	const db_url = new URL(db_conn_str);
+
+	if (!/^(192\.168(\.\d{1,3}){2}|localhost)$|\.local$/.test(db_url.hostname)) {
+		console.error(
+			`DB is NOT localhost or LAN IP or local domain: ${db_conn_str}`
+		);
+		console.error(`ABORTING`);
+		process.exit(1);
+	}
+
 	const pool = new pg.Pool({
 		connectionString: db_conn_str,
 	});
@@ -317,6 +325,8 @@ function getMaxouts(num) {
 			);
 		}
 	}
+
+	console.log(`DONE - Inserted ${players.length} players`);
 
 	process.exit(0);
 })();
