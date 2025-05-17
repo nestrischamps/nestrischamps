@@ -222,7 +222,7 @@ function getMaxouts(num) {
 		const {
 			id,
 			login,
-			email,
+			// email,
 			secret,
 			display_name,
 			pronouns,
