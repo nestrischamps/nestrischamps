@@ -188,7 +188,7 @@ router.get('/view/profile_card/:login', async (req, res) => {
 		user,
 		age: user.dob ? getAge(user.dob) : 9, // 😅
 		// pb: readableScoreFomatter(pb),
-		pbs: mapObject(pbs, v => (v ? readableScoreFomatter(v.score) : 0)),
+		pbs: mapObject(pbs, v => (v ? readableScoreFomatter(v) : 0)),
 		elo_rating: readableScoreFomatter(Math.floor(user.elo_rating)),
 	});
 });

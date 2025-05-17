@@ -32,25 +32,6 @@ class ScoreDAO {
 		}
 	}
 
-	async getPBs181929(user) {
-		const db_client = await dbPool.connect();
-
-		try {
-			const data = {};
-
-			for (const level of [18, 19, 29]) {
-				data[level] = await this._getPBs(db_client, user, level);
-			}
-
-			return data;
-		} catch (err) {
-			console.error(err, 'Error getting user stats');
-			return {};
-		} finally {
-			db_client.release();
-		}
-	}
-
 	async _getPBs(db_client, user, start_level) {
 		const result = await db_client.query(
 			`
@@ -133,6 +114,25 @@ class ScoreDAO {
 		} catch (err) {
 			return 0;
 		}
+	}
+
+	async getPBs181929(user) {
+		const result = await dbPool.query(
+			`
+				SELECT start_level, MAX(score) as score
+				FROM scores
+				WHERE player_id = $1
+				AND start_level IN (18, 19, 29)
+				GROUP BY start_level
+				ORDER BY start_level ASC
+			`,
+			[user.id]
+		);
+
+		return result.rows.reduce((acc, { start_level, score }) => {
+			acc[start_level] = score;
+			return acc;
+		}, {});
 	}
 
 	async getTop3(user, since = 0) {
