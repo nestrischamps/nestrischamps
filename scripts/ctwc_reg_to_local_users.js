@@ -28,8 +28,6 @@ function identity(v) {
 		skip_empty_lines: true,
 	});
 
-	console.log(records);
-
 	const START_ID = 33;
 	const errors = [];
 
@@ -40,7 +38,6 @@ function identity(v) {
 		'display_name',
 		'pronouns',
 		'twitch',
-		'personal_best',
 		'controller',
 		'pb18',
 		'pb19',
@@ -62,7 +59,7 @@ function identity(v) {
 	];
 
 	// 1. we extract all records from the sheet and convert that in NTC-compatible player data
-	const players = records.map((record, index) => {
+	const players = records.slice(1).map((record, index) => {
 		const id = START_ID + index - 1;
 		const csv = Object.fromEntries(
 			CSV_FIELDS.map((key, i) => [key, record[i]])
@@ -70,6 +67,7 @@ function identity(v) {
 
 		// verify numeric fields
 		const numeric_fields = [
+			'seed',
 			'pb18',
 			'pb19',
 			'pb29',
@@ -81,11 +79,11 @@ function identity(v) {
 
 		// verify numeric values
 		for (const field of numeric_fields) {
-			if (!/^[1-9]\d*(\.\d*[1-9])|$/.test(csv[field].trim())) {
+			if (!/^([1-9]\d*(\.\d*[1-9])?(E\+\d+)?|)$/.test(csv[field].trim())) {
 				errors.push({
 					index,
 					csv,
-					err: `${field} is not a valid value`,
+					err: `${csv[field]} is not a valid value`,
 				});
 			}
 		}
@@ -94,35 +92,40 @@ function identity(v) {
 			errors.push({
 				index,
 				csv,
-				err: `player short name is longer than 10 characters: "${csv.display_name}"`,
+				err: `short name is longer than 10 characters (${csv.display_name.length} chars)`,
 			});
 		}
 
-		if (parseInt(csv.num_maxouts) > 10000) {
+		if (Math.trunc(Number(csv.num_maxouts)) > 10000) {
 			errors.push({
 				index,
 				csv,
-				err: `Invalid number of maxout (${csv.num_maxouts})`,
+				err: `Number of maxout > 10,000 (${csv.num_maxouts})`,
 			});
 		}
 
 		return { id, csv };
 	});
 
+	console.log(players);
+
 	// show all errors by row for quick fixes
-	if (errors.entries().length) {
+	if (errors.length) {
 		errors.sort((e1, e2) => e1.index - e2.index);
 		console.error(`ERROR: Unexpected values found in data sheet - Aborting`);
+		console.error('----------');
 		console.error(
 			errors
 				.map(
 					({ index, csv, err }) =>
-						`row ${index + 1} (${csv.display_name}): ${err}`
+						`row ${index + 2} (${csv.display_name}): ${err}`
 				)
 				.join('\n')
 		);
 		process.exit(1);
 	}
+
+	process.exit(2);
 
 	// 2. Derive NTC values
 	players.forEach(player => {
@@ -158,11 +161,12 @@ function identity(v) {
 		const age = parseInt(csv.age, 10);
 		const dob = ntc.dob;
 		dob.setFullYear(dob.getFullYear() - age);
-		dob.setDate()(dob.getDate() - 1);
+		dob.setDate(dob.getDate() - 1);
 
 		player.ntc = ntc;
 	});
 
+	console.log(players);
 	process.exit(1);
 
 	// 3. Inject NTC record into DB!
