@@ -139,27 +139,33 @@ p::first-letter {
 		<% if (user.description) { %>
 		<section id="bio">
 			<h1>Player bio</h1>
-			<p>
 			<% for (const item of user.description.split(/[\r\n]+/)) { %>
-				<%= item %></br>
+				<p><%= item %></p>
 			<% } %>
-			</p>
 		</section>
 		<% } %>
 
 		<section id="play_style">
 			<h1>Play info</h1>
 			<p class="play_style">Style: <%= (user.style || '').toUpperCase() %></p>
-			<p class="pb">PB: <%= pb %></p>
+			<% for (const [level, pb] of Object.entries(pbs)) { %>
+				<% if (pb) { %>
+				<p class="pb">PB <%= level %>: <%= pb %></p>
+				<% } %>
+			<% } %>
 			<% if (user.elo_rating) { %>
-				<p class="pb">Elo: <%= user.elo_rating %><% if (user.elo_rank) { %> ( <%= user.elo_rank %> )<% } %></p>
+				<p class="pb">Elo: <%= elo_rating %><% if (user.elo_rank) { %> ( <%= user.elo_rank %> )<% } %></p>
 			<% } %>
 		</section>
 
+		<% if (user.interests) { %>
 		<section id="interests">
 			<h1>Interests</h1>
-			<p><%= user.interests.replace(/\n+/g, ', ') %></p>
+			<% for (const item of user.interests.split(/[\r\n]+/)) { %>
+				<p><%= item %></p>
+			<% } %>
 		</section>
+		<% } %>
 	</div>
 
 	<% if (!user.login.startsWith('__user')) { %>

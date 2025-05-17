@@ -32,6 +32,25 @@ class ScoreDAO {
 		}
 	}
 
+	async getPBs181929(user) {
+		const db_client = await dbPool.connect();
+
+		try {
+			const data = {};
+
+			for (const level of [18, 19, 29]) {
+				data[level] = await this._getPBs(db_client, user, level);
+			}
+
+			return data;
+		} catch (err) {
+			console.error(err, 'Error getting user stats');
+			return {};
+		} finally {
+			db_client.release();
+		}
+	}
+
 	async _getPBs(db_client, user, start_level) {
 		const result = await db_client.query(
 			`
