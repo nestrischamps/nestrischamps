@@ -1,11 +1,8 @@
-// Sample Attendee Sheet
-// https://docs.google.com/spreadsheets/d/13ylAk77UR_5V3zyVxpAlYFiHtouKiIoQu9DVOcyTibM/edit?usp=sharing
-// 1. Make a copy
-// 2. Fill it
-// 3. Publish Sheet 1 to Web as CSV
-// 4. update the sheet csv export URL below
+// Script is based on the CTWC 2025 Registration sheet
+// 1. Publish Sheet 1 to Web as CSV
+// 2. enter the sheet csv url as a new variable CSV_URL in your .env file
 // 5. run script as:
-// node scripts/insert_local_users.js
+// npm run ctwc-ingest
 
 import pg from 'pg';
 import { parse } from 'csv-parse/sync';
