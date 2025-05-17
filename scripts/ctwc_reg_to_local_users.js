@@ -20,6 +20,36 @@ function identity(v) {
 	return v;
 }
 
+// need to return values that match DB enum
+function getStyle(entry) {
+	if (/hybrid/i.test(entry)) return 'hybrid';
+	if (/das/i.test(entry)) return 'das';
+	if (/tap/i.test(entry)) return 'tap';
+	if (/roll/i.test(entry)) return 'roll';
+}
+
+function getCompetitonWins(entry) {
+	entry = entry.trim();
+	if (!entry) return '';
+	if (/^(no|n\/?a)$/i.test(entry)) return '';
+	return entry;
+}
+
+function getAchievements(entry) {
+	entry = entry.trim();
+	if (!entry) return '';
+	if (/^(no|n\/?a)$/i.test(entry)) return '';
+	return entry;
+}
+
+function getMaxouts(num) {
+	num = num.trim();
+	if (!num) return '';
+	if (num === '0') return '';
+	if (num === '1') return '1 maxout';
+	return `${num} maxouts`;
+}
+
 (async function () {
 	const records_csv_content = await got(sheet_csv_url).text();
 	const records = parse(records_csv_content, {
@@ -51,14 +81,14 @@ function identity(v) {
 		'favourite_sport_team',
 		'num_year_qualified_ctwc',
 		'highest_rank_and_year',
+		'competition_wins',
 		'achievements',
-		'other_game',
 		'hobbies',
 	];
 
 	// 1. we extract all records from the sheet and convert that in NTC-compatible player data
 	const players = records.slice(1).map((record, index) => {
-		const id = START_ID + index - 1;
+		const id = START_ID + index;
 		const csv = Object.fromEntries(
 			CSV_FIELDS.map((key, i) => [key, record[i]])
 		);
@@ -141,11 +171,12 @@ function identity(v) {
 			secret: ULID.ulid(),
 			description: [
 				csv.job.trim(),
-				csv.achievements.trim(),
-				`${csv.num_maxouts} maxouts`,
+				getCompetitonWins(csv.competition_wins),
+				getAchievements(csv.achievements.trim()),
+				getMaxouts(csv.num_maxouts),
 			]
 				.filter(identity)
-				.join(', '), // do we want that default?? probably not
+				.join('\n'), // do we want that default?? probably not
 			pronouns: csv.pronouns.trim(),
 			profile_image_url: '',
 			dob: new Date(),
@@ -157,10 +188,10 @@ function identity(v) {
 				csv.favourite_sport_team.trim(),
 			]
 				.filter(identity)
-				.join(', '),
-			style: csv.style,
-			elo_rank: null,
-			elo_rating: null,
+				.join('\n'),
+			style: getStyle(csv.style),
+			elo_rank: 0,
+			elo_rating: 0,
 		};
 
 		const age = parseInt(csv.age, 10);
@@ -183,6 +214,10 @@ function identity(v) {
 		connectionString: db_conn_str,
 	});
 
+	// To verify: does this clear all the scores and recorded games?
+	// deleting the users will cascade to the emails and scores
+	await pool.query('DELETE FROM users WHERE id>32');
+
 	// 3. Inject NTC record into DB!
 	for (const { ntc, csv } of players) {
 		const {
@@ -204,15 +239,14 @@ function identity(v) {
 		} = ntc;
 
 		await pool.query(
-			`INSERT INTO twitch_users
-			(id, login, email, secret, description, display_name, pronouns, profile_image_url, dob, country_code, city, interests, style, elo_rank, elo_rating, created_on, last_login)
+			`INSERT INTO users
+			(id, login, secret, description, display_name, pronouns, profile_image_url, dob, country_code, city, interests, style, elo_rank, elo_rating, created_at, last_login_at)
 			VALUES
-			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
+			($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
 			`,
 			[
 				id,
 				login,
-				email,
 				secret,
 				description,
 				display_name,

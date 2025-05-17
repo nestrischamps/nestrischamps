@@ -79,6 +79,10 @@ p {
 	margin-block-end: 0;
 }
 
+p::first-letter {
+  text-transform: uppercase;
+}
+
 #twitch {
 	flex-grow: 0;
 	flex-shrink: 0;
@@ -135,7 +139,11 @@ p {
 		<% if (user.description) { %>
 		<section id="bio">
 			<h1>Player bio</h1>
-			<p><%= user.description.replace(/\n+/g, ', ') %></p>
+			<p>
+			<% for (const item of user.description.split(/[\r\n]+/)) { %>
+				<%= item %></br>
+			<% } %>
+			</p>
 		</section>
 		<% } %>
 
@@ -143,7 +151,9 @@ p {
 			<h1>Play info</h1>
 			<p class="play_style">Style: <%= (user.style || '').toUpperCase() %></p>
 			<p class="pb">PB: <%= pb %></p>
-			<p class="pb">Elo: <%= elo_rating %><% if (user.elo_rank) { %> ( <%= user.elo_rank %> )<% } %></p>
+			<% if (user.elo_rating) { %>
+				<p class="pb">Elo: <%= user.elo_rating %><% if (user.elo_rank) { %> ( <%= user.elo_rank %> )<% } %></p>
+			<% } %>
 		</section>
 
 		<section id="interests">
