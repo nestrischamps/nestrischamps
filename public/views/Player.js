@@ -702,6 +702,16 @@ export default class Player extends EventTarget {
 
 	startCountDown(seconds = 5) {
 		this.count_down_timer = clearTimeout(this.count_down_timer);
+
+		this._gameReset();
+		this.renderPreview(18, null);
+		this.createGame(this.last_frame.gameid ?? 0);
+
+		// break encapsulation to alter behaviour
+		// frames from the current game should NOT cause any UI update till the next game start
+		this.game.no_curtain_top_out = true;
+		this.game.over = true;
+
 		this.only_show_admin_started_game = true;
 		this.admin_only_pending_game = true;
 
@@ -1021,10 +1031,11 @@ export default class Player extends EventTarget {
 		this._refreshProfileCard();
 	}
 
-	createGame() {
+	createGame(gameid) {
 		this._destroyGame();
 
 		this.game = new BaseGame();
+		if (gameid) this.game.gameid = gameid;
 
 		// Handlers with local rendering actions or custom behaviours
 		this.game.onScore = this._renderScore;
@@ -1111,6 +1122,8 @@ export default class Player extends EventTarget {
 	}
 
 	_setFrameOuter(data) {
+		this.last_frame = data;
+
 		if (!this.game) {
 			this._renderNewGame(data);
 		} else {
@@ -1119,6 +1132,11 @@ export default class Player extends EventTarget {
 	}
 
 	_renderNewGame(frame) {
+		if (this.only_show_admin_started_game) {
+			if (!this.admin_only_pending_game) return;
+			this.admin_only_pending_game = false;
+		}
+
 		this._gameReset();
 		this._hideCurtain();
 		this.createGame();
