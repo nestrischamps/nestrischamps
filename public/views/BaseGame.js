@@ -480,18 +480,8 @@ export default class BaseGame {
 
 		if (data.score === 999999) {
 			this.pending_score = data.lines != this.data.lines;
-		} else if (data.score >= 1600000) {
-			// if data.score reads over 1.6M, score OCR is 7-digits. We can do a simple score comparison to detect changes
-			this.pending_score = data.score != this.data.score.current;
 		} else {
-			// Assume 1.6M rollovers must be accounted for
-			const high_score = this.data.score.current / 1600000;
-
-			if (high_score >= 1) {
-				this.pending_score = data.score != this.data.score.current % 1600000;
-			} else {
-				this.pending_score = data.score != this.data.score.current;
-			}
+			this.pending_score = data.score != this.data.score.current;
 		}
 	}
 
@@ -526,7 +516,7 @@ export default class BaseGame {
 				// Using Hex score Game Genie code XNEOOGEX
 				// The GG code makes the score display wrap around to 0
 				// when reaching 1,600,000. We correct accordingly here.
-				real_score = 1600000 * num_wraps + data.score;
+				// real_score = 1600000 * num_wraps + data.score; // for ctwc, we never adjust
 			} else {
 				// weird reading (score goes lower than it was)
 				// but we do nothing and will accept it anyway
