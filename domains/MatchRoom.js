@@ -401,31 +401,37 @@ class MatchRoom extends Room {
 
 		this.assertValidPlayer(p_num);
 
-		const player_id = `${p_id}`;
+		const user_id = `${p_id}`;
 
-		if (!/^[1-9]\d*$/.test(player_id)) return;
+		if (!/^[1-9]\d*$/.test(user_id)) return;
 
-		const player_data = await UserDAO.getUserById(player_id, true);
+		const player = this.state.players[p_num];
+		const player_data = await UserDAO.getUserById(player.id);
+		const user_data = await UserDAO.getUserById(user_id, true);
 
-		this.state.players[p_num] = Object.assign(this.state.players[p_num], {
-			login: player_data.login,
-			display_name: player_data.display_name,
-			country_code: player_data.country_code,
+		Object.assign(player, {
+			login: user_data.login,
+			display_name: user_data.display_name,
+			country_code: user_data.country_code,
+			on_behalf_of_user: user_id,
 		});
 
-		this.sendToViews(['setLogin', p_num, player_data.login]);
-		this.sendToViews(['setDisplayName', p_num, player_data.display_name]);
-		this.sendToViews(['setCountryCode', p_num, player_data.country_code]);
+		// warning: this adds state to the global player object. As in, it reaches out of the matchroom and into the whole process
+		// it's dirty but sort of fine to do, since a user can only have a single producer at a time
+		player_data.on_behalf_of_user = user_id;
+
+		this.sendToViews(['setLogin', p_num, user_data.login]);
+		this.sendToViews(['setDisplayName', p_num, user_data.display_name]);
+		this.sendToViews(['setCountryCode', p_num, user_data.country_code]);
 
 		// only update the avatar if supplied
-		if (!/^\s*$/.test(player_data.profile_image_url)) {
-			this.state.players[p_num].profile_image_url =
-				player_data.profile_image_url;
+		if (!/^\s*$/.test(user_data.profile_image_url)) {
+			this.state.players[p_num].profile_image_url = user_data.profile_image_url;
 
 			this.sendToViews([
 				'setProfileImageURL',
 				p_num,
-				player_data.profile_image_url,
+				user_data.profile_image_url,
 			]);
 		}
 	}

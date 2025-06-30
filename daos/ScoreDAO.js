@@ -248,6 +248,54 @@ class ScoreDAO {
 		return result.rows[0].id;
 	}
 
+	async recordQualResult(user, score_id, event_name) {
+		const result = await dbPool.query(
+			`
+			INSERT INTO qual_scores
+			(
+				event,
+				player_id,
+				score_id,
+				on_behalf_of_user_id,
+				display_name
+			)
+			VALUES
+			(
+				$1, $2, $3, $4, $5
+			)
+			RETURNING id
+			`,
+			[
+				event_name,
+				user.id,
+				score_id,
+				user.on_behalf_of_user_id || user.id,
+				user.display_name,
+			]
+		);
+
+		return result.rows[0].id;
+	}
+
+	async getQualResults(event_name, max_value = 999999) {
+		const result = await dbPool.query(
+			`
+			SELECT
+				qs.on_behalf_of_user_id as user_id,
+				qs.display_name as display_name,
+				SUM((s.score >= $1)::int) AS num_maxes,
+				MAX(CASE WHEN s.score < $1 THEN s.score ELSE 0 END) AS kicker
+			FROM qual_scores qs INNER JOIN scores s on qs.score_id = s.id
+			WHERE qs.event = $2
+			GROUP BY qs.on_behalf_of_user_id
+			ORDER BY num_maxes DESC, kicker DESC;
+			`,
+			[max_value, event_name]
+		);
+
+		return result.rows;
+	}
+
 	async getNumberOfScores(user, options = {}) {
 		const args = [user.id];
 		let additional_conditions = '';
