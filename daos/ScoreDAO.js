@@ -248,7 +248,7 @@ class ScoreDAO {
 		return result.rows[0].id;
 	}
 
-	async recordQualResult(user, score_id, event_name) {
+	async recordQualResult(user, on_behalf_of_user, score_id, event_name) {
 		const result = await dbPool.query(
 			`
 			INSERT INTO qual_scores
@@ -269,8 +269,8 @@ class ScoreDAO {
 				event_name,
 				user.id,
 				score_id,
-				user.on_behalf_of_user_id || user.id,
-				user.display_name,
+				on_behalf_of_user.id,
+				on_behalf_of_user.display_name,
 			]
 		);
 
@@ -287,7 +287,7 @@ class ScoreDAO {
 				MAX(CASE WHEN s.score < $1 THEN s.score ELSE 0 END) AS kicker
 			FROM qual_scores qs INNER JOIN scores s on qs.score_id = s.id
 			WHERE qs.event = $2
-			GROUP BY qs.on_behalf_of_user_id
+			GROUP BY qs.on_behalf_of_user_id, qs.display_name
 			ORDER BY num_maxes DESC, kicker DESC;
 			`,
 			[max_value, event_name]

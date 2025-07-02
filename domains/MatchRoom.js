@@ -418,7 +418,10 @@ class MatchRoom extends Room {
 
 		// warning: this adds state to the global player object. As in, it reaches out of the matchroom and into the whole process
 		// it's dirty but sort of fine to do, since a user can only have a single producer at a time
-		player_data.on_behalf_of_user = user_id;
+		player_data.on_behalf_of_user = {
+			id: user_id,
+			display_name: user_data.display_name,
+		};
 
 		this.sendToViews(['setLogin', p_num, user_data.login]);
 		this.sendToViews(['setDisplayName', p_num, user_data.display_name]);

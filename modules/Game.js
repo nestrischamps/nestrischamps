@@ -303,19 +303,44 @@ class Game {
 			return;
 		}
 
-		ScoreDAO.recordGame(this.user, report).then(
-			score_id => {
-				console.log(
-					`Recorded new game for user ${this.user.login} (${this.user.id}) with id ${score_id}`
-				);
-				this.user.send(['scoreRecorded', this.user.id, score_id]);
-			},
-			err => {
-				console.log('Unable to record game');
-				console.error(err);
-				// TODO delete replay file too
-			}
-		);
+		this.recordGame(report);
+	}
+
+	async recordGame(report) {
+		let score_id = null;
+
+		try {
+			score_id = await ScoreDAO.recordGame(this.user, report);
+			console.log(
+				`Recorded new game for user ${this.user.login} (${this.user.id}) with id ${score_id}`
+			);
+			this.user.send(['scoreRecorded', this.user.id, score_id]);
+		} catch (err) {
+			console.log('Unable to record game');
+			console.error(err);
+			// TODO delete replay file too
+		}
+
+		if (!global.__ntc_event_name) return;
+		if (!score_id) return;
+		if (!this.user.on_behalf_of_user) return;
+
+		try {
+			// TODO: retrieve event name from a module rather than global scope
+			await ScoreDAO.recordQualResult(
+				this.user,
+				this.user.on_behalf_of_user,
+				score_id,
+				global.__ntc_event_name
+			);
+			console.log(
+				`Recorded new qual result for event ${global.__ntc_event_name}`
+			);
+		} catch (err) {
+			console.log('Unable to record qual result');
+			console.error(err);
+			// TODO delete replay file too
+		}
 	}
 
 	_isSameField(data) {
