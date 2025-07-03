@@ -283,7 +283,8 @@ class ScoreDAO {
 				qs.on_behalf_of_user_id as user_id,
 				qs.display_name as display_name,
 				SUM((s.score >= $1)::int) AS num_maxes,
-				MAX(CASE WHEN s.score < $1 THEN s.score ELSE 0 END) AS kicker
+				MAX(CASE WHEN s.score < $1 THEN s.score ELSE 0 END) AS kicker,
+				COUNT(*) as num_scores
 			FROM qual_scores qs INNER JOIN scores s on qs.score_id = s.id
 			WHERE qs.event = $2
 			GROUP BY qs.on_behalf_of_user_id, qs.display_name
@@ -292,9 +293,10 @@ class ScoreDAO {
 			[max_value, event_name]
 		);
 
-		// type cast num maxes to int
+		// type cast num maxes and scores to int
 		result.rows.forEach(row => {
 			row.num_maxes = parseInt(row.num_maxes, 10);
+			row.num_scores = parseInt(row.num_scores, 10);
 		});
 
 		return result.rows;
