@@ -263,7 +263,6 @@ class ScoreDAO {
 			(
 				$1, $2, $3, $4, $5
 			)
-			RETURNING id
 			`,
 			[
 				event_name,
@@ -274,7 +273,7 @@ class ScoreDAO {
 			]
 		);
 
-		return result.rows[0].id;
+		return result.rowCount === 1;
 	}
 
 	async getQualResults(event_name, max_value = 999999) {

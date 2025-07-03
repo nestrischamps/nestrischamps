@@ -225,21 +225,21 @@ router.get('/replay/:layout/:gamedef', (req, res) => {
 	);
 });
 
-if (process.env.IS_PUBLIC_SERVER === '1') {
+if (process.env.IS_PUBLIC_SERVER != '1') {
 	// prep a route to set up the global qual mode, which will be used to record qual results
 	// TODO: how to set add authentication to the endpoint
-	router.get('/system/qual/:name/:action(start|stop)', (req, res) => {
-		if (action === 'start') {
-			global.__ntc_event_name = req.params.name;
+	router.get('/system/qual/:name/start', (req, res) => {
+		global.__ntc_event_name = req.params.name;
+		res.sendStatus(200);
+	});
+
+	router.get('/system/qual/:name/stop', (req, res) => {
+		if (global.__ntc_event_name === req.params.name) {
+			global.__ntc_event_name = '';
+			delete global.__ntc_event_name;
 			res.sendStatus(200);
-		} else if (action === 'stop') {
-			if (global.__ntc_event_name != req.params.name) {
-				res.sendStatus(404);
-			} else {
-				global.__ntc_event_name = '';
-				delete global.__ntc_event_name;
-				res.sendStatus(200);
-			}
+		} else {
+			res.status(404).json({ msg: `Event ${req.params.name} not started` });
 		}
 	});
 
