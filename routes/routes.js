@@ -7,7 +7,7 @@ import layouts from '../modules/layouts.js';
 import UserDAO from '../daos/UserDAO.js';
 import ScoreDAO from '../daos/ScoreDAO.js';
 
-const router = express.Router();
+const router = express.Router({ caseSensitive: true });
 
 router.get('/debug/session', (req, res) => {
 	res.send(JSON.stringify(req.session));
@@ -228,11 +228,11 @@ router.get('/replay/:layout/:gamedef', (req, res) => {
 if (process.env.IS_PUBLIC_SERVER === '1') {
 	// prep a route to set up the global qual mode, which will be used to record qual results
 	// TODO: how to set add authentication to the endpoint
-	router.get('/system/qual/:name/(start|stop)', (req, res) => {
-		if (/start$/.test(req.path)) {
+	router.get('/system/qual/:name/:action(start|stop)', (req, res) => {
+		if (action === 'start') {
 			global.__ntc_event_name = req.params.name;
 			res.sendStatus(200);
-		} else if (/stop$/.test(req.path)) {
+		} else if (action === 'stop') {
 			if (global.__ntc_event_name != req.params.name) {
 				res.sendStatus(404);
 			} else {
