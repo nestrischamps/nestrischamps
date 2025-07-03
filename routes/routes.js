@@ -242,6 +242,15 @@ if (process.env.IS_PUBLIC_SERVER === '1') {
 			}
 		}
 	});
+
+	router.get('/system/qual/:name/results', async (req, res) => {
+		// TODO: implement 60s cache for the results
+		const max_value = /^[1-9]\d+$/.test(req.query.max_value)
+			? parseInt(req.query.max_value, 10)
+			: 999999; // standard maxout
+
+		res.json(await ScoreDAO.getQualResults(req.params.name, max_value));
+	});
 }
 
 export default router;
