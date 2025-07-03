@@ -83,7 +83,7 @@ create table qual_scores (
 	CONSTRAINT fk_player
 		FOREIGN KEY(player_id)
 			REFERENCES users(id)
-				ON DELETE CASCADE ON UPDATE CASCADE
+				ON DELETE CASCADE ON UPDATE CASCADE,
 
 	CONSTRAINT fk_score
 		FOREIGN KEY(score_id)
