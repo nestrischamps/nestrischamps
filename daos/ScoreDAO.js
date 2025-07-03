@@ -292,6 +292,11 @@ class ScoreDAO {
 			[max_value, event_name]
 		);
 
+		// type cast num maxes to int
+		result.rows.forEach(row => {
+			row.num_maxes = parseInt(row.num_maxes, 10);
+		});
+
 		return result.rows;
 	}
 
