@@ -784,8 +784,8 @@
 			const isDAS = QueryString.get('style') === 'das';
 			const hasAds = QueryString.get('ads') === '1';
 
-			const SHOW_SIMUL_TETRIS = /^[1-9]\d*$/.test(QueryString.get('simultris'));
-			const SIMUL_TETRIS_DELAY = SHOW_SIMUL_TETRIS
+			const SHOW_SIMUL_TETRIS = QueryString.get('simultris') !== '0';
+			const SIMUL_TETRIS_DELAY = /^[1-9]\d+$/.test(QueryString.get('simultris'))
 				? parseInt(QueryString.get('simultris'), 10)
 				: 120;
 
