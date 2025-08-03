@@ -1,3 +1,4 @@
+import BinaryFrame from '/js/BinaryFrame.js';
 import { html } from '../StringUtils.js';
 import {
 	getConnectedDevices,
@@ -6,7 +7,12 @@ import {
 } from '../MediaUtils.js';
 import { appStore } from '../AppStore.js';
 import { NtcComponent } from './NtcComponent.js';
-import { CONFIGS, REFERENCE_SIZE, REFERENCE_LOCATIONS } from '../constants.js';
+import {
+	CONFIGS,
+	REFERENCE_SIZE,
+	REFERENCE_LOCATIONS,
+	RETRON_HD_CONFIG,
+} from '../constants.js';
 import loadPalettes from '../../ocr/palettes.js';
 import {
 	getFieldCoordinates,
@@ -74,6 +80,30 @@ const MARKUP = html`
 										title="Capture score, level, lines, preview and field"
 									>
 										Minimal
+									</option>
+									<option
+										value="retron_hdmi_169_classic"
+										title="Capture from a Retron with 16:9 aspect ratio"
+									>
+										Retron HDMI 16:9 (classic)
+									</option>
+									<option
+										value="retron_hdmi_43_classic"
+										title="Capture from a Retron with 4:3 aspect ratio"
+									>
+										Retron HDMI 4:3 (classic)
+									</option>
+									<option
+										value="retron_hdmi_169_minimal"
+										title="Capture from a Retron with 16:9 aspect ratio"
+									>
+										Retron HDMI 16:9 (minimal)
+									</option>
+									<option
+										value="retron_hdmi_43_minimal"
+										title="Capture from a Retron with 4:3 aspect ratio"
+									>
+										Retron HDMI 4:3 (minimal)
 									</option>
 								</select>
 							</div>
@@ -192,7 +222,8 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		const device_id = device_selector.value;
 
 		if (device_id === 'everdrive') {
-			// broadcast ready!
+			this.#finalizeEverdriveConfig();
+			return;
 		} else {
 			this.#stopVideo();
 
@@ -226,6 +257,9 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 		if (rom_selector.value === '') {
 			hideAndResetColorMatching();
+		} else if (/^retron_/.test(rom_selector.value)) {
+			this.#finalizeRetronConfig(rom_selector.value);
+			return;
 		} else {
 			const game_type = CONFIGS[rom_selector.value].game_type;
 
@@ -385,6 +419,8 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 		try {
 			config = this.#getConfig(...args);
+
+			this.#saveAndDispatchConfig(config);
 		} catch (err) {
 			alert(
 				`Unexpected Error: ${err.message}. Please try again or contact NTC devs.`
@@ -394,7 +430,32 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			rom_selector.disabled = false;
 			palette_selector.disabled = false;
 		}
+	}
 
+	#finalizeRetronConfig(retron_rom_id) {
+		// 1 parse the rom id
+		const m = retron_rom_id.match(
+			/^retron_hdmi_(?<aspect>169|43)_(?<rom_id>classic|minimal)$/
+		);
+
+		if (!m) {
+			throw new Error('Unexpected Retron rom ID');
+		}
+
+		const { aspect, rom_id } = m.groups;
+
+		const config = this.#getRetronConfig(aspect, rom_id);
+
+		this.#saveAndDispatchConfig(config);
+	}
+
+	#finalizeEverdriveConfig() {
+		this.#saveAndDispatchConfig({
+			device_id: 'everdrive',
+		});
+	}
+
+	#saveAndDispatchConfig(config) {
 		console.log({ config });
 
 		saveConfig(config);
@@ -443,6 +504,38 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			brightness: device_id === 'window' ? 1 : 1.75,
 			tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
 		});
+
+		return config;
+	}
+
+	#getRetronConfig(aspect, rom_id) {
+		const { device_selector } = this.#domrefs;
+		const device_id = device_selector.value;
+
+		if (!device_id) {
+			throw new Error('No device selected');
+		}
+
+		if (!/^(classic|minimal)$/.test(rom_id)) {
+			throw new Error(`Invalid retron rom ID: ${rom_id}`);
+		}
+
+		const config = {
+			...getDefaultOcrConfig(),
+			device_id,
+			game_type: BinaryFrame.GAME_TYPE[rom_id.toUpperCase()],
+			palette: 'retron_hdmi',
+		};
+
+		for (const [name, definition] of Object.entries(
+			RETRON_HD_CONFIG[aspect][rom_id]
+		)) {
+			config.tasks[name] = Object.assign(
+				{},
+				REFERENCE_LOCATIONS[name], // all task parameters
+				definition // retron-specific crop values
+			);
+		}
 
 		return config;
 	}
