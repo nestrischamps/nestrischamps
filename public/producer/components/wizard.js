@@ -571,6 +571,8 @@ export class NTC_Producer_Wizard extends NtcComponent {
 	#updateDeviceList(devices) {
 		console.log(Date.now(), 'updateDeviceList()');
 
+		const { device_selector } = this.#domrefs;
+
 		// Make sure we show devices with their IDs
 		const mappedDevices = devices.map(camera => {
 			const device = { label: camera.label, deviceId: camera.deviceId };
@@ -608,12 +610,10 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				deviceId: 'everdrive',
 			});
 		} else {
-			this.#domrefs.device_selector.after(
-				'(For EverDrive Capture, use Chrome)'
-			);
+			device_selector.after('(For EverDrive Capture, use Chrome)');
 		}
 
-		this.#domrefs.device_selector.replaceChildren(
+		device_selector.replaceChildren(
 			...[...default_devices, ...mappedDevices].map(camera => {
 				const camera_option = document.createElement('option');
 				camera_option.text = camera.label;
