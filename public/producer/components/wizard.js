@@ -13,6 +13,7 @@ import {
 	getCaptureCoordinates,
 } from '../../ocr/calibration.js';
 import { getDefaultOcrConfig, saveConfig } from '../ConfigUtils.js';
+import { sleep } from '../timer.js';
 
 function css_size(css_pixel_width) {
 	return parseFloat(css_pixel_width.replace(/px$/, ''));
@@ -26,12 +27,6 @@ function updateCanvasSizeIfNeeded(canvas, w, h) {
 		// must restore no smoothing after change of size
 		canvas.getContext('2d', { alpha: false }).imageSmoothingEnabled = false;
 	}
-}
-
-function sleep(ms) {
-	return new Promise(resolve => {
-		setTimeout(resolve, ms);
-	});
 }
 
 const MARKUP = html`
@@ -169,7 +164,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 		const palettes = await loadPalettes();
 
-		console.log(palettes);
+		console.log({ palettes });
 
 		palette_selector.replaceChildren(
 			...[
@@ -182,7 +177,6 @@ export class NTC_Producer_Wizard extends NtcComponent {
 					value,
 				})),
 			].map(option => {
-				console.log(option);
 				const palette_option = document.createElement('option');
 				palette_option.text = option.label;
 				palette_option.value = option.value;
@@ -482,7 +476,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 	}
 
 	#updateDeviceList(devices) {
-		console.log(Date.now(), 'updateDeviceList');
+		console.log(Date.now(), 'updateDeviceList()');
 
 		// Make sure we show devices with their IDs
 		const mappedDevices = devices.map(camera => {
@@ -558,6 +552,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 	}
 
 	disconnectedCallback() {
+		console.log('wizard.disconnectedCallback()');
 		this.#stopVideo();
 	}
 }

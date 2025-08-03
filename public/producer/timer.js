@@ -59,3 +59,9 @@ export const workerTimer = {
 		});
 	},
 };
+
+export function sleep(ms) {
+	return new Promise(resolve => {
+		setTimeout(resolve, ms);
+	});
+}

@@ -1,6 +1,6 @@
 import QueryString from '/js/QueryString.js';
 
-import { stdTimer, workerTimer } from './timer.js';
+import { sleep, stdTimer, workerTimer } from './timer.js';
 import { NTC_Producer_Wizard } from './components/wizard.js';
 import { hasConfig, loadConfig } from './ConfigUtils.js';
 
@@ -86,12 +86,16 @@ import { hasConfig, loadConfig } from './ConfigUtils.js';
 		const wizard = document.createElement('ntc-wizard');
 		document.body.prepend(wizard);
 
-		wizard.addEventListener('config-ready', evt => {
+		wizard.addEventListener('config-ready', async evt => {
 			console.log(`Received config-ready`, { config: evt.detail.config });
+
+			await sleep(0);
+
+			wizard.remove();
+			document.getElementById('capture').classList.remove('is-hidden');
 		});
 
 		/*
-
 		capture_rate.value = default_frame_rate;
 
 		// create default dummy waiting to be populated by user selection
