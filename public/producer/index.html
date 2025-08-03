@@ -23,40 +23,13 @@
 			body.loading {
 				background: black; /* black FOUC better than white */
 			}
+
+			#capture {
+				margin-top: 32px;
+			}
 		</style>
 	</head>
 	<body class="loading">
-		<div id="capture" class="is-hidden">
-			<div class="tabs is-toggle is-toggle-rounded is-fullwidth is-medium">
-				<ul>
-					<li class="is-active">
-						<a>
-							<span class="icon is-small"><i class="fas fa-image"></i></span>
-							<span>Settings</span>
-						</a>
-					</li>
-					<li>
-						<a>
-							<span class="icon is-small"><i class="fas fa-music"></i></span>
-							<span>Data</span>
-						</a>
-					</li>
-					<li>
-						<a>
-							<span class="icon is-small"><i class="fas fa-film"></i></span>
-							<span>Calibration</span>
-						</a>
-					</li>
-					<li>
-						<a>
-							<span class="icon is-small"><i class="fas fa-file-alt"></i></span>
-							<span>Room View</span>
-						</a>
-					</li>
-				</ul>
-			</div>
-		</div>
-
 		<script src="/vendor/peerjs.1.5.4.min.js"></script>
 		<script type="module" src="/producer/main.js"></script>
 	</body>

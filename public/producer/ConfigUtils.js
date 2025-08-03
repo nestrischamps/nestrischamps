@@ -1,5 +1,6 @@
 import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
+import { appStore } from './AppStore.js';
 
 function getConfigName() {
 	return QueryString.get('config') || 'config';
@@ -92,6 +93,19 @@ export function saveConfig(config) {
 	}
 
 	localStorage.setItem(getConfigName(), JSON.stringify(config_copy));
+
+	appStore.setState({ config });
+}
+
+export function clearConfigAndReset() {
+	if (
+		confirm(
+			'You are about to remove your current configuration. You will have to recalibrate. Are you sure?'
+		)
+	) {
+		localStorage.removeItem(getConfigName());
+		location.reload();
+	}
 }
 
 export function getDefaultOcrConfig() {

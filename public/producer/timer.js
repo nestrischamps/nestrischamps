@@ -1,8 +1,3 @@
-export const stdTimer = {
-	setInterval: setInterval.bind(window),
-	clearInterval: clearInterval.bind(window),
-};
-
 const worker_script = `
 	idMap = {};
 	onmessage = e => {
@@ -22,7 +17,7 @@ const worker_script = `
 	postMessage(['init']);
 `;
 
-export const workerTimer = {
+export const timer = {
 	callid: 0,
 	callbacks: {},
 	worker: null,

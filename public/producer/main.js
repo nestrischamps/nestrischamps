@@ -1,12 +1,19 @@
-import QueryString from '/js/QueryString.js';
+import './components/wizard.js';
+import './components/capture.js';
 
-import { sleep, stdTimer, workerTimer } from './timer.js';
-import { NTC_Producer_Wizard } from './components/wizard.js';
+import QueryString from '/js/QueryString.js';
+import { sleep, timer } from './timer.js';
 import { hasConfig, loadConfig } from './ConfigUtils.js';
+
+function loadCaptureUI() {
+	const element = document.createElement('ntc-capture');
+	element.id = 'capture';
+	document.body.prepend(element);
+}
 
 (async function main() {
 	// unfortunate bootstrap delay, but makes everything else simpler later on
-	await workerTimer.init();
+	await timer.init();
 
 	// initTabControls();
 
@@ -22,7 +29,10 @@ import { hasConfig, loadConfig } from './ConfigUtils.js';
 	// showTemplates(templates);
 	// await updatePaletteList();
 
-	if (hasConfig()) {
+	loadCaptureUI();
+	return;
+
+	if (false && hasConfig()) {
 		config = loadConfig();
 
 		// transformation of color numbers for old configs
@@ -50,11 +60,6 @@ import { hasConfig, loadConfig } from './ConfigUtils.js';
 		focus_alarm.checked = config.focus_alarm != false;
 		use_worker_for_interval.checked = config.use_worker_for_interval != false;
 		handle_retron_levels_6_7.checked = config.handle_retron_levels_6_7 != false;
-
-		if (use_worker_for_interval.checked) {
-			console.log('Utilizing Worker Timer');
-			timer = workerTimer;
-		}
 
 		const brightness = config.brightness === undefined ? 1 : config.brightness;
 		brightness_slider.value = config.brightness = brightness;
@@ -92,7 +97,8 @@ import { hasConfig, loadConfig } from './ConfigUtils.js';
 			await sleep(0);
 
 			wizard.remove();
-			document.getElementById('capture').classList.remove('is-hidden');
+
+			loadCaptureUI();
 		});
 
 		/*

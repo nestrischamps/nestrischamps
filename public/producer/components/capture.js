@@ -1,0 +1,120 @@
+import { NtcComponent } from './NtcComponent.js';
+
+import './settings.js';
+import './calibration.js';
+import './ocrresults.js';
+import './roomview.js';
+
+import { html } from '../StringUtils.js';
+
+const MARKUP = html`
+	<div id="capture" class="container is-fluid">
+		<div
+			id="tabs"
+			class="tabs is-toggle is-toggle-rounded is-fullwidth is-medium"
+		>
+			<ul>
+				<li data-target="settings" class="is-active">
+					<a>
+						<span class="icon is-small"><i class="fas fa-image"></i></span>
+						<span>Settings</span>
+					</a>
+				</li>
+				<li data-target="ocr_results">
+					<a>
+						<span class="icon is-small"><i class="fas fa-music"></i></span>
+						<span>Data</span>
+					</a>
+				</li>
+				<li data-target="calibration">
+					<a>
+						<span class="icon is-small"><i class="fas fa-film"></i></span>
+						<span>Calibration</span>
+					</a>
+				</li>
+				<li data-target="room">
+					<a>
+						<span class="icon is-small"><i class="fas fa-file-alt"></i></span>
+						<span>Room View</span>
+					</a>
+				</li>
+			</ul>
+		</div>
+	</div>
+	<div id="content" class="container is-fluid">
+		<ntc-settings id="settings" class="tab-item is-hidden"></ntc-settings>
+		<ntc-ocrresults
+			id="ocr_results"
+			class="tab-item is-hidden"
+		></ntc-ocrresults>
+		<ntc-calibration
+			id="calibration"
+			class="tab-item is-hidden"
+		></ntc-calibration>
+		<ntc-roomview id="room" class="tab-item is-hidden"></ntc-roomview>
+	</div>
+`;
+
+export class NTC_Producer_Capture extends NtcComponent {
+	#domrefs;
+	#is_match_room;
+	#roomIFrame;
+
+	constructor() {
+		super();
+
+		this.shadow.innerHTML = MARKUP;
+
+		this.#domrefs = {
+			tabs: this.shadow.querySelectorAll('#tabs li'),
+			content: this.shadow.getElementById('content'),
+			tabContents: this.shadow.querySelectorAll('#content .tab-item'),
+			settings: this.shadow.getElementById('settings'),
+			ocr_results: this.shadow.getElementById('ocr_results'),
+			calibration: this.shadow.getElementById('calibration'),
+			room: this.shadow.getElementById('room'),
+		};
+
+		this.#is_match_room = /^\/room\/u\//.test(new URL(location).pathname);
+
+		this.#initTabControls();
+	}
+
+	#initTabControls() {
+		const { tabs, tabContents, room } = this.#domrefs;
+
+		if (!this.#is_match_room) {
+			// remove the room tab
+			[...tabs].find(tab => tab.dataset.target === 'room').remove();
+			room.remove();
+		}
+
+		tabContents.forEach(box => box.classList.add('is-hidden'));
+
+		tabs.forEach(tab => {
+			tab.addEventListener('click', () => {
+				tabs.forEach(tab => tab.classList.remove('is-active'));
+				tab.classList.add('is-active');
+
+				const target = tab.dataset.target;
+				tabContents.forEach(box => {
+					if (box.getAttribute('id') === target) {
+						box.classList.remove('is-hidden');
+					} else {
+						box.classList.add('is-hidden');
+					}
+				});
+
+				// TODOv2: handle room clear inside the component
+				if (target === 'room') {
+					destroyRoomViewTO = clearTimeout(destroyRoomViewTO);
+					loadRoomView();
+				} else if (this.#roomIFrame) {
+					destroyRoomViewTO = setTimeout(destroyRoomView, 15000); // 15 seconds to allow users to click around
+				}
+			});
+		});
+	}
+}
+
+customElements.define('ntc-capture', NTC_Producer_Capture);
