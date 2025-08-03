@@ -72,6 +72,16 @@ router.get(
 /**/
 
 router.get(
+	/^\/room\/producer2/,
+	middlewares.assertSession,
+	middlewares.checkToken,
+	(req, res) => {
+		req.originalUrl;
+		res.sendFile(path.join(path.resolve(), `public/producer/index.html`));
+	}
+);
+
+router.get(
 	/^\/room\/(producer|emu)/,
 	middlewares.assertSession,
 	middlewares.checkToken,

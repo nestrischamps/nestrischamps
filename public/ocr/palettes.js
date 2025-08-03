@@ -10,20 +10,26 @@ async function getPalette(name) {
 	]);
 }
 
-export default async function loadPalettes() {
-	const palettes = {};
+async function _loadPalettes() {
+	const _palettes = {};
 
 	try {
 		const saved_palette = localStorage.getItem('palette');
 		if (saved_palette) {
 			// TODO: verify that palette has right format too
-			palettes._saved = JSON.parse(saved_palette);
+			_palettes._saved = JSON.parse(saved_palette);
 		}
 	} catch (err) {}
 
 	(await Promise.all(LIST.map(getPalette))).forEach((palette, idx) => {
-		palettes[LIST[idx]] = palette;
+		_palettes[LIST[idx]] = palette;
 	});
 
-	return palettes;
+	return _palettes;
+}
+
+let palettes = _loadPalettes();
+
+export default function loadPalettes() {
+	return palettes; // everybody shares the same promise!
 }

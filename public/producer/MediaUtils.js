@@ -1,0 +1,118 @@
+export async function getConnectedDevices(type) {
+	let stream;
+
+	try {
+		// prompt for permission if needed
+		// on windows, this requests the first available capture device and it may fail
+		// BUT if permission has been granted, then listing the devices below might still work
+		// SO, we wrap the device call in a try..catch, and ignore errors
+		stream = await navigator.mediaDevices.getUserMedia({ video: true });
+	} catch (err) {
+		// We log a warning but we do nothing
+		console.log(
+			`Warning: could not open default capture device: ${err.message}`
+		);
+	}
+
+	const devices = (await navigator.mediaDevices.enumerateDevices()).filter(
+		device => device.kind === type && device.deviceId
+	);
+
+	if (stream) stream.getTracks()[0].stop();
+
+	return devices;
+}
+
+function logStreamDetails(stream) {
+	const track = stream.getVideoTracks()[0];
+	const settings = track.getSettings();
+	const capabilities = track.getCapabilities?.() || null;
+
+	console.log(`Stream Details: ${JSON.stringify(settings, null, 2)}`);
+	console.log(`Stream Capabilities: ${JSON.stringify(capabilities, null, 2)}`);
+
+	/*
+	console.log(
+		`Video settings: ${settings.width}x${
+			settings.height
+		}@${settings.frameRate.toFixed(1)}fps`
+	);
+	/**/
+}
+
+export async function playVideoFromDevice(video, device_id, fps = 60) {
+	console.log('playVideoFromDevice()');
+
+	try {
+		const constraints = {
+			audio: false,
+			video: {
+				height: { ideal: 720 },
+				frameRate: { ideal: fps }, // Should we always try to get the highest the card can support?
+			},
+		};
+
+		if (device_id) {
+			constraints.video.deviceId = { exact: device_id };
+		}
+
+		console.log(`Capture Constraints: ${JSON.stringify(constraints, null, 2)}`);
+
+		const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+		// we only prompt for permission with the first call
+		if (device_id === undefined) return;
+
+		logStreamDetails(stream);
+
+		// when an actual device id is supplied, we start everything
+		video.srcObject = stream;
+		video.ntcType = 'device';
+		video.play();
+	} catch (error) {
+		console.error('Error opening video camera.', error);
+		video.pause();
+	}
+}
+
+export async function playVideoFromScreenCap(video, fps = 60) {
+	console.log('playVideoFromScreenCap()');
+
+	try {
+		const constraints = {
+			audio: false,
+			video: {
+				cursor: 'never',
+				frameRate: { ideal: fps },
+			},
+		};
+
+		const stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+
+		// when an actual device id is supplied, we start everything
+		video.srcObject = stream;
+		video.ntcType = 'screencap';
+		video.play();
+	} catch (error) {
+		console.error('Error capturing window.', error);
+		video.pause();
+	}
+}
+
+export async function playVideoFromConfig(video, frame_rate = 60) {
+	if (!config.device_id) {
+		return;
+	}
+
+	video.classList.remove('is-hidden');
+
+	if (config.device_id === 'window') {
+		await playVideoFromScreenCap(config.frame_rate);
+	} else {
+		await playVideoFromDevice(config.device_id, config.frame_rate);
+	}
+
+	capture_rate
+		.querySelectorAll('.device_only')
+		.forEach(elmt => (elmt.hidden = config.device_id === 'window'));
+}
