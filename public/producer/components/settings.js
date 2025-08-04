@@ -3,38 +3,33 @@ import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
 import { clearConfigAndReset } from '../ConfigUtils.js';
 
+import { getConnectedDevices } from '../MediaUtils.js';
+
 const MARKUP = html`
 	<div id="inputs" class="columns container is-fluid">
 		<fieldset id="controls" class="column">
 			<legend>Controls</legend>
 
-			<div class="field is-horizontal">
-				<div class="field-label is-normal">
-					<label for="focus_alarm" class="label">Enable Focus Alarm</label>
-				</div>
-				<div class="field-body">
-					<div class="control">
-						<input type="checkbox" class="checkbox" id="focus_alarm" checked />
-					</div>
-				</div>
+			<div class="field">
+				<label class="checkbox">
+					Enable Focus Alarm
+					<input type="checkbox" class="checkbox" id="focus_alarm" checked />
+				</label>
 			</div>
 
 			<div class="field">
-				<div class="control">
-					<button id="clear_config" class="button is-light">
-						Clear config and Restart
-					</button>
-				</div>
+				<button id="clear_config" class="button is-light">
+					Clear config and Restart
+				</button>
 			</div>
 
 			<div class="field">
-				<div class="control">
-					<button id="save_game_palette" class="button is-light" disabled>
-						Save Last Game's Palette
-					</button>
-				</div>
+				<button id="save_game_palette" class="button is-light" disabled>
+					Save Last Game's Palette
+				</button>
 			</div>
-			<div id="timer_control" class="is-hidden">
+
+			<div id="timer_control" class="field is-hidden-">
 				<button id="start_timer" class="button">Start Timer</button>
 				for
 				<input type="number" id="minutes" value="120" min="5" max="5949" />
@@ -45,18 +40,28 @@ const MARKUP = html`
 		<fieldset id="privacy" class="column">
 			<legend>Privacy / Camera</legend>
 			<p>
-				<label for="allow_video_feed">Share webcam feed with peerjs</label>
-				<input type="checkbox" id="allow_video_feed" checked /><br />
+				<label for="allow_video_feed" class="label">
+					Share webcam feed with peerjs
+					<input
+						type="checkbox"
+						class="checkbox"
+						id="allow_video_feed"
+						checked
+					/>
+				</label>
 
-				<label for="video_feed_device">Webcam</label>
-				<select id="video_feed_device"></select
-				><br />
+				<div class="select">
+					<select class="select" id="video_feed_device"></select>
+				</div>
 
-				<video width="160" height="120" id="video_feed"></video>
+				<video width="200" height="150" id="video_feed"></video>
 			</p>
 			<p>
-				<label for="vdo_ninja">OR use vdo.ninja</label>
-				<input type="checkbox" id="vdo_ninja" />
+				<label for="vdo_ninja" class="label">
+					OR use vdo.ninja
+					<input type="checkbox" class="checkbox" id="vdo_ninja" />
+				</label>
+
 				<span id="vdo_ninja_url"></span><br />
 				<iframe
 					allow="autoplay;camera;microphone;fullscreen;picture-in-picture;display-capture;midi;geolocation;gyroscope;"
@@ -67,11 +72,23 @@ const MARKUP = html`
 	</div>
 `;
 
+const cssOverride = new CSSStyleSheet();
+cssOverride.replaceSync(`
+	#vdoninja_iframe {
+		width: 100%;
+		height: 30em;
+	}
+`);
+
 export class NTC_Producer_Settings extends NtcComponent {
 	#domrefs;
 
 	constructor() {
 		super();
+
+		window.BULMA_STYLESHEETS.then(() => {
+			this.shadow.adoptedStyleSheets.push(cssOverride);
+		});
 
 		this.shadow.innerHTML = MARKUP;
 
@@ -90,6 +107,35 @@ export class NTC_Producer_Settings extends NtcComponent {
 		};
 
 		this.#domrefs.clear_config.addEventListener('click', clearConfigAndReset);
+
+		this.resetDevices();
+	}
+
+	async resetDevices() {
+		const { video_feed_device } = this.#domrefs;
+		const devicesList = await getConnectedDevices('videoinput');
+
+		const mappedDevices = devicesList.map(camera => {
+			const device = { label: camera.label, deviceId: camera.deviceId };
+
+			// Drop the manufacturer:make identifier because it's (typically) not useful
+			device.label = device.label.replace(
+				/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/,
+				''
+			);
+
+			return device;
+		});
+
+		video_feed_device.replaceChildren(
+			...mappedDevices.map(camera => {
+				const camera_option = document.createElement('option');
+				camera_option.text = camera.label;
+				camera_option.value = camera.deviceId;
+
+				return camera_option;
+			})
+		);
 	}
 }
 

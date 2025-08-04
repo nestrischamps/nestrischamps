@@ -8,7 +8,7 @@ import './roomview.js';
 import { html } from '../StringUtils.js';
 
 const MARKUP = html`
-	<div id="capture" class="container is-fluid">
+	<div id="capture" class="container is-fluid mt-5">
 		<div
 			id="tabs"
 			class="tabs is-toggle is-toggle-rounded is-fullwidth is-medium"
