@@ -1,8 +1,7 @@
+import QueryString from '/js/QueryString.js';
 import { NtcComponent } from './NtcComponent.js';
-
 import { html } from '../StringUtils.js';
 import { clearConfigAndReset } from '../ConfigUtils.js';
-
 import { getConnectedDevices } from '../MediaUtils.js';
 
 const MARKUP = html`
@@ -29,7 +28,7 @@ const MARKUP = html`
 				</button>
 			</div>
 
-			<div id="timer_control" class="field is-hidden-">
+			<div id="timer_control" class="field is-hidden">
 				<button id="start_timer" class="button">Start Timer</button>
 				for
 				<input type="number" id="minutes" value="120" min="5" max="5949" />
@@ -51,7 +50,7 @@ const MARKUP = html`
 				</label>
 
 				<div class="select">
-					<select class="select" id="video_feed_device"></select>
+					<select class="select" id="video_feed_selector"></select>
 				</div>
 
 				<video width="200" height="150" id="video_feed"></video>
@@ -99,20 +98,36 @@ export class NTC_Producer_Settings extends NtcComponent {
 			timer_control: this.shadow.getElementById('timer_control'),
 			start_timer: this.shadow.getElementById('start_timer'),
 			privacy: this.shadow.getElementById('privacy'),
+
 			allow_video_feed: this.shadow.getElementById('allow_video_feed'),
-			video_feed_device: this.shadow.getElementById('video_feed_device'),
+			video_feed_selector: this.shadow.getElementById('video_feed_selector'),
+			video_feed: this.shadow.getElementById('video_feed'),
+
 			vdo_ninja: this.shadow.getElementById('vdo_ninja'),
 			vdo_ninja_url: this.shadow.getElementById('vdo_ninja_url'),
 			vdoninja_iframe: this.shadow.getElementById('vdoninja_iframe'),
 		};
 
+		this.#domrefs.focus_alarm.addEventListener(
+			'change',
+			this.#onFocusAlarmChange
+		);
 		this.#domrefs.clear_config.addEventListener('click', clearConfigAndReset);
+		this.#domrefs.video_feed_selector.addEventListener(
+			'change',
+			this.#playDevice
+		);
+		this.#domrefs.allow_video_feed.addEventListener(
+			'change',
+			this.#onAllowVideoFeedChange
+		);
+		this.#domrefs.vdo_ninja.addEventListener('change', this.#onVdoNinjaChange);
 
 		this.resetDevices();
 	}
 
 	async resetDevices() {
-		const { video_feed_device } = this.#domrefs;
+		const { video_feed_selector } = this.#domrefs;
 		const devicesList = await getConnectedDevices('videoinput');
 
 		const mappedDevices = devicesList.map(camera => {
@@ -127,8 +142,8 @@ export class NTC_Producer_Settings extends NtcComponent {
 			return device;
 		});
 
-		video_feed_device.replaceChildren(
-			...mappedDevices.map(camera => {
+		video_feed_selector.replaceChildren(
+			...[{ label: '-', deviceId: 'default' }, ...mappedDevices].map(camera => {
 				const camera_option = document.createElement('option');
 				camera_option.text = camera.label;
 				camera_option.value = camera.deviceId;
@@ -137,6 +152,107 @@ export class NTC_Producer_Settings extends NtcComponent {
 			})
 		);
 	}
+
+	#onFocusAlarmChange = () => {
+		const { focus_alarm } = this.#domrefs;
+
+		if (focus_alarm.checked) {
+		} else {
+		}
+	};
+
+	#playDevice = async () => {
+		const { video_feed, video_feed_selector } = this.#domrefs;
+
+		const video_constraints = {
+			width: { ideal: 320 },
+			height: { ideal: 240 },
+			frameRate: { ideal: 15 }, // players hardly move... no need high fps?
+		};
+
+		// TODO: get from connection somehow?
+		const m = (this.view_meta?._video || '').match(/^(\d+)x(\d+)$/);
+
+		if (m) {
+			video_constraints.width.ideal = parseInt(m[1], 10);
+			video_constraints.height.ideal = parseInt(m[2], 10);
+		}
+
+		if (video_feed_selector.value === 'default') {
+			delete video_constraints.deviceId;
+		} else {
+			video_constraints.deviceId = { exact: video_feed_selector.value };
+		}
+
+		console.log(Date.now(), 'Probing for cam feed');
+
+		const stream = await navigator.mediaDevices.getUserMedia({
+			audio: QueryString.get('webcam_audio') === '1',
+			video: video_constraints,
+		});
+
+		video_feed.srcObject = stream;
+		video_feed.play();
+	};
+
+	#onAllowVideoFeedChange = () => {
+		const { allow_video_feed, video_feed, vdo_ninja } = this.#domrefs;
+
+		if (allow_video_feed.checked) {
+			this.#playDevice();
+
+			vdo_ninja.checked = false;
+			this.#onVdoNinjaChange();
+		} else {
+			video_feed.pause();
+			video_feed.srcObject?.getTracks().forEach(track => track.stop());
+			video_feed.srcObject = null;
+		}
+	};
+
+	#onVdoNinjaChange = () => {
+		const { allow_video_feed, vdo_ninja, vdoninja_iframe, vdo_ninja_url } =
+			this.#domrefs;
+
+		if (vdo_ninja.checked) {
+			// 1. start up vdo ninja
+			const chars =
+				'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split(
+					''
+				);
+			const streamid = `_NTC_${Array(8)
+				.fill()
+				.map(() => chars[Math.floor(Math.random() * chars.length)])
+				.join('')}`;
+
+			const url = new URL('https://vdo.ninja/');
+			url.searchParams.set('view', streamid);
+			url.searchParams.set('cover', 1);
+			url.searchParams.set('transparent', 0);
+
+			const viewURL = url.toString();
+
+			url.searchParams.delete('view');
+			url.searchParams.delete('cover');
+			url.searchParams.set('push', streamid);
+			url.searchParams.set('webcam', 1);
+			url.searchParams.set('audiodevice', 0);
+			url.searchParams.set('autostart', 1);
+
+			vdoninja_iframe.src = url.toString();
+
+			// connection.send(['setVdoNinjaURL', viewURL]);
+			navigator.clipboard.writeText(viewURL);
+			vdo_ninja_url.textContent = `${viewURL} (URL has been copied to clipboard)`;
+
+			// 2. cancel peerjs video
+			allow_video_feed.checked = false;
+			this.#onAllowVideoFeedChange();
+		} else {
+			vdoninja_iframe.src = '';
+			vdo_ninja_url.textContent = '';
+		}
+	};
 }
 
 customElements.define('ntc-settings', NTC_Producer_Settings);
