@@ -85,8 +85,8 @@ export class NTC_Producer_Capture extends NtcComponent {
 
 		if (!this.#is_match_room) {
 			// remove the room tab
-			[...tabs].find(tab => tab.dataset.target === 'room').remove();
-			room.remove();
+			// [...tabs].find(tab => tab.dataset.target === 'room').remove();
+			// room.remove();
 		}
 
 		tabContents.forEach(box => box.classList.add('is-hidden'));

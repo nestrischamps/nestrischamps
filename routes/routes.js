@@ -76,31 +76,31 @@ router.get(
 	middlewares.assertSession,
 	middlewares.checkToken,
 	(req, res) => {
+		console.log('/room/producer2');
 		req.originalUrl;
 		res.sendFile(path.join(path.resolve(), `public/producer/index.html`));
 	}
 );
 
 router.get(
-	/^\/room\/(producer|emu)/,
+	/^\/room\/(producer2?|emu)/,
 	middlewares.assertSession,
 	middlewares.checkToken,
 	(req, res) => {
-		req.originalUrl;
-		res.sendFile(
-			path.join(
-				path.resolve(),
-				`public${
-					/producer/.test(req.path) ? '/ocr/ocr.html' : '/emu/index.html'
-				}`
-			)
-		);
+		console.log('/room/producer');
+		const tplPath = /producer2/.test(req.path)
+			? '/producer/index.html'
+			: /producer/.test(req.path)
+				? '/ocr/ocr.html'
+				: '/emu/index.html';
+
+		res.sendFile(path.join(path.resolve(), `public${tplPath}`));
 	}
 );
 
 // access producer by url secret
 router.get(
-	/^\/room\/u\/([^/]+)\/(producer|emu)\/([a-zA-Z0-9-]+)/,
+	/^\/room\/u\/([^/]+)\/(producer2?|emu)\/([a-zA-Z0-9-]+)/,
 	async (req, res) => {
 		const host_user = await UserDAO.getUserByLogin(req.params[0]);
 
@@ -116,14 +116,13 @@ router.get(
 			return;
 		}
 
-		res.sendFile(
-			path.join(
-				path.resolve(),
-				`public${
-					/producer/.test(req.path) ? '/ocr/ocr.html' : '/emu/index.html'
-				}`
-			)
-		);
+		const tplPath = /producer2/.test(req.path)
+			? '/producer/index.html'
+			: /producer/.test(req.path)
+				? '/ocr/ocr.html'
+				: '/emu/index.html';
+
+		res.sendFile(path.join(path.resolve(), `public${tplPath}`));
 	}
 );
 

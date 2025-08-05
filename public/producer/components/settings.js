@@ -10,7 +10,7 @@ const MARKUP = html`
 			<legend>Controls</legend>
 
 			<div class="field">
-				<label class="checkbox">
+				<label class="checkbox" for="focus_alarm">
 					Enable Focus Alarm
 					<input type="checkbox" class="checkbox" id="focus_alarm" checked />
 				</label>
@@ -39,29 +39,33 @@ const MARKUP = html`
 		<fieldset id="privacy" class="column">
 			<legend>Privacy / Camera</legend>
 			<p>
-				<label for="allow_video_feed" class="label">
-					Share webcam feed with peerjs
-					<input
-						type="checkbox"
-						class="checkbox"
-						id="allow_video_feed"
-						checked
-					/>
-				</label>
-
-				<div class="select">
-					<select class="select" id="video_feed_selector"></select>
+				<div class="field">
+					<label for="allow_video_feed" class="checkbox">
+						Share webcam feed with peerjs
+						<input
+							type="checkbox"
+							class="checkbox"
+							id="allow_video_feed"
+							checked
+						/>
+					</label>
 				</div>
 
+				<div class="select">
+					<select id="video_feed_selector"></select>
+				</div>
+				<br />
 				<video width="200" height="150" id="video_feed"></video>
 			</p>
 			<p>
-				<label for="vdo_ninja" class="label">
-					OR use vdo.ninja
-					<input type="checkbox" class="checkbox" id="vdo_ninja" />
-				</label>
-
-				<span id="vdo_ninja_url"></span><br />
+				<div class="field">
+					<label class="checkbox">
+						OR use vdo.ninja
+						<input type="checkbox" class="checkbox" id="vdo_ninja" />
+					</label>
+				</div>
+				<div id="vdo_ninja_url"></div>
+				<br />
 				<iframe
 					allow="autoplay;camera;microphone;fullscreen;picture-in-picture;display-capture;midi;geolocation;gyroscope;"
 					id="vdoninja_iframe"
@@ -242,8 +246,26 @@ export class NTC_Producer_Settings extends NtcComponent {
 			vdoninja_iframe.src = url.toString();
 
 			// connection.send(['setVdoNinjaURL', viewURL]);
-			navigator.clipboard.writeText(viewURL);
-			vdo_ninja_url.textContent = `${viewURL} (URL has been copied to clipboard)`;
+			const a = document.createElement('a');
+			a.href = a.textContent = viewURL;
+
+			a.addEventListener('click', event => {
+				event.preventDefault();
+				event.stopPropagation();
+				navigator.clipboard.writeText(viewURL);
+
+				vdo_ninja_url.querySelectorAll('div').forEach(s => s.remove());
+
+				const div = document.createElement('div');
+				div.innerHTML = `<i>(URL has been copied to clipboard)</i>`;
+
+				vdo_ninja_url.append(div);
+
+				setTimeout(() => div.remove(), 1000);
+			});
+
+			vdo_ninja_url.replaceChildren(a);
+			a.click();
 
 			// 2. cancel peerjs video
 			allow_video_feed.checked = false;
