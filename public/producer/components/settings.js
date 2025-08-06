@@ -229,30 +229,29 @@ export class NTC_Producer_Settings extends NtcComponent {
 				.map(() => chars[Math.floor(Math.random() * chars.length)])
 				.join('')}`;
 
-			const url = new URL('https://vdo.ninja/');
-			url.searchParams.set('view', streamid);
-			url.searchParams.set('cover', 1);
-			url.searchParams.set('transparent', 0);
+			const pushURL = new URL('https://vdo.ninja/');
+			pushURL.searchParams.set('push', streamid);
+			pushURL.searchParams.set('transparent', 0);
+			pushURL.searchParams.set('webcam', 1);
+			pushURL.searchParams.set('audiodevice', 0);
+			pushURL.searchParams.set('autostart', 1);
+			pushURL.searchParams.set('easyexit', 1);
 
-			const viewURL = url.toString();
+			vdoninja_iframe.src = pushURL.toString();
 
-			url.searchParams.delete('view');
-			url.searchParams.delete('cover');
-			url.searchParams.set('push', streamid);
-			url.searchParams.set('webcam', 1);
-			url.searchParams.set('audiodevice', 0);
-			url.searchParams.set('autostart', 1);
-
-			vdoninja_iframe.src = url.toString();
+			const viewURL = new URL('https://vdo.ninja/');
+			viewURL.searchParams.set('view', streamid);
+			viewURL.searchParams.set('cover', 1);
+			viewURL.searchParams.set('transparent', 0);
 
 			// connection.send(['setVdoNinjaURL', viewURL]);
 			const a = document.createElement('a');
-			a.href = a.textContent = viewURL;
+			a.href = a.textContent = viewURL.toString();
 
 			a.addEventListener('click', event => {
 				event.preventDefault();
 				event.stopPropagation();
-				navigator.clipboard.writeText(viewURL);
+				navigator.clipboard.writeText(viewURL.toString());
 
 				vdo_ninja_url.querySelectorAll('div').forEach(s => s.remove());
 
