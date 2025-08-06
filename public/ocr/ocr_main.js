@@ -148,7 +148,6 @@ let game_tracker;
 let config;
 let connection;
 let pending_calibration = false;
-let in_calibration = false;
 
 device_selector.addEventListener('change', evt => {
 	config.device_id = device_selector.value;
@@ -161,13 +160,12 @@ device_selector.addEventListener('change', evt => {
 		showProducerUI();
 		tabs[1].click(); // data
 	} else {
+		config.use_half_height = false;
+		use_half_height.checked = false;
+
 		if (config.device_id === 'window') {
-			config.use_half_height = false;
-			use_half_height.checked = false;
 			use_half_height.parentNode.style.display = 'none';
 		} else {
-			config.use_half_height = false;
-			use_half_height.checked = false;
 			use_half_height.parentNode.style.display = null;
 		}
 
@@ -508,11 +506,10 @@ video.controls = false;
 video.style.cursor = 'crosshair';
 video.addEventListener('click', async evt => {
 	evt.preventDefault();
-	if (!pending_calibration || in_calibration) return;
+	if (!pending_calibration) return;
 
 	// TODO: should be a state system
 	// pending_calibration = false;
-	// in_calibration = true;
 
 	const video_styles = getComputedStyle(video);
 	const ratioX = evt.offsetX / css_size(video_styles.width);
@@ -1738,21 +1735,37 @@ function toCol(col_tuple) {
 }
 
 function saveConfig(config) {
+	const {
+		device_id,
+		game_type,
+		palette,
+		frame_rate,
+		focus_alarm,
+		allow_video_feed,
+		video_feed_device_id,
+		brightness,
+		contrast,
+		score7,
+		use_half_height,
+		use_worker_for_interval,
+		handle_retron_levels_6_7,
+	} = config;
+
 	// need to drop non-serializable fields
 	const config_copy = {
-		device_id: config.device_id,
-		game_type: config.game_type,
-		palette: config.palette,
-		frame_rate: config.frame_rate,
-		focus_alarm: config.focus_alarm,
-		allow_video_feed: config.allow_video_feed,
-		video_feed_device_id: config.video_feed_device_id,
-		brightness: config.brightness,
-		contrast: config.contrast,
-		score7: config.score7,
-		use_half_height: config.use_half_height,
-		use_worker_for_interval: config.use_worker_for_interval,
-		handle_retron_levels_6_7: config.handle_retron_levels_6_7,
+		device_id,
+		game_type,
+		palette,
+		frame_rate,
+		focus_alarm,
+		allow_video_feed,
+		video_feed_device_id,
+		brightness,
+		contrast,
+		score7,
+		use_half_height,
+		use_worker_for_interval,
+		handle_retron_levels_6_7,
 		tasks: {},
 	};
 
@@ -1875,6 +1888,7 @@ function showPerfData(perf) {
 }
 
 function trackAndSendFrames() {
+	console.log('trackAndSendFrames');
 	if (show_parts.checked) {
 		showConfigControls(templates, palettes, config);
 	}
