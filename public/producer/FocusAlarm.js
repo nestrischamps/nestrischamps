@@ -87,10 +87,11 @@ function monitor() {
 let monitorId = null;
 
 export function enableFocusMonitoring() {
+	monitorId = timer.clearInterval(monitorId);
 	monitorId = timer.setInterval(monitor, target_interval);
 }
 
 export function disableFocusMonitoring() {
 	stopUnfocusedAlarm();
-	timer.clearInterval(monitorId);
+	monitorId = timer.clearInterval(monitorId);
 }
