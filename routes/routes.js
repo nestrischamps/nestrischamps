@@ -72,17 +72,6 @@ router.get(
 /**/
 
 router.get(
-	/^\/room\/producer2/,
-	middlewares.assertSession,
-	middlewares.checkToken,
-	(req, res) => {
-		console.log('/room/producer2');
-		req.originalUrl;
-		res.sendFile(path.join(path.resolve(), `public/producer/index.html`));
-	}
-);
-
-router.get(
 	/^\/room\/(producer2?|emu)/,
 	middlewares.assertSession,
 	middlewares.checkToken,
@@ -149,7 +138,6 @@ router.get(
 	}
 );
 
-// This route should only be allowed by admin for non-owner
 router.get(
 	'/room/u/:login/view/:layout',
 	middlewares.assertSession,
@@ -162,6 +150,27 @@ router.get(
 			return;
 		}
 
+		const layout = layouts[req.params.layout];
+
+		if (!layout) {
+			res.status(404).send('Layout Not found');
+			return;
+		}
+
+		res.sendFile(
+			path.join(
+				path.resolve(),
+				`public/views/${layout.type}/${layout.file}.html`
+			)
+		);
+	}
+);
+
+router.get(
+	'/room/view/:layout',
+	middlewares.assertSession,
+	middlewares.checkToken,
+	async (req, res) => {
 		const layout = layouts[req.params.layout];
 
 		if (!layout) {

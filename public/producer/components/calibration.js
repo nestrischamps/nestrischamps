@@ -126,6 +126,10 @@ cssOverride.replaceSync(`
 		top: 0;
 		padding-top: 1.5em;
 	}
+
+	#device_video {
+		width: 360px;
+	}
 `);
 
 export class NTC_Producer_Calibration extends NtcComponent {

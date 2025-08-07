@@ -104,14 +104,6 @@ export class NTC_Producer_Capture extends NtcComponent {
 						box.classList.add('is-hidden');
 					}
 				});
-
-				// TODOv2: handle room clear inside the component
-				if (target === 'room') {
-					destroyRoomViewTO = clearTimeout(destroyRoomViewTO);
-					loadRoomView();
-				} else if (this.#roomIFrame) {
-					destroyRoomViewTO = setTimeout(destroyRoomView, 15000); // 15 seconds to allow users to click around
-				}
 			});
 		});
 	}

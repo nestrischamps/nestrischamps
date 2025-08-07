@@ -1,46 +1,74 @@
+import QueryString from '/js/QueryString.js';
 import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
 
 const MARKUP = html`
 	<div id="room">
-		<div class="controls container mt-5 has-text-centered">
+		<div class="controls container mt-5 mb-4 has-text-centered">
 			<button class="button is-success" id="setReady">Set Ready</button>
 			<button class="button is-danger" id="notReady">Not Ready</button>
 		</div>
-		<div class="view"></div>
+		<div id="view"></div>
 	</div>
 `;
 
 export class NTC_Producer_RoomView extends NtcComponent {
 	#domrefs;
 	#roomIFrame;
+	#observer;
+	#destroyIframeTO;
 
 	constructor() {
 		super();
 
 		this.shadow.innerHTML = MARKUP;
+		this.style.display = 'block'; // needed for this.clientWidth to be non-zero
 
 		this.#domrefs = {
 			setReady: this.shadow.getElementById('setReady'),
 			notReady: this.shadow.getElementById('notReady'),
 			view: this.shadow.getElementById('view'),
 		};
+
+		this.#observer = new IntersectionObserver(this.#observerCallBack);
 	}
 
-	loadRoomView() {
-		if (!is_match_room) {
-			console.warn('View in private room is not supported');
-			return;
-		}
+	connectedCallback() {
+		this.#observer.observe(this);
+	}
 
-		const view_url = this.getViewURL();
+	disconnectedCallback() {
+		this.#observer.disconnect();
+	}
+
+	#observerCallBack = (entries, observer) => {
+		this.#destroyIframeTO = clearTimeout(this.#destroyIframeTO);
+
+		entries.forEach(entry => {
+			if (entry.isIntersecting) {
+				console.log('Room is visible!');
+				this.#loadRoomView();
+			} else {
+				console.log('Room is not visible.');
+				this.#destroyIframeTO = setTimeout(this.#destroyRoomView, 15000); // 15 seconds to allow users to click around
+			}
+		});
+	};
+
+	#loadRoomView() {
+		const view_url = this.#getViewURL();
 
 		if (this.#roomIFrame) {
-			if (this.#roomIFrame.getAttribute('src') === view_url) return; // same view, nothing to do
+			if (this.#roomIFrame.getAttribute('src') === view_url) {
+				// same view, nothing to
+				console.log(`iframe is already loaded correctly`);
+				return;
+			}
 
 			// there's already an iframe, but we need to reload the correct layout
 			// clear first and fall through
-			this.destroyRoomView();
+			console.log(`Clearing old iframe`);
+			this.#destroyRoomView();
 		}
 
 		const iFrameStyles = {
@@ -53,58 +81,56 @@ export class NTC_Producer_RoomView extends NtcComponent {
 		Object.assign(this.#roomIFrame.style, iFrameStyles);
 		this.#roomIFrame.setAttribute('src', view_url);
 
-		if (view_meta?._size === '720') {
-			this.#roomIFrame.setAttribute('width', 1280);
-			this.#roomIFrame.setAttribute('height', 720);
-		} else if (view_meta?._size === '750') {
-			this.#roomIFrame.setAttribute('width', 1334);
-			this.#roomIFrame.setAttribute('height', 750);
-		} else {
-			this.#roomIFrame.setAttribute('width', 1920);
-			this.#roomIFrame.setAttribute('height', 1080);
-		}
+		const size =
+			this.view_meta?._size === '720'
+				? { w: 1280, h: 720 }
+				: this.view_meta?._size === '750'
+					? { w: 1334, h: 750 }
+					: { w: 1920, h: 1080 };
 
-		this.resizeRoomIFrame();
+		this.#roomIFrame.setAttribute('width', size.w);
+		this.#roomIFrame.setAttribute('height', size.h);
 
 		this.#domrefs.view.appendChild(this.#roomIFrame);
 
-		window.addEventListener('resize', resizeRoomIFrame);
+		window.addEventListener('resize', this.#resizeRoomIFrame);
+		this.#resizeRoomIFrame();
 	}
 
-	resizeRoomIFrame = () => {
+	#resizeRoomIFrame = () => {
 		if (!this.#roomIFrame) return;
 
 		const size =
-			view_meta?._size === '720'
+			this.view_meta?._size === '720'
 				? 1280
-				: view_meta?._size === '750'
+				: this.view_meta?._size === '750'
 					? 1334
 					: 1920;
 
-		if (room.clientWidth >= size) {
+		if (this.clientWidth >= size) {
 			if (!this.#roomIFrame.style.transform) return;
 			this.#roomIFrame.style.transform = null;
 		} else {
-			const scale = room.clientWidth / size;
+			const scale = this.clientWidth / size;
 			this.#roomIFrame.style.transform = `scale(${scale})`;
 		}
 	};
 
-	getLayout(layout) {
+	#getLayout(layout) {
 		return layout && /^[a-z0-9_]+$/.test(layout) ? layout : null;
 	}
 
-	getViewURL() {
+	#getViewURL() {
 		const producer_url = new URL(document.location);
 		const searchParams = new URLSearchParams();
 
 		let mainViewLayout;
 
-		if (view_meta) {
-			mainViewLayout = this.getLayout(view_meta._layout);
+		if (false && this.view_meta) {
+			mainViewLayout = this.#getLayout(this.view_meta._layout);
 
 			// add remote view settings (all except private keys)
-			Object.entries(view_meta)
+			Object.entries(this.view_meta)
 				.filter(([key, _]) => !key.startsWith('_'))
 				.forEach(([key, value]) => searchParams.set(key, value));
 		}
@@ -127,11 +153,12 @@ export class NTC_Producer_RoomView extends NtcComponent {
 		return `${producer_url.origin}${newPathname}?${searchParams}`;
 	}
 
-	destroyRoomView() {
+	#destroyRoomView = () => {
+		console.log(`Removing room iframe`);
 		this.#roomIFrame.remove();
-		window.removeEventListener('resize', resizeRoomIFrame);
+		window.removeEventListener('resize', this.#resizeRoomIFrame);
 		this.#roomIFrame = null;
-	}
+	};
 }
 
 customElements.define('ntc-roomview', NTC_Producer_RoomView);
