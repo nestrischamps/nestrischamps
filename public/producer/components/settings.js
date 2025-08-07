@@ -94,6 +94,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 		});
 
 		this.shadow.innerHTML = MARKUP;
+		this.style.display = 'block';
 
 		this.#domrefs = {
 			focus_alarm: this.shadow.getElementById('focus_alarm'),

@@ -64,6 +64,7 @@ export class NTC_Producer_Capture extends NtcComponent {
 		super();
 
 		this.shadow.innerHTML = MARKUP;
+		this.style.display = 'block';
 
 		this.#domrefs = {
 			tabs: this.shadow.querySelectorAll('#tabs li'),

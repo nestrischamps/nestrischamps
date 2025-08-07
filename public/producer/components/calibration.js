@@ -143,6 +143,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		});
 
 		this.shadow.innerHTML = MARKUP;
+		this.style.display = 'block';
 
 		this.#domrefs = {
 			show_parts: this.shadow.getElementById('show_parts'),

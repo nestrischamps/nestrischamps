@@ -46,6 +46,7 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 		});
 
 		this.shadow.innerHTML = MARKUP;
+		this.style.display = 'block';
 
 		this.#domrefs = {
 			frame_data: this.shadow.getElementById('frame_data'),
