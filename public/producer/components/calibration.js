@@ -112,11 +112,11 @@ const MARKUP = html`
 				</div>
 			</div>
 			<div id="adjustments" class="column is-7">
-				<ntc-cropcontrol name="score"></ntc-cropcontrol>
-				<ntc-cropcontrol name="lines"></ntc-cropcontrol>
-				<ntc-cropcontrol name="level"></ntc-cropcontrol>
-				<ntc-cropcontrol name="preview"></ntc-cropcontrol>
-				<ntc-cropcontrol name="field"></ntc-cropcontrol>
+				<ntc-cropcontrol id="score"></ntc-cropcontrol>
+				<ntc-cropcontrol id="lines"></ntc-cropcontrol>
+				<ntc-cropcontrol id="level"></ntc-cropcontrol>
+				<ntc-cropcontrol id="preview"></ntc-cropcontrol>
+				<ntc-cropcontrol id="field"></ntc-cropcontrol>
 			</div>
 		</div>
 	</div>
@@ -192,6 +192,8 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			contrast_slider: this.shadow.querySelector('.field.contrast input'),
 			contrast_value: this.shadow.querySelector('.field.contrast span'),
 			contrast_reset: this.shadow.querySelector('.field.contrast a'),
+
+			score: this.shadow.getElementById('score'),
 		};
 
 		this.#domrefs.brightness_slider.addEventListener(
@@ -222,6 +224,14 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			'change',
 			this.#onCaptureRateChange
 		);
+
+		this.addEventListener('crop-coordinate-change', console.log);
+
+		this.#domrefs.score.setCoordinates({ x: 2, y: 3, w: 4, h: 5 });
+		const canvas = document.createElement('canvas');
+		canvas.width = 5;
+		canvas.height = 5;
+		this.#domrefs.score.setCaptureCanvas(canvas);
 	}
 
 	connectedCallback() {
