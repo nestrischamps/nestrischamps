@@ -213,22 +213,17 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		);
 
 		Object.entries(ATTRIBUTES).forEach(([key, { name, init }]) => {
-			console.log({ key, name, init });
 			this.attributeChangedCallback(name, '', this.getAttribute(name) || init);
 		});
 	}
 
 	attributeChangedCallback(name, oldValue, newValue) {
-		console.log({ name, oldValue, newValue });
-
 		if (oldValue === newValue) {
 			return;
 		}
 
 		const settingElement =
 			this.#domrefs[name.replace(/^enable-/, '').replace(/-/g, '_')];
-
-		console.log({ settingElement });
 
 		if (!settingElement) return;
 
