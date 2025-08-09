@@ -53,7 +53,7 @@ const MARKUP = html`
 					Use Web Worker for interval ⓘ
 					<input
 						type="checkbox"
-						id="use_worker_for_interval"
+						id="web_worker_timer"
 						checked
 						autocomplete="off"
 					/>
@@ -132,8 +132,27 @@ cssOverride.replaceSync(`
 	}
 `);
 
+const ATTRIBUTES = {
+	enableShowParts: {
+		name: 'enable-show-parts',
+		init: 'true',
+	},
+	enableWebWorkerTimer: {
+		name: 'enable-web-worker-timer',
+		init: 'false',
+	},
+	enableCaptureRate: {
+		name: 'enable-capture-rate',
+		init: 'true',
+	},
+};
+
 export class NTC_Producer_Calibration extends NtcComponent {
 	#domrefs;
+
+	static get observedAttributes() {
+		return ['name', 'color'];
+	}
 
 	constructor() {
 		super();
@@ -152,9 +171,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			handle_retron_levels_6_7: this.shadow.getElementById(
 				'handle_retron_levels_6_7'
 			),
-			use_worker_for_interval: this.shadow.getElementById(
-				'use_worker_for_interval'
-			),
+			web_worker_timer: this.shadow.getElementById('web_worker_timer'),
 			capture_rate: this.shadow.getElementById('capture_rate'),
 
 			brightness_slider: this.shadow.querySelector('.field.brightness input'),
@@ -182,6 +199,42 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			'click',
 			this.#onContrastReset
 		);
+		this.#domrefs.show_parts.addEventListener(
+			'change',
+			this.#onShowPartsChange
+		);
+		this.#domrefs.web_worker_timer.addEventListener(
+			'change',
+			this.#onUseWebWorkerForInterval
+		);
+		this.#domrefs.capture_rate.addEventListener(
+			'change',
+			this.#onCaptureRateChange
+		);
+
+		Object.entries(ATTRIBUTES).forEach(([key, { name, init }]) => {
+			console.log({ key, name, init });
+			this.attributeChangedCallback(name, '', this.getAttribute(name) || init);
+		});
+	}
+
+	attributeChangedCallback(name, oldValue, newValue) {
+		console.log({ name, oldValue, newValue });
+
+		if (oldValue === newValue) {
+			return;
+		}
+
+		const settingElement =
+			this.#domrefs[name.replace(/^enable-/, '').replace(/-/g, '_')];
+
+		console.log({ settingElement });
+
+		if (!settingElement) return;
+
+		settingElement
+			.closest('.field')
+			.classList[newValue === 'true' ? 'remove' : 'add']('is-hidden');
 	}
 
 	#onBrightnessChange = () => {
@@ -229,6 +282,10 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			this.#onContrastChange();
 		}
 	};
+
+	#onShowPartsChange() {}
+	#onUseWebWorkerForInterval() {}
+	#onCaptureRateChange() {}
 }
 
 customElements.define('ntc-calibration', NTC_Producer_Calibration);

@@ -154,6 +154,7 @@ export class NTC_Producer_RoomView extends NtcComponent {
 	}
 
 	#destroyRoomView = () => {
+		if (!this.#roomIFrame) return;
 		console.log(`Removing room iframe`);
 		this.#roomIFrame.remove();
 		window.removeEventListener('resize', this.#resizeRoomIFrame);

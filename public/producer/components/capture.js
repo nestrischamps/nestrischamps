@@ -50,6 +50,9 @@ const MARKUP = html`
 		<ntc-calibration
 			id="calibration"
 			class="tab-item is-hidden"
+			enable-show-parts="true"
+			enable-web-worker-timer="false"
+			enable-capture-rate="true"
 		></ntc-calibration>
 		<ntc-roomview id="room" class="tab-item is-hidden"></ntc-roomview>
 	</div>
@@ -64,7 +67,6 @@ export class NTC_Producer_Capture extends NtcComponent {
 		super();
 
 		this.shadow.innerHTML = MARKUP;
-		this.style.display = 'block';
 
 		this.#domrefs = {
 			tabs: this.shadow.querySelectorAll('#tabs li'),
