@@ -1,3 +1,5 @@
+import './cropcontrol.js';
+
 import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
 
@@ -104,18 +106,28 @@ const MARKUP = html`
 		</fieldset>
 
 		<div id="extraction" class="container columns">
-			<div id="capture-container" class="column">
+			<div id="capture-container" class="column is-5">
 				<div id="capture">
 					<video id="device_video" playsinline controls="false"></video>
 				</div>
 			</div>
-			<div id="adjustments" class="column"></div>
+			<div id="adjustments" class="column is-7">
+				<ntc-cropcontrol name="score"></ntc-cropcontrol>
+				<ntc-cropcontrol name="lines"></ntc-cropcontrol>
+				<ntc-cropcontrol name="level"></ntc-cropcontrol>
+				<ntc-cropcontrol name="preview"></ntc-cropcontrol>
+				<ntc-cropcontrol name="field"></ntc-cropcontrol>
+			</div>
 		</div>
 	</div>
 `;
 
 const cssOverride = new CSSStyleSheet();
 cssOverride.replaceSync(`
+	:host {
+		display: block
+	}
+
 	#capture {
 		margin-right: 1em;
 		display: flex;
@@ -151,7 +163,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	#domrefs;
 
 	static get observedAttributes() {
-		return ['name', 'color'];
+		return Object.values(ATTRIBUTES).map(v => v.name);
 	}
 
 	constructor() {
@@ -162,7 +174,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		});
 
 		this.shadow.innerHTML = MARKUP;
-		this.style.display = 'block';
 
 		this.#domrefs = {
 			show_parts: this.shadow.getElementById('show_parts'),
@@ -205,16 +216,20 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		);
 		this.#domrefs.web_worker_timer.addEventListener(
 			'change',
-			this.#onUseWebWorkerForInterval
+			this.#onWebWorkerTimerChange
 		);
 		this.#domrefs.capture_rate.addEventListener(
 			'change',
 			this.#onCaptureRateChange
 		);
+	}
 
-		Object.entries(ATTRIBUTES).forEach(([key, { name, init }]) => {
-			this.attributeChangedCallback(name, '', this.getAttribute(name) || init);
-		});
+	connectedCallback() {
+		Object.values(ATTRIBUTES)
+			.filter(({ name }) => !this.hasAttribute(name))
+			.forEach(({ name, init }) => {
+				this.attributeChangedCallback(name, '', init);
+			});
 	}
 
 	attributeChangedCallback(name, oldValue, newValue) {
@@ -279,7 +294,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	};
 
 	#onShowPartsChange() {}
-	#onUseWebWorkerForInterval() {}
+	#onWebWorkerTimerChange() {}
 	#onCaptureRateChange() {}
 }
 

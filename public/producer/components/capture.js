@@ -50,9 +50,6 @@ const MARKUP = html`
 		<ntc-calibration
 			id="calibration"
 			class="tab-item is-hidden"
-			enable-show-parts="true"
-			enable-web-worker-timer="false"
-			enable-capture-rate="true"
 		></ntc-calibration>
 		<ntc-roomview id="room" class="tab-item is-hidden"></ntc-roomview>
 	</div>

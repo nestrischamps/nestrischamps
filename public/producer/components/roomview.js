@@ -12,6 +12,13 @@ const MARKUP = html`
 	</div>
 `;
 
+const cssOverride = new CSSStyleSheet();
+cssOverride.replaceSync(`
+	:host {
+		display: block
+	}
+`);
+
 export class NTC_Producer_RoomView extends NtcComponent {
 	#domrefs;
 	#roomIFrame;
@@ -21,8 +28,11 @@ export class NTC_Producer_RoomView extends NtcComponent {
 	constructor() {
 		super();
 
+		window.BULMA_STYLESHEETS.then(() => {
+			this.shadow.adoptedStyleSheets.push(cssOverride);
+		});
+
 		this.shadow.innerHTML = MARKUP;
-		this.style.display = 'block'; // needed for this.clientWidth to be non-zero
 
 		this.#domrefs = {
 			setReady: this.shadow.getElementById('setReady'),
