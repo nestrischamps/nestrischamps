@@ -4,7 +4,7 @@ import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
 
 const MARKUP = html`
-	<div id="calibration" class="container">
+	<div id="calibration" class="">
 		<fieldset class="inputs">
 			<legend>Controls</legend>
 
@@ -105,7 +105,7 @@ const MARKUP = html`
 			</div>
 		</fieldset>
 
-		<div id="extraction" class="container columns">
+		<div id="extraction" class="columns">
 			<div id="capture-container" class="column is-5">
 				<div id="capture">
 					<video id="device_video" playsinline controls="false"></video>

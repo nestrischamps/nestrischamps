@@ -40,6 +40,46 @@ function logStreamDetails(stream) {
 	/**/
 }
 
+async function getStream(config) {
+	if (config.device_id === 'everdrive' || !config.device_id) {
+		throw new Exception(`getSream(): Unexpected device id`);
+	}
+
+	const default_frame_rate = 60;
+
+	try {
+		if (config.device_id === 'window') {
+			const constraints = {
+				audio: false,
+				video: {
+					cursor: 'never',
+					frameRate: { ideal: fps },
+				},
+			};
+
+			return await navigator.mediaDevices.getDisplayMedia(constraints);
+		} else {
+			const constraints = {
+				audio: false,
+				video: {
+					deviceId: { exact: device_id },
+					height: { ideal: 720 },
+					frameRate: { ideal: config.frame_rate || default_frame_rate }, // Should we always try to get the highest the card can support?
+				},
+			};
+
+			console.log(
+				`Capture Constraints: ${JSON.stringify(constraints, null, 2)}`
+			);
+
+			return await navigator.mediaDevices.getUserMedia(constraints);
+		}
+	} catch (err) {
+		console.error(`Unable to get stream: ${err.message}`);
+		throw err;
+	}
+}
+
 export async function playVideoFromDevice(video, device_id, fps = 60) {
 	console.log('playVideoFromDevice()');
 

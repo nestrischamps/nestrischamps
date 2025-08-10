@@ -4,6 +4,8 @@ import './components/capture.js';
 import QueryString from '/js/QueryString.js';
 import { sleep, timer } from './timer.js';
 import { hasConfig, loadConfig } from './ConfigUtils.js';
+import { getStream } from '../MediaUtils.js';
+import { Connection } from 'pg';
 
 function loadCaptureUI() {
 	const element = document.createElement('ntc-capture');
@@ -11,16 +13,11 @@ function loadCaptureUI() {
 	document.body.prepend(element);
 }
 
+let pipeline;
+
 (async function main() {
 	// unfortunate bootstrap delay, but makes everything else simpler later on
 	await timer.init();
-
-	// initTabControls();
-
-	// check if timer should be made visible
-	if (QueryString.get('timer') === '1') {
-		timer_control.classList.remove('is_hidden');
-	}
 
 	// load external assets - could parrallelize
 	// templates = await loadDigitTemplates();
@@ -29,19 +26,31 @@ function loadCaptureUI() {
 	// showTemplates(templates);
 	// await updatePaletteList();
 
-	loadCaptureUI();
-	return;
+	if (hasConfig()) {
+		const config = loadConfig();
 
-	if (false && hasConfig()) {
-		config = loadConfig();
+		if (config.device_id === 'everdrive') {
+		} else {
+			// transformation of color numbers for old configs
+			// TODO: delete when everyone is using the new config
+			if (config.tasks.color1 && !config.tasks.color3) {
+				config.tasks.color3 = config.tasks.color2;
+				config.tasks.color2 = config.tasks.color1;
 
-		// transformation of color numbers for old configs
-		// TODO: delete when everyone is using the new config
-		if (config.tasks.color1 && !config.tasks.color3) {
-			config.tasks.color3 = config.tasks.color2;
-			config.tasks.color2 = config.tasks.color1;
+				delete config.tasks.color1;
+			}
 
-			delete config.tasks.color1;
+			const stream = getStream(config);
+			const ocr = new cpuTetrisORC(stream, config);
+			const gameTracker = new GameTracker();
+			const connection = new Connection();
+
+			pipeline = new pipeline(
+				[ocr, 'onFrame'],
+				[gameTracker, 'setFrame'],
+				[gameTracker, 'onFrame'],
+				[connection, 'sendFrame']
+			);
 		}
 
 		await resetDevices();
