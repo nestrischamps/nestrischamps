@@ -84,27 +84,28 @@ export class NTC_Producer_Capture extends NtcComponent {
 		const { tabs, tabContents, room } = this.#domrefs;
 
 		if (!this.#is_match_room) {
-			// remove the room tab
-			// [...tabs].find(tab => tab.dataset.target === 'room').remove();
-			// room.remove();
+			[...tabs].find(tab => tab.dataset.target === 'room').remove();
+			room.remove();
 		}
 
 		tabContents.forEach(box => box.classList.add('is-hidden'));
 
 		tabs.forEach(tab => {
 			tab.addEventListener('click', () => {
-				tabs.forEach(tab => tab.classList.remove('is-active'));
-				tab.classList.add('is-active');
-
-				const target = tab.dataset.target;
-				tabContents.forEach(box => {
-					if (box.getAttribute('id') === target) {
-						box.classList.remove('is-hidden');
-					} else {
-						box.classList.add('is-hidden');
-					}
-				});
+				this.#showTab(tab.dataset.target);
 			});
+		});
+	}
+
+	#showTab(id) {
+		const { tabs, tabContents } = this.#domrefs;
+		const tab = [...tabs].find(tab => tab.dataset.target === id);
+
+		tabs.forEach(tab => tab.classList.remove('is-active'));
+		tab.classList.add('is-active');
+
+		tabContents.forEach(box => {
+			box.classList[box.id === id ? 'remove' : 'add']('is-hidden');
 		});
 	}
 }
