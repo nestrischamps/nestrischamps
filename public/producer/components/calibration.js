@@ -111,12 +111,22 @@ const MARKUP = html`
 					<video id="device_video" playsinline controls="false"></video>
 				</div>
 			</div>
-			<div id="adjustments" class="column is-7">
+			<div id="adjustments" class="column is-7" data-crop-scope>
 				<ntc-cropcontrol id="score"></ntc-cropcontrol>
 				<ntc-cropcontrol id="lines"></ntc-cropcontrol>
 				<ntc-cropcontrol id="level"></ntc-cropcontrol>
 				<ntc-cropcontrol id="preview"></ntc-cropcontrol>
 				<ntc-cropcontrol id="field"></ntc-cropcontrol>
+				<ntc-cropcontrol id="color1" bind="colors-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="color2" bind="colors-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="color3" bind="colors-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="T" bind="stats-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="J" bind="stats-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="Z" bind="stats-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="O" bind="stats-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="S" bind="stats-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="L" bind="stats-xw"></ntc-cropcontrol>
+				<ntc-cropcontrol id="I" bind="stats-xw"></ntc-cropcontrol>
 			</div>
 		</div>
 	</div>
@@ -226,6 +236,11 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		);
 
 		this.addEventListener('crop-coordinate-change', console.log);
+		this.addEventListener('crop-coordinate-group-change', event => {
+			console.log(event);
+			console.log(event.target.id);
+			console.log([...event.detail.group].map(element => element.id));
+		});
 
 		this.#domrefs.score.setCoordinates({ x: 2, y: 3, w: 4, h: 5 });
 		const canvas = document.createElement('canvas');
