@@ -45,12 +45,25 @@ let pipeline;
 			const gameTracker = new GameTracker();
 			const connection = new Connection();
 
-			pipeline = new pipeline(
-				[ocr, 'onFrame'],
-				[gameTracker, 'setFrame'],
-				[gameTracker, 'onFrame'],
-				[connection, 'sendFrame']
-			);
+			ocr.onFrame = (ocrdata, perfdata) => {
+				// ocrdata contains ONLY OCR data
+				// e.g. the board is 200 color values
+				// preview is a collection of shine points at known coordinates
+
+				gameTracker.setFrame(data);
+			};
+
+			if (showFrame) {
+				ocr.onFrame = () => {
+					// add one step of processing and display
+					ocr.updateCanvas();
+				};
+			}
+
+			gameTracker.onframe = data => {
+				// dedup duplicate frames
+				connection.send(data);
+			};
 		}
 
 		await resetDevices();

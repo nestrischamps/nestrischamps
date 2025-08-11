@@ -31,7 +31,7 @@ export function hasConfig() {
 	return true;
 }
 
-function getGameTypeFromTasks(tasks) {
+export function getGameTypeFromTasks(tasks) {
 	return tasks.T
 		? BinaryFrame.GAME_TYPE.CLASSIC
 		: tasks.cur_piece_das

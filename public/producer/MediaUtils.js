@@ -23,29 +23,23 @@ export async function getConnectedDevices(type) {
 	return devices;
 }
 
-function logStreamDetails(stream) {
+export function logStreamDetails(stream) {
 	const track = stream.getVideoTracks()[0];
 	const settings = track.getSettings();
 	const capabilities = track.getCapabilities?.() || null;
 
 	console.log(`Stream Details: ${JSON.stringify(settings, null, 2)}`);
 	console.log(`Stream Capabilities: ${JSON.stringify(capabilities, null, 2)}`);
-
-	/*
-	console.log(
-		`Video settings: ${settings.width}x${
-			settings.height
-		}@${settings.frameRate.toFixed(1)}fps`
-	);
-	/**/
 }
 
-async function getStream(config) {
+export async function getStream(config) {
 	if (config.device_id === 'everdrive' || !config.device_id) {
 		throw new Exception(`getSream(): Unexpected device id`);
 	}
 
 	const default_frame_rate = 60;
+
+	let stream;
 
 	try {
 		if (config.device_id === 'window') {
@@ -57,7 +51,8 @@ async function getStream(config) {
 				},
 			};
 
-			return await navigator.mediaDevices.getDisplayMedia(constraints);
+			stream = await navigator.mediaDevices.getDisplayMedia(constraints);
+			stream.ntcType = 'screencap';
 		} else {
 			const constraints = {
 				audio: false,
@@ -72,8 +67,12 @@ async function getStream(config) {
 				`Capture Constraints: ${JSON.stringify(constraints, null, 2)}`
 			);
 
-			return await navigator.mediaDevices.getUserMedia(constraints);
+			stream = await navigator.mediaDevices.getUserMedia(constraints);
+			stream.ntcType = 'device';
 		}
+
+		logStreamDetails(stream);
+		return stream;
 	} catch (err) {
 		console.error(`Unable to get stream: ${err.message}`);
 		throw err;

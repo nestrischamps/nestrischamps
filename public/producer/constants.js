@@ -1,6 +1,17 @@
-import QueryString from '/js/QueryString.js';
-import Connection from '/js/connection.js';
-import BinaryFrame from '/js/BinaryFrame.js';
+const GAME_TYPE = {
+	MINIMAL: 0,
+	CLASSIC: 1,
+	DAS_TRAINER: 2,
+};
+
+export const PATTERN_MAX_INDEXES = {
+	B: 3, // null, 0, 1 (Binary)
+	T: 4, // null, 0, 1, 2 (Ternary)
+	Q: 6, // null, 0, 1, 2, 3, 4 (Quintic)
+	D: 11, // null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 (Digits)
+	L: 13, // null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A, B (Level)
+	A: 17, // null, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, A, B, C, D, E, F (Alphanums)
+};
 
 export const REFERENCE_SIZE = { w: 512, h: 448 };
 export const REFERENCE_LOCATIONS = {
@@ -52,6 +63,8 @@ function getDigitsWidth(n) {
 	return 16 * n - 2;
 }
 
+const piece_counter = { w: getDigitsWidth(3), h: 14 };
+
 export const TASK_RESIZE = {
 	score: { w: getDigitsWidth(6), h: 14 },
 	score7: { w: getDigitsWidth(7), h: 14 },
@@ -66,7 +79,13 @@ export const TASK_RESIZE = {
 	color2: { w: 5, h: 5 },
 	color3: { w: 5, h: 5 },
 	stats: { w: getDigitsWidth(3), h: 14 * 7 + 14 * 7 },
-	piece_count: { w: getDigitsWidth(3), h: 14 },
+	T: { ...piece_counter },
+	J: { ...piece_counter },
+	Z: { ...piece_counter },
+	O: { ...piece_counter },
+	S: { ...piece_counter },
+	L: { ...piece_counter },
+	I: { ...piece_counter },
 	gym_pause: { w: 22, h: 1 },
 };
 
@@ -74,7 +93,7 @@ export const GYM_PAUSE_CROP_RELATIVE_TO_FIELD = { x: 37, y: 47, w: 22, h: 1 };
 
 export const CONFIGS = {
 	classic: {
-		game_type: BinaryFrame.GAME_TYPE.CLASSIC,
+		game_type: GAME_TYPE.CLASSIC,
 		reference: '/ocr/reference_ui_classic.png',
 		fields: [
 			'score',
@@ -96,7 +115,7 @@ export const CONFIGS = {
 		webgpu: {
 			packing_size: { w: getDigitsWidth(7), h: 256 },
 			packing_positions: {
-				/* sizes come from TASK_RESIZE */ score: { x: 0, y: 0 },
+				score: { x: 0, y: 0 },
 				lines: { x: 0, y: 16 },
 				level: { x: 48, y: 16 },
 				preview: { x: 0, y: 32 },
@@ -118,7 +137,7 @@ export const CONFIGS = {
 		},
 	},
 	das_trainer: {
-		game_type: BinaryFrame.GAME_TYPE.DAS_TRAINER,
+		game_type: GAME_TYPE.DAS_TRAINER,
 		reference: '/ocr/reference_ui_das_trainer.png',
 		palette: 'easiercap',
 		fields: [
@@ -148,7 +167,7 @@ export const CONFIGS = {
 		},
 	},
 	minimal: {
-		game_type: BinaryFrame.GAME_TYPE.MINIMAL,
+		game_type: GAME_TYPE.MINIMAL,
 		reference: '/ocr/reference_ui_classic.png',
 		palette: 'easiercap',
 		fields: ['score', 'level', 'lines', 'field', 'preview'],
