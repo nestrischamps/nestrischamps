@@ -46,8 +46,6 @@ cssOverride.replaceSync(`
 
     canvas {
         image-rendering: pixelated;
-        image-rendering: -webkit-optimize-contrast;
-        image-rendering: -moz-crisp-edges;
     }
 `);
 
@@ -79,12 +77,6 @@ export class NTC_Crop_Control extends NtcComponent {
 			w: this.shadow.getElementById('w'),
 			h: this.shadow.getElementById('h'),
 		};
-
-		if (this.getAttribute('name')) {
-			this.#domrefs.legend.textContent = this.getAttribute('name');
-		} else if (this.id) {
-			this.#domrefs.legend.textContent = this.id;
-		}
 
 		this.shadow.querySelectorAll('input[type=number]').forEach(input => {
 			input.addEventListener('change', this.#handleCoordinateChange);
@@ -126,6 +118,8 @@ export class NTC_Crop_Control extends NtcComponent {
 	}
 
 	connectedCallback() {
+		this.#domrefs.legend.textContent = this.id;
+
 		this.#groupSettings = this.#getGroupSettings();
 
 		if (!this.#groupSettings) return;

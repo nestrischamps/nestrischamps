@@ -4,8 +4,8 @@ import './components/capture.js';
 import QueryString from '/js/QueryString.js';
 import { sleep, timer } from './timer.js';
 import { hasConfig, loadConfig } from './ConfigUtils.js';
-import { getStream } from '../MediaUtils.js';
-import { Connection } from 'pg';
+import { getStream } from './MediaUtils.js';
+import { CpuTetrisOCR } from './cpuTetrisOCR.js';
 
 function loadCaptureUI() {
 	const element = document.createElement('ntc-capture');
@@ -13,9 +13,8 @@ function loadCaptureUI() {
 	document.body.prepend(element);
 }
 
-let pipeline;
-
 (async function main() {
+	console.log('main');
 	// unfortunate bootstrap delay, but makes everything else simpler later on
 	await timer.init();
 
@@ -27,6 +26,7 @@ let pipeline;
 	// await updatePaletteList();
 
 	if (hasConfig()) {
+		console.log('has config');
 		const config = loadConfig();
 
 		if (config.device_id === 'everdrive') {
@@ -40,30 +40,39 @@ let pipeline;
 				delete config.tasks.color1;
 			}
 
-			const stream = getStream(config);
-			const ocr = new cpuTetrisORC(stream, config);
-			const gameTracker = new GameTracker();
-			const connection = new Connection();
+			const stream = await getStream(config);
 
-			ocr.onFrame = (ocrdata, perfdata) => {
-				// ocrdata contains ONLY OCR data
-				// e.g. the board is 200 color values
-				// preview is a collection of shine points at known coordinates
+			console.log({ stream });
 
-				gameTracker.setFrame(data);
-			};
+			const ocr = new CpuTetrisOCR(stream, config);
 
-			if (showFrame) {
-				ocr.onFrame = () => {
-					// add one step of processing and display
-					ocr.updateCanvas();
-				};
-			}
+			loadCaptureUI();
 
-			gameTracker.onframe = data => {
-				// dedup duplicate frames
-				connection.send(data);
-			};
+			document.getElementById('capture').setOCR(ocr);
+
+			return;
+			// const gameTracker = new GameTracker();
+			// const connection = new Connection();
+
+			// ocr.onFrame = (ocrdata, perfdata) => {
+			// 	// ocrdata contains ONLY OCR data
+			// 	// e.g. the board is 200 color values
+			// 	// preview is a collection of shine points at known coordinates
+
+			// 	gameTracker.setFrame(data);
+			// };
+
+			// if (showFrame) {
+			// 	ocr.onFrame = () => {
+			// 		// add one step of processing and display
+			// 		ocr.updateCanvas();
+			// 	};
+			// }
+
+			// gameTracker.onframe = data => {
+			// 	// dedup duplicate frames
+			// 	connection.send(data);
+			// };
 		}
 
 		await resetDevices();
@@ -113,31 +122,19 @@ let pipeline;
 		const wizard = document.createElement('ntc-wizard');
 		document.body.prepend(wizard);
 
-		wizard.addEventListener('config-ready', async evt => {
-			console.log(`Received config-ready`, { config: evt.detail.config });
+		wizard.addEventListener(
+			'config-ready',
+			async evt => {
+				console.log(`Received config-ready`, { config: evt.detail.config });
 
-			await sleep(0);
+				await sleep(0);
 
-			wizard.remove();
+				wizard.remove();
 
-			loadCaptureUI();
-		});
-
-		/*
-		capture_rate.value = default_frame_rate;
-
-		// create default dummy waiting to be populated by user selection
-		config = {
-			frame_rate: default_frame_rate,
-			tasks: {},
-		};
-
-		video.classList.add('is-hidden');
-		wizard.append(video);
-		wizard.classList.remove('is-hidden');
-
-		// TODO: await completion of the calibration before connecting
-        /**/
+				loadCaptureUI();
+			},
+			{ once: true }
+		);
 	}
 
 	// we connect last so UI is ready before we try to send any data or video feed

@@ -9,7 +9,7 @@ export class TetrisOCR {
 	constructor(stream, config) {
 		this.config = config;
 
-		this.configData = Object.values(CONFIG).find(
+		this.configData = Object.values(CONFIGS).find(
 			conf => conf.game_type === config.game_type
 		);
 
@@ -23,11 +23,11 @@ export class TetrisOCR {
 
 		this.setConfig(config);
 
-		this.output_canvas = new Canvas();
+		this.output_canvas = document.createElement('canvas');
 		this.output_canvas.width = this.configData.webgpu.packing_size.w;
 		this.output_canvas.height = this.configData.webgpu.packing_size.h;
 
-		this.capture_canvas = new Canvas();
+		this.capture_canvas = document.createElement('canvas');
 
 		this.video.addEventListener(
 			'loadedmetadata',
@@ -77,6 +77,8 @@ export class TetrisOCR {
 		}
 
 		for (const [name, task] of Object.entries(this.all_tasks)) {
+			console.log({ name, task });
+
 			let resize_tuple;
 
 			if (name === 'score' && config.score7) {
@@ -85,7 +87,7 @@ export class TetrisOCR {
 				resize_tuple = TASK_RESIZE[name];
 			}
 
-			const canvas = new Canvas();
+			const canvas = document.createElement('canvas');
 			canvas.width = resize_tuple.w;
 			canvas.height = resize_tuple.h;
 

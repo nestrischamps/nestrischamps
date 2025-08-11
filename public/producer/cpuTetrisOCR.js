@@ -1,4 +1,4 @@
-import { TetrisOCR } from './TetrisOCR';
+import { TetrisOCR } from './TetrisOCR.js';
 
 export class CpuTetrisOCR extends TetrisOCR {
 	constructor(stream, config) {
@@ -33,7 +33,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
 			task.canvas_ctx.drawImage(
-				this.capture_context,
+				this.capture_canvas,
 				task.crop.x,
 				task.crop.y,
 				task.crop.w,

@@ -57,7 +57,7 @@ export async function getStream(config) {
 			const constraints = {
 				audio: false,
 				video: {
-					deviceId: { exact: device_id },
+					deviceId: { exact: config.device_id },
 					height: { ideal: 720 },
 					frameRate: { ideal: config.frame_rate || default_frame_rate }, // Should we always try to get the highest the card can support?
 				},

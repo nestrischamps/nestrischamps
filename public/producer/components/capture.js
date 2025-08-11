@@ -108,6 +108,10 @@ export class NTC_Producer_Capture extends NtcComponent {
 			box.classList[box.id === id ? 'remove' : 'add']('is-hidden');
 		});
 	}
+
+	setOCR(ocr) {
+		this.#domrefs.calibration.setOCR(ocr);
+	}
 }
 
 customElements.define('ntc-capture', NTC_Producer_Capture);

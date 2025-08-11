@@ -186,6 +186,9 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		this.shadow.innerHTML = MARKUP;
 
 		this.#domrefs = {
+			capture: this.shadow.getElementById('capture'),
+			adjustments: this.shadow.getElementById('adjustments'),
+
 			show_parts: this.shadow.getElementById('show_parts'),
 			use_half_height: this.shadow.getElementById('use_half_height'),
 			score7: this.shadow.getElementById('score7'),
@@ -202,8 +205,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			contrast_slider: this.shadow.querySelector('.field.contrast input'),
 			contrast_value: this.shadow.querySelector('.field.contrast span'),
 			contrast_reset: this.shadow.querySelector('.field.contrast a'),
-
-			score: this.shadow.getElementById('score'),
 		};
 
 		this.#domrefs.brightness_slider.addEventListener(
@@ -241,12 +242,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			console.log(event.target.id);
 			console.log([...event.detail.group].map(element => element.id));
 		});
-
-		this.#domrefs.score.setCoordinates({ x: 2, y: 3, w: 4, h: 5 });
-		const canvas = document.createElement('canvas');
-		canvas.width = 5;
-		canvas.height = 5;
-		this.#domrefs.score.setCaptureCanvas(canvas);
 	}
 
 	connectedCallback() {
@@ -321,6 +316,31 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	#onShowPartsChange() {}
 	#onWebWorkerTimerChange() {}
 	#onCaptureRateChange() {}
+
+	setOCR(ocr) {
+		const { capture, adjustments } = this.#domrefs;
+
+		capture.replaceChildren(ocr.video, ocr.capture_canvas, ocr.output_canvas);
+
+		adjustments.replaceChildren(
+			...Object.entries(ocr.all_tasks).map(([name, task]) => {
+				const control = document.createElement('ntc-cropcontrol');
+
+				control.id = name;
+
+				if (/^color/.test(name)) {
+					control.setAttribute('bind', 'colors-xw');
+				} else if (name.length === 1) {
+					control.setAttribute('bind', 'stats-xw');
+				}
+
+				control.setCoordinates(task.crop);
+				control.setCaptureCanvas(task.canvas);
+
+				return control;
+			})
+		);
+	}
 }
 
 customElements.define('ntc-calibration', NTC_Producer_Calibration);
