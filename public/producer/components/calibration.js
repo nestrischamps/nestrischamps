@@ -293,9 +293,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		const value = parseFloat(brightness_slider.value);
 		brightness_value.textContent = value.toFixed(2);
 
-		// config.brightness = value;
-		// saveConfig(config);
-		// updateImageCorrection();
+		this.ocr.config.brightness = value;
 	};
 
 	#onBrightnessReset = evt => {
@@ -316,9 +314,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		const value = parseFloat(contrast_slider.value);
 		contrast_value.textContent = value.toFixed(2);
 
-		// config.contrast = value;
-		// saveConfig(config);
-		// updateImageCorrection();
+		this.ocr.config.contrast = value;
 	};
 
 	#onContrastReset = evt => {
@@ -340,7 +336,8 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	setOCR(ocr) {
 		this.ocr = ocr;
 
-		const { capture, adjustments } = this.#domrefs;
+		const { capture, adjustments, contrast_slider, brightness_slider } =
+			this.#domrefs;
 
 		capture.replaceChildren(ocr.video, ocr.capture_canvas, ocr.output_canvas);
 
@@ -362,6 +359,12 @@ export class NTC_Producer_Calibration extends NtcComponent {
 				return control;
 			})
 		);
+
+		contrast_slider.value = this.ocr.config.contrast;
+		brightness_slider.value = this.ocr.config.brightness;
+
+		this.#onBrightnessChange();
+		this.#onContrastChange();
 	}
 }
 
