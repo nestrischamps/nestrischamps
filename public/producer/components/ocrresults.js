@@ -17,14 +17,16 @@ const MARKUP = html`
 const cssOverride = new CSSStyleSheet();
 cssOverride.replaceSync(`
 	dl {
-		display: grid;
+		display: inline-grid;
 		grid-template-columns: max-content auto;
 		font-family: monospace;
 		margin: 1em 0;
+		column-gap: 1em;
 	}
 
 	dt {
 		grid-column-start: 1;
+		text-align: right;
 	}
 
 	dd {
@@ -32,6 +34,7 @@ cssOverride.replaceSync(`
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		text-align: right;
 	}
 `);
 
@@ -54,7 +57,18 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 		};
 	}
 
-	set perfData(perf) {
+	setOCR(ocr) {
+		this.ocr = ocr;
+
+		ocr.addEventListener('frame', this.#handleFrame);
+	}
+
+	#handleFrame = ({ detail: { frame, perf } }) => {
+		this.#setFrameData(frame);
+		this.#setPerfData(perf);
+	};
+
+	#setPerfData(perf) {
 		const { perf_data } = this.#domrefs;
 
 		for (const [name, value] of Object.entries(perf)) {
@@ -82,7 +96,7 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 		}
 	}
 
-	set frameData(data) {
+	#setFrameData(data) {
 		if (!data) return;
 
 		const { frame_data } = this.#domrefs;
@@ -90,7 +104,7 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 		for (const [name, value] of Object.entries(data)) {
 			if (name === 'raw') continue;
 
-			let dt = perf_data.querySelector(`dt.${name}`);
+			let dt = frame_data.querySelector(`dt.${name}`);
 			let dd;
 
 			if (dt) {

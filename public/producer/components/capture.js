@@ -110,6 +110,7 @@ export class NTC_Producer_Capture extends NtcComponent {
 	}
 
 	setOCR(ocr) {
+		this.#domrefs.ocr_results.setOCR(ocr);
 		this.#domrefs.calibration.setOCR(ocr);
 	}
 }

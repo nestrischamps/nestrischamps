@@ -5,8 +5,10 @@ import {
 	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
 } from './constants.js';
 
-export class TetrisOCR {
+export class TetrisOCR extends EventTarget {
 	constructor(stream, config) {
+		super();
+
 		this.config = config;
 
 		this.configData = Object.values(CONFIGS).find(
@@ -24,10 +26,12 @@ export class TetrisOCR {
 		this.setConfig(config);
 
 		this.output_canvas = document.createElement('canvas');
+		this.output_canvas.id = 'output_canvas';
 		this.output_canvas.width = this.configData.webgpu.packing_size.w;
 		this.output_canvas.height = this.configData.webgpu.packing_size.h;
 
 		this.capture_canvas = document.createElement('canvas');
+		this.capture_canvas.id = 'capture_canvas';
 
 		this.video.addEventListener(
 			'loadedmetadata',
@@ -124,16 +128,39 @@ export class TetrisOCR {
 
 		if ('MediaStreamTrackProcessor' in window) {
 			for await (const frame of this.#frameGenerator()) {
-				await this.processVideoFrame(frame);
+				await this.#work(frame);
 				frame.close();
 			}
 		} else {
 			const frame_ms = 1000 / this.config.frame_rate;
 
-			this.captureIntervalId = timer.setInterval(() => {
-				this.processVideoFrame();
+			this.captureIntervalId = timer.setInterval(async () => {
+				await this.#work();
 			});
 		}
+	}
+
+	async #work(frame) {
+		await this.processVideoFrame(frame);
+
+		const perf = {};
+
+		performance.getEntriesByType('measure').forEach(m => {
+			// discard browser performance measurements -_-
+			if (m.name.startsWith('browser::')) return;
+			if (m.name.startsWith('invoke-')) return;
+			if (m.name.startsWith('inline-')) return;
+			if (m.name.startsWith('DOM-')) return;
+			if (m.name.startsWith('ANALYZE_')) return;
+
+			perf[m.name] = m.duration.toFixed(3);
+		});
+
+		const event = new CustomEvent('frame', {
+			detail: { frame: {}, perf },
+		});
+
+		this.dispatchEvent(event);
 	}
 
 	async processVideoFrame() {

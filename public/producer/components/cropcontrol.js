@@ -46,6 +46,7 @@ cssOverride.replaceSync(`
 
     canvas {
         image-rendering: pixelated;
+		border: 1px white solid;
     }
 `);
 
@@ -180,10 +181,12 @@ export class NTC_Crop_Control extends NtcComponent {
 	}
 
 	setCaptureCanvas(canvas) {
+		const scale = this.canvasScaleFactor * (/^color/.test(this.id) ? 2 : 1);
+
 		// TODO: replace by an additional adopted stylesheet to hide from inline dom inspection...
 		Object.assign(canvas.style, {
-			width: `${canvas.width * this.canvasScaleFactor}px`,
-			height: `${canvas.height * this.canvasScaleFactor}px`,
+			width: `${canvas.width * scale}px`,
+			height: `${canvas.height * scale}px`,
 		});
 
 		this.#domrefs.capture.replaceChildren(canvas);
@@ -199,7 +202,7 @@ export class NTC_Crop_Control extends NtcComponent {
 			bubbles: true,
 			composed: true, // Allows the event to cross Shadow DOM boundaries
 			detail: {
-				name: this.getAttribute('name') || this.id, // field name (e.g. score, lines)
+				name: this.id, // field name (e.g. score, lines)
 
 				og_target: sourceEvent.target,
 
@@ -229,7 +232,7 @@ export class NTC_Crop_Control extends NtcComponent {
 			bubbles: true,
 			composed: true, // Allows the event to cross Shadow DOM boundaries
 			detail: {
-				name: this.getAttribute('name') || this.id, // field name (e.g. score, lines)
+				name: this.id, // field name (e.g. score, lines)
 
 				groupName,
 				group,

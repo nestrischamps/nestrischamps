@@ -111,23 +111,7 @@ const MARKUP = html`
 					<video id="device_video" playsinline controls="false"></video>
 				</div>
 			</div>
-			<div id="adjustments" class="column is-7" data-crop-scope>
-				<ntc-cropcontrol id="score"></ntc-cropcontrol>
-				<ntc-cropcontrol id="lines"></ntc-cropcontrol>
-				<ntc-cropcontrol id="level"></ntc-cropcontrol>
-				<ntc-cropcontrol id="preview"></ntc-cropcontrol>
-				<ntc-cropcontrol id="field"></ntc-cropcontrol>
-				<ntc-cropcontrol id="color1" bind="colors-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="color2" bind="colors-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="color3" bind="colors-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="T" bind="stats-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="J" bind="stats-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="Z" bind="stats-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="O" bind="stats-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="S" bind="stats-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="L" bind="stats-xw"></ntc-cropcontrol>
-				<ntc-cropcontrol id="I" bind="stats-xw"></ntc-cropcontrol>
-			</div>
+			<div id="adjustments" class="column is-7" data-crop-scope></div>
 		</div>
 	</div>
 `;
@@ -149,8 +133,12 @@ cssOverride.replaceSync(`
 		padding-top: 1.5em;
 	}
 
-	#device_video {
+	#capture video {
 		width: 360px;
+	}
+
+	canvas:first-of-type {
+		width: 500px;
 	}
 `);
 
@@ -236,13 +224,45 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			this.#onCaptureRateChange
 		);
 
-		this.addEventListener('crop-coordinate-change', console.log);
-		this.addEventListener('crop-coordinate-group-change', event => {
-			console.log(event);
-			console.log(event.target.id);
-			console.log([...event.detail.group].map(element => element.id));
-		});
+		this.addEventListener(
+			'crop-coordinate-change',
+			this.#handleCropCoordinateChange
+		);
+		this.addEventListener(
+			'crop-coordinate-group-change',
+			this.#handleCropCoordinateGroupChange
+		);
 	}
+
+	#handleCropCoordinateChange = event => {
+		event.stopPropagation();
+
+		const {
+			detail: { name, key, value },
+		} = event;
+
+		console.log({ name, key, value });
+
+		if (!this.ocr?.config?.tasks?.[name]) return;
+
+		this.ocr.config.tasks[name].crop[key] = value;
+	};
+
+	#handleCropCoordinateGroupChange = event => {
+		event.stopPropagation();
+
+		const {
+			detail: { group, key, value },
+		} = event;
+
+		[...group]
+			.map(element => element.id)
+			.forEach(name => {
+				if (!this.ocr?.config?.tasks?.[name]) return;
+
+				this.ocr.config.tasks[name].crop[key] = value;
+			});
+	};
 
 	connectedCallback() {
 		Object.values(ATTRIBUTES)
@@ -318,6 +338,8 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	#onCaptureRateChange() {}
 
 	setOCR(ocr) {
+		this.ocr = ocr;
+
 		const { capture, adjustments } = this.#domrefs;
 
 		capture.replaceChildren(ocr.video, ocr.capture_canvas, ocr.output_canvas);

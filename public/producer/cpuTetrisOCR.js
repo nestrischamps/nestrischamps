@@ -22,6 +22,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 	async processVideoFrame(videoFrame) {
 		const { width, height } = this.capture_canvas;
 
+		performance.mark(`start`);
+
 		this.capture_context.drawImage(
 			videoFrame || this.video,
 			0,
@@ -29,6 +31,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 			width,
 			height
 		);
+
+		performance.mark(`draw`);
 
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
@@ -44,5 +48,26 @@ export class CpuTetrisOCR extends TetrisOCR {
 				task.canvas.height
 			);
 		});
+
+		performance.mark(`extract`);
+
+		this.capture_context.fillStyle = '#FFA50080';
+
+		this.configData.fields.forEach(name => {
+			const task = this.config.tasks[name];
+
+			this.capture_context.fillRect(
+				task.crop.x,
+				task.crop.y,
+				task.crop.w,
+				task.crop.h
+			);
+		});
+
+		performance.mark(`highlight`);
+
+		performance.measure('draw', `start`, `draw`);
+		performance.measure('extract', `draw`, `extract`);
+		performance.measure('highlight', `extract`, `highlight`);
 	}
 }
