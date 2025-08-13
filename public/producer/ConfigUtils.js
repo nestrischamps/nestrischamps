@@ -49,11 +49,17 @@ export function loadConfig() {
 			parsed.game_type = getGameTypeFromTasks(parsed.tasks);
 		}
 
+		parsed.save = function () {
+			saveConfig(this);
+		};
+
 		return parsed;
 	}
 }
 
 export function saveConfig(config) {
+	console.log('saveConfig');
+
 	const {
 		device_id,
 		game_type,
@@ -123,5 +129,8 @@ export function getDefaultOcrConfig() {
 		use_worker_for_interval: true,
 		handle_retron_levels_6_7: false,
 		tasks: {},
+		save: function () {
+			saveConfig(this);
+		},
 	};
 }

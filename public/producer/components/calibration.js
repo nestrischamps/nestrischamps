@@ -246,6 +246,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		if (!this.ocr?.config?.tasks?.[name]) return;
 
 		this.ocr.config.tasks[name].crop[key] = value;
+		this.ocr.config.save();
 	};
 
 	#handleCropCoordinateGroupChange = event => {
@@ -262,6 +263,8 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 				this.ocr.config.tasks[name].crop[key] = value;
 			});
+
+		this.ocr.config.save();
 	};
 
 	connectedCallback() {
@@ -294,6 +297,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		brightness_value.textContent = value.toFixed(2);
 
 		this.ocr.config.brightness = value;
+		this.ocr.config.save();
 	};
 
 	#onBrightnessReset = evt => {
@@ -315,6 +319,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		contrast_value.textContent = value.toFixed(2);
 
 		this.ocr.config.contrast = value;
+		this.ocr.config.save();
 	};
 
 	#onContrastReset = evt => {
