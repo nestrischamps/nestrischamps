@@ -34,7 +34,6 @@ cssOverride.replaceSync(`
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
-		text-align: right;
 	}
 `);
 
@@ -123,7 +122,12 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 			if (name === 'field') {
 				const rows = Array(20)
 					.fill()
-					.map((_, idx) => value.slice(idx * 10, (idx + 1) * 10).join(''));
+					.map((_, idx) =>
+						value
+							.slice(idx * 10, (idx + 1) * 10)
+							.map(v => (v ? 1 : 0))
+							.join('')
+					);
 				dd.innerHTML = `${rows.join('<br/>')}`;
 			} else {
 				dd.textContent = value;

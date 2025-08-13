@@ -339,12 +339,21 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	#onCaptureRateChange() {}
 
 	setOCR(ocr) {
+		if (this.ocr) {
+			this.ocr.removeEventListener('frame', this.#handleFrame);
+		}
+
 		this.ocr = ocr;
 
 		const { capture, adjustments, contrast_slider, brightness_slider } =
 			this.#domrefs;
 
-		capture.replaceChildren(ocr.video, ocr.capture_canvas, ocr.output_canvas);
+		capture.replaceChildren(
+			ocr.video,
+			ocr.capture_canvas,
+			// ocr.output_canvas,
+			ocr.digit_canvas_1
+		);
 
 		adjustments.replaceChildren(
 			...Object.entries(ocr.all_tasks).map(([name, task]) => {
@@ -370,7 +379,20 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 		this.#onBrightnessChange();
 		this.#onContrastChange();
+
+		this.ocr.addEventListener('frame', this.#handleFrame);
 	}
+
+	#handleFrame = event => {
+		const {
+			detail: { frame, perf },
+		} = event;
+
+		Object.entries(frame).forEach(([name, value]) => {
+			const control = this.shadow.getElementById(name);
+			control?.setOCRResults?.(value);
+		});
+	};
 }
 
 customElements.define('ntc-calibration', NTC_Producer_Calibration);

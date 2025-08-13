@@ -12,7 +12,7 @@ const PATTERN_MAX_INDEXES = {
 };
 
 const PERF_METHODS = [
-	'getSourceImageData',
+	//	'getSourceImageData',
 	'scanScore',
 	'scanLevel',
 	'scanLines',

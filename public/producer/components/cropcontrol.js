@@ -48,6 +48,15 @@ cssOverride.replaceSync(`
         image-rendering: pixelated;
 		border: 1px white solid;
     }
+
+	#results {
+		font-size: 2em;
+	}
+
+	pre {
+		display: inline-block;
+		padding: 0;
+	}
 `);
 
 export class NTC_Crop_Control extends NtcComponent {
@@ -192,9 +201,64 @@ export class NTC_Crop_Control extends NtcComponent {
 		this.#domrefs.capture.replaceChildren(canvas);
 	}
 
-	setOCRResult(results) {
-		// dirty but include formatting logic based on OCR type type...
-		this.#domrefs.ocr.replaceChildren(results);
+	setOCRResults(results) {
+		const { ocr: holder } = this.#domrefs;
+
+		if (holder.children.length <= 0) {
+			if (this.id.startsWith('color')) {
+				const color_result = document.createElement('div');
+				color_result.classList.add('col_res');
+				color_result.style.display = 'inline-block';
+				color_result.style.width = '25px';
+				color_result.style.height = '25px';
+
+				holder.appendChild(color_result);
+			} else if (this.id === 'field') {
+				const field_result = document.createElement('canvas');
+				field_result.width = 158;
+				field_result.height = 318;
+				field_result.classList.add('field_res');
+				field_result.style.display = 'inline-block';
+
+				const ctx = field_result.getContext('2d', { alpha: false });
+				ctx.fillStyle = '#000000';
+				ctx.fillRect(0, 0, 158, 318);
+
+				holder.appendChild(field_result);
+			}
+
+			const text_result = document.createElement('pre');
+
+			holder.appendChild(text_result);
+		}
+
+		if (this.id.startsWith('color')) {
+			const color = `rgb(${results[0]},${results[1]},${results[2]})`;
+			holder.querySelector(`.col_res`).style.backgroundColor = color;
+			holder.querySelector(`pre`).textContent = color;
+		} else if (this.id != 'field') {
+			holder.querySelector(`pre`).innerHTML =
+				results === null ? '&nbsp;' : results;
+		} else {
+			const canvas = holder.querySelector(`.field_res`);
+			const ctx = canvas.getContext('2d', { alpha: false });
+
+			ctx.fillStyle = '#000000';
+			ctx.fillRect(0, 0, 158, 318);
+
+			for (let ridx = 0; ridx < 20; ridx++) {
+				const row = results.slice(ridx * 10, ridx * 10 + 10);
+
+				row.forEach((col, cidx) => {
+					const r = (col >> 24) & 0xff;
+					const g = (col >> 16) & 0xff;
+					const b = (col >> 8) & 0xff;
+					const a = ((col >> 0) & 0xff) / 255;
+					ctx.fillStyle = `rgb(${r},${g},${b},${a})`;
+					ctx.fillRect(cidx * 16, ridx * 16, 14, 14);
+				});
+			}
+		}
 	}
 
 	#handleCoordinateChange = sourceEvent => {
