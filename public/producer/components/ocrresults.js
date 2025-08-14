@@ -103,7 +103,7 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 		for (const [name, value] of Object.entries(data)) {
 			if (name === 'raw') continue;
 
-			let dt = frame_data.querySelector(`dt.${name}`);
+			let dt = frame_data.querySelector(`dt._${name}`);
 			let dd;
 
 			if (dt) {
@@ -112,7 +112,7 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 				dt = document.createElement('dt');
 				dd = document.createElement('dd');
 
-				dt.classList.add(name);
+				dt.classList.add(`_${name}`);
 				dt.textContent = name;
 
 				frame_data.appendChild(dt);
