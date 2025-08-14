@@ -43,6 +43,7 @@ export class TetrisOCR extends EventTarget {
 		this.output_canvas.height = this.configData.packing.size.h;
 
 		this.capture_canvas = document.createElement('canvas');
+		this.capture_canvas.imageSmoothingEnabled = false;
 		this.capture_canvas.id = 'capture_canvas';
 
 		this.digit_canvas_0 = document.createElement('canvas');
@@ -254,9 +255,12 @@ export class TetrisOCR extends EventTarget {
 			perf[m.name] = m.duration.toFixed(3);
 		});
 
-		const { total } = perf;
+		const { ocr, total } = perf;
 
 		delete perf.total;
+		delete perf.ocr;
+
+		perf.ocr_total = ocr;
 		perf.TOTAL = total;
 
 		const event = new CustomEvent('frame', {

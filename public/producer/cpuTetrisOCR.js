@@ -26,10 +26,12 @@ export class CpuTetrisOCR extends TetrisOCR {
 		super(stream, config);
 
 		this.capture_ctx = this.capture_canvas.getContext('2d', {
+			alpha: false,
 			willReadFrequently: true,
 		});
 
 		this.output_ctx = this.output_canvas.getContext('2d', {
+			alpha: false,
 			willReadFrequently: true,
 		});
 
@@ -48,6 +50,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 		for (const task of Object.values(this.all_tasks)) {
 			task.canvas_ctx = task.canvas.getContext('2d', {
+				alpha: false,
 				willReadFrequently: true,
 			});
 		}
@@ -68,20 +71,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
 
-			// 1. to the individual canvas
-			task.canvas_ctx.drawImage(
-				this.capture_canvas,
-				task.crop.x,
-				task.crop.y,
-				task.crop.w,
-				task.crop.h,
-				0,
-				0,
-				task.canvas.width,
-				task.canvas.height
-			);
-
-			// 2. to the packing output canvas
+			// 1. to the packing output canvas
 			this.output_ctx.drawImage(
 				this.capture_canvas,
 				task.crop.x,
@@ -93,22 +83,39 @@ export class CpuTetrisOCR extends TetrisOCR {
 				task.canvas.width,
 				task.canvas.height
 			);
+
+			if (!this.config.show_parts) return;
+
+			// 2. to the individual canvas
+			task.canvas_ctx.drawImage(
+				this.capture_canvas,
+				task.crop.x,
+				task.crop.y,
+				task.crop.w,
+				task.crop.h,
+				0,
+				0,
+				task.canvas.width,
+				task.canvas.height
+			);
 		});
 
 		performance.mark(`get_areas`);
 
-		// draw the orange regions on the capture canvas
-		this.capture_ctx.fillStyle = '#FFA50080';
-		this.configData.fields.forEach(name => {
-			const task = this.config.tasks[name];
+		if (this.config.show_parts) {
+			// draw the orange regions on the capture canvas
+			this.capture_ctx.fillStyle = '#FFA50080';
+			this.configData.fields.forEach(name => {
+				const task = this.config.tasks[name];
 
-			this.capture_ctx.fillRect(
-				task.crop.x,
-				task.crop.y,
-				task.crop.w,
-				task.crop.h
-			);
-		});
+				this.capture_ctx.fillRect(
+					task.crop.x,
+					task.crop.y,
+					task.crop.w,
+					task.crop.h
+				);
+			});
+		}
 
 		performance.mark(`highlight`);
 

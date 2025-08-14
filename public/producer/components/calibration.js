@@ -141,6 +141,7 @@ const ATTRIBUTES = {
 
 export class NTC_Producer_Calibration extends NtcComponent {
 	#domrefs;
+	#hidePartsTID;
 
 	static get observedAttributes() {
 		return Object.values(ATTRIBUTES).map(v => v.name);
@@ -201,6 +202,10 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			this.#onUseHalfHeightChange
 		);
 		this.#domrefs.score7.addEventListener('change', this.#onScore7Change);
+		this.#domrefs.handle_retron_levels_6_7.addEventListener(
+			'change',
+			this.#onHandleRetron67Change
+		);
 		this.#domrefs.capture_rate.addEventListener(
 			'change',
 			this.#onCaptureRateChange
@@ -223,12 +228,12 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			detail: { name, key, value },
 		} = event;
 
-		console.log({ name, key, value });
-
 		if (!this.ocr?.config?.tasks?.[name]) return;
 
 		this.ocr.config.tasks[name].crop[key] = value;
 		this.ocr.config.save();
+
+		this.#restartHidePartsTimeout();
 	};
 
 	#handleCropCoordinateGroupChange = event => {
@@ -255,6 +260,10 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			.forEach(({ name, init }) => {
 				this.attributeChangedCallback(name, '', init);
 			});
+
+		const { show_parts } = this.#domrefs;
+		show_parts.checked = true;
+		this.#restartHidePartsTimeout();
 	}
 
 	attributeChangedCallback(name, oldValue, newValue) {
@@ -316,11 +325,79 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		}
 	};
 
-	#onShowPartsChange() {}
-	#onUseHalfHeightChange() {
-		this.ocr.config.use_half_height = this.#domrefs.use_half_height.checked;
-		this.ocr.config.save();
+	#restartHidePartsTimeout() {
+		this.#hidePartsTID = clearTimeout(this.#hidePartsTID);
+		this.#hidePartsTID = setTimeout(() => {
+			const { show_parts } = this.#domrefs;
+
+			show_parts.checked = false;
+			this.#onShowPartsChange();
+		}, 45000);
 	}
+
+	#onShowPartsChange = () => {
+		const { show_parts, capture, adjustments } = this.#domrefs;
+
+		const config = this.ocr.config;
+		config.show_parts = !!show_parts.checked;
+
+		if (config.show_parts) {
+			this.#restartHidePartsTimeout();
+
+			adjustments.classList.remove('is-hidden');
+			this.shadow.getElementById('capture-container').classList.remove('is-12');
+			this.shadow.getElementById('capture-container').classList.add('is-5');
+			[...capture.querySelectorAll('canvas')].forEach(canvas =>
+				canvas.classList.remove('is-hidden')
+			);
+			this.ocr.video.style.width = null;
+		} else {
+			this.#hidePartsTID = clearTimeout(this.#hidePartsTID);
+
+			adjustments.classList.add('is-hidden');
+			this.shadow.getElementById('capture-container').classList.remove('is-5');
+			this.shadow.getElementById('capture-container').classList.add('is-12');
+			[...capture.querySelectorAll('canvas')].forEach(canvas =>
+				canvas.classList.add('is-hidden')
+			);
+			this.ocr.video.style.width = '500px';
+		}
+	};
+
+	#onUseHalfHeightChange = () => {
+		const { use_half_height, adjustments } = this.#domrefs;
+		const config = this.ocr.config;
+
+		config.use_half_height = !!use_half_height.checked;
+		config.save();
+
+		if (config.use_half_height) {
+			// half the y and height of everything
+			for (const [name, task] of Object.entries(config.tasks)) {
+				if (!task?.crop) continue;
+
+				task.crop.y = Math.floor(task.crop.y / 2);
+				task.crop.h = Math.ceil(task.crop.h / 2);
+
+				adjustments.querySelector(`#${name}`).setCoordinates(task.crop);
+
+				this.ocr.capture_canvas.height = Math.ceil(
+					this.ocr.video.videoHeight / 2
+				);
+			}
+		} else {
+			for (const [name, task] of Object.entries(config.tasks)) {
+				if (!task?.crop) continue;
+
+				task.crop.y = Math.floor(task.crop.y * 2);
+				task.crop.h = Math.ceil(task.crop.h * 2);
+
+				adjustments.querySelector(`#${name}`).setCoordinates(task.crop);
+
+				this.ocr.capture_canvas.height = this.ocr.video.videoHeight;
+			}
+		}
+	};
 
 	#onScore7Change = () => {
 		const config = this.ocr.config;
@@ -351,7 +428,15 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		config.save();
 	};
 
-	#onCaptureRateChange() {}
+	#onHandleRetron67Change = () => {
+		this.ocr.config.handle_retron_levels_6_7 =
+			!!this.#domrefs.handle_retron_levels_6_7.checked;
+		this.ocr.config.save();
+	};
+
+	#onCaptureRateChange() {
+		// TODO: hard (?) changing the capture changes the stream, and therefore the video
+	}
 
 	setOCR(ocr) {
 		if (this.ocr) {
@@ -363,6 +448,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		const {
 			capture,
 			adjustments,
+			show_parts,
 			score7,
 			use_half_height,
 			handle_retron_levels_6_7,
@@ -405,6 +491,11 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 		this.#onBrightnessChange();
 		this.#onContrastChange();
+
+		if (ocr.config.show_parts == null) {
+			show_parts.checked = true;
+			this.#onShowPartsChange();
+		}
 
 		this.ocr.addEventListener('frame', this.#handleFrame);
 	}
