@@ -324,29 +324,29 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 	#onScore7Change = () => {
 		const config = this.ocr.config;
-
 		config.score7 = !!this.#domrefs.score7.checked;
+		const task = config.tasks.score;
 
 		const scale6to7 =
 			REFERENCE_LOCATIONS.score7.crop.w / REFERENCE_LOCATIONS.score.crop.w;
 
 		// assume transition is valid
 		if (config.score7) {
-			config.tasks.score.crop.w *= scale6to7;
-			config.tasks.score.pattern = REFERENCE_LOCATIONS.score7.pattern;
-			config.tasks.score.canvas.width = TASK_RESIZE.score7.w;
+			task.crop.w *= scale6to7;
+			task.pattern = REFERENCE_LOCATIONS.score7.pattern;
+			task.canvas.width = TASK_RESIZE.score7.w;
 		} else {
-			config.tasks.score.crop.w /= scale6to7;
-			config.tasks.score.pattern = REFERENCE_LOCATIONS.score.pattern;
-			config.tasks.score.canvas.width = TASK_RESIZE.score.w;
+			task.crop.w /= scale6to7;
+			task.pattern = REFERENCE_LOCATIONS.score.pattern;
+			task.canvas.width = TASK_RESIZE.score.w;
 		}
 
-		config.tasks.score.crop.w = Math.round(config.tasks.score.crop.w);
+		task.crop.w = Math.round(task.crop.w);
 
-		this.shadow.getElementById('score').setCoordinates(config.tasks.score.crop);
-		this.shadow
-			.getElementById('score')
-			.setCaptureCanvas(config.tasks.score.canvas);
+		const scoreControls = this.shadow.getElementById('score');
+
+		scoreControls.setCoordinates(task.crop);
+		scoreControls.setCaptureCanvas(task.canvas);
 
 		config.save();
 	};

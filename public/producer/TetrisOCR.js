@@ -254,6 +254,11 @@ export class TetrisOCR extends EventTarget {
 			perf[m.name] = m.duration.toFixed(3);
 		});
 
+		const { total } = perf;
+
+		delete perf.total;
+		perf.TOTAL = total;
+
 		const event = new CustomEvent('frame', {
 			detail: { frame: res, perf },
 		});

@@ -152,12 +152,14 @@ export class CpuTetrisOCR extends TetrisOCR {
 		}
 
 		performance.mark(`ocr`);
+		performance.mark(`end`);
 
 		performance.measure('draw', `start`, `draw`);
 		performance.measure('get_areas', `draw`, `get_areas`);
 		performance.measure('highlight', `get_areas`, `highlight`);
 		performance.measure('get_img_data', `highlight`, `get_img_data`);
 		performance.measure('ocr', `get_img_data`, `ocr`);
+		performance.measure('total', `start`, `end`);
 
 		return res;
 	}
