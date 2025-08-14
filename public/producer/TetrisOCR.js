@@ -4,7 +4,7 @@ import {
 	TASK_RESIZE,
 	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
 } from './constants.js';
-import { luma, bicubic, crop } from '/ocr/image_tools.js';
+import { luma } from '/ocr/image_tools.js';
 
 const DIGITS = '0123456789ABCDEF'.split('');
 
@@ -194,6 +194,7 @@ export class TetrisOCR extends EventTarget {
 			canvas.height = resize_tuple.h;
 
 			task.canvas = canvas;
+			task.packing_pos = this.configData.packing.positions[name];
 		}
 	}
 

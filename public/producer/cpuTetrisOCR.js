@@ -95,7 +95,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			);
 		});
 
-		performance.mark(`extract`);
+		performance.mark(`get_areas`);
 
 		// draw the orange regions on the capture canvas
 		this.capture_ctx.fillStyle = '#FFA50080';
@@ -112,30 +112,39 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 		performance.mark(`highlight`);
 
+		const source_img = this.output_ctx.getImageData(
+			0,
+			0,
+			this.output_canvas.width,
+			this.output_canvas.height
+		);
+
+		performance.mark(`get_img_data`);
+
 		// scan (i.e. ORC) all the regions
 		const res = {
-			score: this.scanScore(),
-			level: this.scanLevel(),
-			lines: this.scanLines(),
-			preview: this.scanPreview(),
-			field: this.scanField(),
+			score: this.scanScore(source_img),
+			level: this.scanLevel(source_img),
+			lines: this.scanLines(source_img),
+			preview: this.scanPreview(source_img),
+			field: this.scanField(source_img),
 		};
 
 		if (this.config.tasks.color2) {
-			res.color1 = this.scanColor1();
-			res.color2 = this.scanColor2().map(v => Math.round(v));
-			res.color3 = this.scanColor3().map(v => Math.round(v));
+			res.color1 = this.scanColor1(source_img);
+			res.color2 = this.scanColor2(source_img).map(v => Math.round(v));
+			res.color3 = this.scanColor3(source_img).map(v => Math.round(v));
 		}
 
 		if (this.config.tasks.instant_das) {
 			// assumes all 3 das tasks are a unit for the das trainer rom
-			res.instant_das = this.scanInstantDas();
-			res.cur_piece_das = this.scanCurPieceDas();
-			res.cur_piece = this.scanCurPiece();
+			res.instant_das = this.scanInstantDas(source_img);
+			res.cur_piece_das = this.scanCurPieceDas(source_img);
+			res.cur_piece = this.scanCurPiece(source_img);
 		}
 
 		if (this.config.tasks.T) {
-			Object.assign(res, this.scanPieceStats());
+			Object.assign(res, this.scanPieceStats(source_img));
 		}
 
 		if (false && this.gym_pause_task) {
@@ -145,9 +154,10 @@ export class CpuTetrisOCR extends TetrisOCR {
 		performance.mark(`ocr`);
 
 		performance.measure('draw', `start`, `draw`);
-		performance.measure('extract', `draw`, `extract`);
-		performance.measure('highlight', `extract`, `highlight`);
-		performance.measure('ocr', `highlight`, `ocr`);
+		performance.measure('get_areas', `draw`, `get_areas`);
+		performance.measure('highlight', `get_areas`, `highlight`);
+		performance.measure('get_img_data', `highlight`, `get_img_data`);
+		performance.measure('ocr', `get_img_data`, `ocr`);
 
 		return res;
 	}
@@ -200,11 +210,12 @@ export class CpuTetrisOCR extends TetrisOCR {
 		return min_idx;
 	}
 
-	ocrDigits(task) {
+	ocrDigits(source_img, task) {
 		const digits = Array(task.pattern.length);
-		const img = task.canvas_ctx.getImageData(
-			0,
-			0,
+		const img = crop(
+			source_img,
+			task.packing_pos.x,
+			task.packing_pos.y,
 			task.canvas.width,
 			task.canvas.height
 		);
@@ -252,51 +263,52 @@ export class CpuTetrisOCR extends TetrisOCR {
 		});
 	}
 
-	scanScore() {
-		return this.ocrDigits(this.config.tasks.score);
+	scanScore(source_img) {
+		return this.ocrDigits(source_img, this.config.tasks.score);
 	}
 
-	scanLevel() {
-		return this.ocrDigits(this.config.tasks.level);
+	scanLevel(source_img) {
+		return this.ocrDigits(source_img, this.config.tasks.level);
 	}
 
-	scanLines() {
-		return this.ocrDigits(this.config.tasks.lines);
+	scanLines(source_img) {
+		return this.ocrDigits(source_img, this.config.tasks.lines);
 	}
 
-	scanColor2() {
-		return this.scanColor(this.config.tasks.color2);
+	scanColor2(source_img) {
+		return this.scanColor(source_img, this.config.tasks.color2);
 	}
 
-	scanColor3() {
-		return this.scanColor(this.config.tasks.color3);
+	scanColor3(source_img) {
+		return this.scanColor(source_img, this.config.tasks.color3);
 	}
 
-	scanInstantDas() {
-		return this.ocrDigits(this.config.tasks.instant_das);
+	scanInstantDas(source_img) {
+		return this.ocrDigits(source_img, this.config.tasks.instant_das);
 	}
 
-	scanCurPieceDas() {
-		return this.ocrDigits(this.config.tasks.cur_piece_das);
+	scanCurPieceDas(source_img) {
+		return this.ocrDigits(source_img, this.config.tasks.cur_piece_das);
 	}
 
-	scanPieceStats() {
+	scanPieceStats(source_img) {
 		return {
-			T: this.ocrDigits(this.config.tasks.T),
-			J: this.ocrDigits(this.config.tasks.J),
-			Z: this.ocrDigits(this.config.tasks.Z),
-			O: this.ocrDigits(this.config.tasks.O),
-			S: this.ocrDigits(this.config.tasks.S),
-			L: this.ocrDigits(this.config.tasks.L),
-			I: this.ocrDigits(this.config.tasks.I),
+			T: this.ocrDigits(source_img, this.config.tasks.T),
+			J: this.ocrDigits(source_img, this.config.tasks.J),
+			Z: this.ocrDigits(source_img, this.config.tasks.Z),
+			O: this.ocrDigits(source_img, this.config.tasks.O),
+			S: this.ocrDigits(source_img, this.config.tasks.S),
+			L: this.ocrDigits(source_img, this.config.tasks.L),
+			I: this.ocrDigits(source_img, this.config.tasks.I),
 		};
 	}
 
-	scanPreview() {
+	scanPreview(source_img) {
 		const task = this.config.tasks.preview;
-		const img = task.canvas_ctx.getImageData(
-			0,
-			0,
+		const img = crop(
+			source_img,
+			task.packing_pos.x,
+			task.packing_pos.y,
 			task.canvas.width,
 			task.canvas.height
 		);
@@ -358,9 +370,10 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 	scanCurPiece(source_img) {
 		const task = this.config.tasks.cur_piece;
-		const img = task.canvas_ctx.getImageData(
-			0,
-			0,
+		const img = crop(
+			source_img,
+			task.packing_pos.x,
+			task.packing_pos.y,
 			task.canvas.width,
 			task.canvas.height
 		);
@@ -426,11 +439,12 @@ export class CpuTetrisOCR extends TetrisOCR {
 		return null;
 	}
 
-	scanColor1() {
+	scanColor1(source_img) {
 		const task = this.config.tasks.color1;
-		const img = task.canvas_ctx.getImageData(
-			0,
-			0,
+		const img = crop(
+			source_img,
+			task.packing_pos.x,
+			task.packing_pos.y,
 			task.canvas.width,
 			task.canvas.height
 		);
@@ -466,10 +480,11 @@ export class CpuTetrisOCR extends TetrisOCR {
 	/**/
 	}
 
-	scanColor(task) {
-		const img = task.canvas_ctx.getImageData(
-			0,
-			0,
+	scanColor(source_img, task) {
+		const img = crop(
+			source_img,
+			task.packing_pos.x,
+			task.packing_pos.y,
 			task.canvas.width,
 			task.canvas.height
 		);
@@ -498,7 +513,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			.map(v => Math.sqrt(v / pix_refs.length));
 	}
 
-	scanGymPause() {
+	scanGymPause(source_img) {
 		// Scanning the pause text scans the bottom of the letter 'U', "S", and "E" of the text "PAUSE"
 		// that's because the bottom of the letters overlaps with block margins, which are black
 		// When the pause text is not visible, luma on these overlap is expected to be very low
@@ -530,13 +545,14 @@ export class CpuTetrisOCR extends TetrisOCR {
 		return [Math.round(avg_luma), avg_luma > GYM_PAUSE_LUMA_THRESHOLD];
 	}
 
-	scanField() {
+	scanField(source_img) {
 		// Note: We work in the square of colors domain
 		// see: https://www.youtube.com/watch?v=LKnqECcg6Gw
 		const task = this.config.tasks.field;
-		const field_img = task.canvas_ctx.getImageData(
-			0,
-			0,
+		const img = crop(
+			source_img,
+			task.packing_pos.x,
+			task.packing_pos.y,
 			task.canvas.width,
 			task.canvas.height
 		);
@@ -567,7 +583,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 				const has_shine = shine_pix_refs.some(([x, y]) => {
 					const col_idx = block_offset + y * row_width * 4 + x * 4;
-					const col = field_img.data.subarray(col_idx, col_idx + 3);
+					const col = img.data.subarray(col_idx, col_idx + 3);
 
 					return luma(...col) > SHINE_LUMA_THRESHOLD;
 				});
@@ -580,7 +596,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 				const channels = pix_refs
 					.map(([x, y]) => {
 						const col_idx = block_offset + y * row_width * 4 + x * 4;
-						return field_img.data.subarray(col_idx, col_idx + 3);
+						return img.data.subarray(col_idx, col_idx + 3);
 					})
 					.reduce(
 						(acc, col) => {

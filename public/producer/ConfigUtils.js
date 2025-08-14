@@ -49,6 +49,8 @@ export function loadConfig() {
 			parsed.game_type = getGameTypeFromTasks(parsed.tasks);
 		}
 
+		Object.entries(parsed.tasks).forEach(([name, task]) => (task.name = name));
+
 		parsed.save = function () {
 			saveConfig(this);
 		};

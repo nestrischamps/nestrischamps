@@ -154,7 +154,7 @@ export const CONFIGS = {
 		],
 		packing: {
 			size: { w: getDigitsWidth(7), h: 224 },
-			areas: {
+			positions: {
 				score: { x: 0, y: 0 },
 				lines: { x: 0, y: 16 },
 				level: { x: 48, y: 16 },
