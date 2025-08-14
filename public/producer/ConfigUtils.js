@@ -97,7 +97,8 @@ export function saveConfig(config) {
 	};
 
 	for (const [name, task] of Object.entries(config.tasks)) {
-		config_copy.tasks[name] = { ...task };
+		const { crop, pattern, luma, red_luma } = task;
+		config_copy.tasks[name] = { crop, pattern, luma, red_luma };
 	}
 
 	localStorage.setItem(getConfigName(), JSON.stringify(config_copy));

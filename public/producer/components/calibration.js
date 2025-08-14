@@ -2,6 +2,7 @@ import './cropcontrol.js';
 
 import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
+import { REFERENCE_LOCATIONS, TASK_RESIZE } from '../constants.js';
 
 const MARKUP = html`
 	<div id="calibration" class="">
@@ -41,21 +42,6 @@ const MARKUP = html`
 					<input
 						type="checkbox"
 						id="handle_retron_levels_6_7"
-						checked
-						autocomplete="off"
-					/>
-				</label>
-			</div>
-
-			<div
-				class="field"
-				title="Use Web Worker to provide stable interval even when the tab is unfocused"
-			>
-				<label class="checkbox">
-					Use Web Worker for interval ⓘ
-					<input
-						type="checkbox"
-						id="web_worker_timer"
 						checked
 						autocomplete="off"
 					/>
@@ -147,10 +133,6 @@ const ATTRIBUTES = {
 		name: 'enable-show-parts',
 		init: 'true',
 	},
-	enableWebWorkerTimer: {
-		name: 'enable-web-worker-timer',
-		init: 'false',
-	},
 	enableCaptureRate: {
 		name: 'enable-capture-rate',
 		init: 'true',
@@ -183,7 +165,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			handle_retron_levels_6_7: this.shadow.getElementById(
 				'handle_retron_levels_6_7'
 			),
-			web_worker_timer: this.shadow.getElementById('web_worker_timer'),
 			capture_rate: this.shadow.getElementById('capture_rate'),
 
 			brightness_slider: this.shadow.querySelector('.field.brightness input'),
@@ -215,10 +196,11 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			'change',
 			this.#onShowPartsChange
 		);
-		this.#domrefs.web_worker_timer.addEventListener(
+		this.#domrefs.use_half_height.addEventListener(
 			'change',
-			this.#onWebWorkerTimerChange
+			this.#onUseHalfHeightChange
 		);
+		this.#domrefs.score7.addEventListener('change', this.#onScore7Change);
 		this.#domrefs.capture_rate.addEventListener(
 			'change',
 			this.#onCaptureRateChange
@@ -335,7 +317,40 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	};
 
 	#onShowPartsChange() {}
-	#onWebWorkerTimerChange() {}
+	#onUseHalfHeightChange() {
+		this.ocr.config.use_half_height = this.#domrefs.use_half_height.checked;
+		this.ocr.config.save();
+	}
+
+	#onScore7Change = () => {
+		const config = this.ocr.config;
+
+		config.score7 = !!this.#domrefs.score7.checked;
+
+		const scale6to7 =
+			REFERENCE_LOCATIONS.score7.crop.w / REFERENCE_LOCATIONS.score.crop.w;
+
+		// assume transition is valid
+		if (config.score7) {
+			config.tasks.score.crop.w *= scale6to7;
+			config.tasks.score.pattern = REFERENCE_LOCATIONS.score7.pattern;
+			config.tasks.score.canvas.width = TASK_RESIZE.score7.w;
+		} else {
+			config.tasks.score.crop.w /= scale6to7;
+			config.tasks.score.pattern = REFERENCE_LOCATIONS.score.pattern;
+			config.tasks.score.canvas.width = TASK_RESIZE.score.w;
+		}
+
+		config.tasks.score.crop.w = Math.round(config.tasks.score.crop.w);
+
+		this.shadow.getElementById('score').setCoordinates(config.tasks.score.crop);
+		this.shadow
+			.getElementById('score')
+			.setCaptureCanvas(config.tasks.score.canvas);
+
+		config.save();
+	};
+
 	#onCaptureRateChange() {}
 
 	setOCR(ocr) {
@@ -345,14 +360,21 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 		this.ocr = ocr;
 
-		const { capture, adjustments, contrast_slider, brightness_slider } =
-			this.#domrefs;
+		const {
+			capture,
+			adjustments,
+			score7,
+			use_half_height,
+			handle_retron_levels_6_7,
+			contrast_slider,
+			brightness_slider,
+		} = this.#domrefs;
 
 		capture.replaceChildren(
 			ocr.video,
 			ocr.capture_canvas,
-			ocr.output_canvas,
-			ocr.digit_canvas_1
+			ocr.digit_canvas_1,
+			ocr.output_canvas
 		);
 
 		adjustments.replaceChildren(
@@ -376,6 +398,10 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 		contrast_slider.value = this.ocr.config.contrast;
 		brightness_slider.value = this.ocr.config.brightness;
+		score7.checked = !!this.ocr.config.score7;
+		use_half_height.checked = !!this.ocr.config.use_half_height;
+		handle_retron_levels_6_7.checked =
+			!!this.ocr.config.handle_retron_levels_6_7;
 
 		this.#onBrightnessChange();
 		this.#onContrastChange();
