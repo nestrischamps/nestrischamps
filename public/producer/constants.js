@@ -114,9 +114,9 @@ export const CONFIGS = {
 			'L',
 			'I',
 		],
-		webgpu: {
-			packing_size: { w: getDigitsWidth(7), h: 256 },
-			packing_positions: {
+		packing: {
+			size: { w: getDigitsWidth(7), h: 256 },
+			positions: {
 				score: { x: 0, y: 0 },
 				lines: { x: 0, y: 16 },
 				level: { x: 48, y: 16 },
@@ -152,9 +152,9 @@ export const CONFIGS = {
 			'cur_piece_das',
 			'cur_piece',
 		],
-		webgpu: {
-			packing_size: { w: getDigitsWidth(7), h: 224 },
-			packing_areas: {
+		packing: {
+			size: { w: getDigitsWidth(7), h: 224 },
+			areas: {
 				score: { x: 0, y: 0 },
 				lines: { x: 0, y: 16 },
 				level: { x: 48, y: 16 },
@@ -173,9 +173,9 @@ export const CONFIGS = {
 		reference: '/ocr/reference_ui_classic.png',
 		palette: 'easiercap',
 		fields: ['score', 'level', 'lines', 'field', 'preview'],
-		webgpu: {
-			packing_size: { w: getDigitsWidth(7), h: 192 },
-			packing_positions: {
+		packing: {
+			size: { w: getDigitsWidth(7), h: 192 },
+			positions: {
 				score: { x: 0, y: 0 },
 				lines: { x: 0, y: 16 },
 				level: { x: 48, y: 16 },

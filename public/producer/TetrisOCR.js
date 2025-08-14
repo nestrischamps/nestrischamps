@@ -39,8 +39,8 @@ export class TetrisOCR extends EventTarget {
 
 		this.output_canvas = document.createElement('canvas');
 		this.output_canvas.id = 'output_canvas';
-		this.output_canvas.width = this.configData.webgpu.packing_size.w;
-		this.output_canvas.height = this.configData.webgpu.packing_size.h;
+		this.output_canvas.width = this.configData.packing.size.w;
+		this.output_canvas.height = this.configData.packing.size.h;
 
 		this.capture_canvas = document.createElement('canvas');
 		this.capture_canvas.id = 'capture_canvas';

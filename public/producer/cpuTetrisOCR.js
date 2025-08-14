@@ -25,7 +25,11 @@ export class CpuTetrisOCR extends TetrisOCR {
 	constructor(stream, config) {
 		super(stream, config);
 
-		this.capture_context = this.capture_canvas.getContext('2d', {
+		this.capture_ctx = this.capture_canvas.getContext('2d', {
+			willReadFrequently: true,
+		});
+
+		this.output_ctx = this.output_canvas.getContext('2d', {
 			willReadFrequently: true,
 		});
 
@@ -54,20 +58,17 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 		performance.mark(`start`);
 
-		this.capture_context.filter = this.#getCanvasFilters();
-		this.capture_context.drawImage(
-			videoFrame || this.video,
-			0,
-			0,
-			width,
-			height
-		);
+		this.capture_ctx.filter = this.#getCanvasFilters();
+		this.capture_ctx.drawImage(videoFrame || this.video, 0, 0, width, height);
 
 		performance.mark(`draw`);
 
-		this.capture_context.filter = 'none';
+		// extract the regions of interes
+		this.capture_ctx.filter = 'none';
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
+
+			// 1. to the individual canvas
 			task.canvas_ctx.drawImage(
 				this.capture_canvas,
 				task.crop.x,
@@ -79,16 +80,29 @@ export class CpuTetrisOCR extends TetrisOCR {
 				task.canvas.width,
 				task.canvas.height
 			);
+
+			// 2. to the packing output canvas
+			this.output_ctx.drawImage(
+				this.capture_canvas,
+				task.crop.x,
+				task.crop.y,
+				task.crop.w,
+				task.crop.h,
+				this.configData.packing.positions[name].x,
+				this.configData.packing.positions[name].y,
+				task.canvas.width,
+				task.canvas.height
+			);
 		});
 
 		performance.mark(`extract`);
 
-		this.capture_context.fillStyle = '#FFA50080';
-
+		// draw the orange regions on the capture canvas
+		this.capture_ctx.fillStyle = '#FFA50080';
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
 
-			this.capture_context.fillRect(
+			this.capture_ctx.fillRect(
 				task.crop.x,
 				task.crop.y,
 				task.crop.w,
@@ -98,6 +112,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 		performance.mark(`highlight`);
 
+		// scan (i.e. ORC) all the regions
 		const res = {
 			score: this.scanScore(),
 			level: this.scanLevel(),

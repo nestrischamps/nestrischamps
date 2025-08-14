@@ -351,7 +351,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		capture.replaceChildren(
 			ocr.video,
 			ocr.capture_canvas,
-			// ocr.output_canvas,
+			ocr.output_canvas,
 			ocr.digit_canvas_1
 		);
 

@@ -34,6 +34,7 @@ const cssOverride = new CSSStyleSheet();
 cssOverride.replaceSync(`
     :host {
         display: block;
+		box-sizing: content-box !important;
     }
 
     .field-label {
@@ -81,6 +82,7 @@ export class NTC_Crop_Control extends NtcComponent {
 		this.#domrefs = {
 			legend: this.shadow.querySelector('legend'),
 			capture: this.shadow.getElementById('capture'),
+			res: this.shadow.getElementById('results'),
 			ocr: this.shadow.getElementById('ocr'),
 			x: this.shadow.getElementById('x'),
 			y: this.shadow.getElementById('y'),
@@ -202,17 +204,18 @@ export class NTC_Crop_Control extends NtcComponent {
 	}
 
 	setOCRResults(results) {
-		const { ocr: holder } = this.#domrefs;
+		const { ocr: holder, res } = this.#domrefs;
 
 		if (holder.children.length <= 0) {
 			if (this.id.startsWith('color')) {
 				const color_result = document.createElement('div');
 				color_result.classList.add('col_res');
 				color_result.style.display = 'inline-block';
-				color_result.style.width = '25px';
-				color_result.style.height = '25px';
+				color_result.style.border = '1px solid white';
+				color_result.style.width = '30px';
+				color_result.style.height = '30px';
 
-				holder.appendChild(color_result);
+				holder.before(color_result);
 			} else if (this.id === 'field') {
 				const field_result = document.createElement('canvas');
 				field_result.width = 158;
@@ -224,7 +227,7 @@ export class NTC_Crop_Control extends NtcComponent {
 				ctx.fillStyle = '#000000';
 				ctx.fillRect(0, 0, 158, 318);
 
-				holder.appendChild(field_result);
+				holder.append(field_result);
 			}
 
 			const text_result = document.createElement('pre');
@@ -234,8 +237,8 @@ export class NTC_Crop_Control extends NtcComponent {
 
 		if (this.id.startsWith('color')) {
 			const color = `rgb(${results[0]},${results[1]},${results[2]})`;
-			holder.querySelector(`.col_res`).style.backgroundColor = color;
-			holder.querySelector(`pre`).textContent = color;
+			res.querySelector(`.col_res`).style.backgroundColor = color;
+			res.querySelector(`pre`).textContent = color;
 		} else if (this.id != 'field') {
 			holder.querySelector(`pre`).innerHTML =
 				results === null ? '&nbsp;' : results;
