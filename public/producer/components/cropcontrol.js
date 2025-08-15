@@ -66,10 +66,6 @@ export class NTC_Crop_Control extends NtcComponent {
 
 	canvasScaleFactor = 3;
 
-	static get observedAttributes() {
-		return ['name'];
-	}
-
 	constructor() {
 		super();
 
@@ -155,21 +151,6 @@ export class NTC_Crop_Control extends NtcComponent {
 		boundInputs.forEach(input => {
 			input.removeEventListener('change', this.#handleGroupPropagation);
 		});
-	}
-
-	attributeChangedCallback(name, oldValue, newValue) {
-		if (oldValue === newValue) {
-			return;
-		}
-
-		const settingElement =
-			this.#domrefs[name.replace(/^enable-/, '').replace(/-/g, '_')];
-
-		if (!settingElement) return;
-
-		settingElement
-			.closest('.field')
-			.classList[newValue === 'true' ? 'remove' : 'add']('is-hidden');
 	}
 
 	getCropCoordinates() {
