@@ -58,6 +58,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 				alpha: false,
 				willReadFrequently: true,
 			});
+			task.img = new ImageData(task.canvas.width, task.canvas.height);
 		}
 	}
 
@@ -229,7 +230,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 			task.packing_pos.x,
 			task.packing_pos.y,
 			task.canvas.width,
-			task.canvas.height
+			task.canvas.height,
+			task.img
 		);
 
 		for (let idx = digits.length; idx--; ) {
@@ -322,7 +324,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 			task.packing_pos.x,
 			task.packing_pos.y,
 			task.canvas.width,
-			task.canvas.height
+			task.canvas.height,
+			task.img
 		);
 
 		// Trying side i blocks
@@ -387,7 +390,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 			task.packing_pos.x,
 			task.packing_pos.y,
 			task.canvas.width,
-			task.canvas.height
+			task.canvas.height,
+			task.img
 		);
 
 		// Trying side i blocks
@@ -458,7 +462,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 			task.packing_pos.x,
 			task.packing_pos.y,
 			task.canvas.width,
-			task.canvas.height
+			task.canvas.height,
+			task.img
 		);
 
 		// I tried selecting the pixel with highest luma but that didn't work.
@@ -498,7 +503,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 			task.packing_pos.x,
 			task.packing_pos.y,
 			task.canvas.width,
-			task.canvas.height
+			task.canvas.height,
+			task.img
 		);
 
 		const row_width = img.width;
@@ -572,7 +578,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 			task.packing_pos.x,
 			task.packing_pos.y,
 			task.canvas.width,
-			task.canvas.height
+			task.canvas.height,
+			task.img
 		);
 
 		// Make a memory efficient array for our needs
