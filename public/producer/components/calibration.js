@@ -49,7 +49,7 @@ const MARKUP = html`
 			</div>
 
 			<div class="field">
-				<label for="show_parts">
+				<label>
 					Capture Rate
 					<span class="select is-small">
 						<select id="capture_rate">
@@ -260,6 +260,13 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			.forEach(({ name, init }) => {
 				this.attributeChangedCallback(name, '', init);
 			});
+
+		if ('MediaStreamTrackProcessor' in window) {
+			// assume we use a frame reader rather than a interval timer
+			// and therefore we must hide the capture rate selector
+			// regardless of what the consumer said or the default value
+			this.#domrefs.capture_rate.closest('.field').classList.add('is-hidden');
+		}
 
 		const { show_parts } = this.#domrefs;
 		show_parts.checked = true;

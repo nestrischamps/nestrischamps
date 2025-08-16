@@ -198,11 +198,13 @@ export class TetrisOCR extends EventTarget {
 		console.log('#startFrameCapture');
 
 		if ('MediaStreamTrackProcessor' in window) {
+			console.log('MediaStreamTrackProcessor is supported');
 			for await (const frame of this.#frameGenerator()) {
 				await this.#work(frame);
 				frame.close();
 			}
 		} else {
+			console.log('MediaStreamTrackProcessor is NOT supported');
 			const frame_ms = 1000 / this.config.frame_rate;
 
 			this.captureIntervalId = timer.setInterval(async () => {
