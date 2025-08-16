@@ -543,6 +543,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			field_task.packing_pos.y + GYM_PAUSE_CROP_RELATIVE_TO_FIELD.y,
 			GYM_PAUSE_CROP_RELATIVE_TO_FIELD.w,
 			GYM_PAUSE_CROP_RELATIVE_TO_FIELD.h
+			// TODO: there's no gym_pause task, but can we still have a reusable gym_pause img?
 		);
 
 		const pix_refs = [
