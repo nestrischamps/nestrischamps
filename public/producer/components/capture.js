@@ -92,12 +92,12 @@ export class NTC_Producer_Capture extends NtcComponent {
 
 		tabs.forEach(tab => {
 			tab.addEventListener('click', () => {
-				this.#showTab(tab.dataset.target);
+				this.showTab(tab.dataset.target);
 			});
 		});
 	}
 
-	#showTab(id) {
+	showTab(id) {
 		const { tabs, tabContents } = this.#domrefs;
 		const tab = [...tabs].find(tab => tab.dataset.target === id);
 
