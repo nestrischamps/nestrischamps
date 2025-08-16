@@ -43,7 +43,6 @@ export class TetrisOCR extends EventTarget {
 		this.output_canvas.height = this.configData.packing.size.h;
 
 		this.capture_canvas = document.createElement('canvas');
-		this.capture_canvas.imageSmoothingEnabled = false;
 		this.capture_canvas.id = 'capture_canvas';
 
 		this.digit_canvas_0 = document.createElement('canvas');

@@ -34,6 +34,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			alpha: false,
 			willReadFrequently: true,
 		});
+		this.capture_ctx.imageSmoothingEnabled = false;
 
 		this.output_ctx = this.output_canvas.getContext('2d', {
 			alpha: false,
