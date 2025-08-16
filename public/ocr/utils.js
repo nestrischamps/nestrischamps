@@ -12,6 +12,12 @@ export function timingDecorator(name, func) {
 	};
 }
 
+export function clamp(value, low, high) {
+	if (value < low) return low;
+	if (value > high) return high;
+	return value;
+}
+
 export function rgb2lab_normalizeRgbChannel(channel) {
 	channel /= 255;
 

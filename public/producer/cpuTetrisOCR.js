@@ -6,7 +6,7 @@ import {
 	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
 	GYM_PAUSE_LUMA_THRESHOLD,
 } from './constants.js';
-import { rgb2lab, timingDecorator } from '/ocr/utils.js';
+import { rgb2lab, clamp, timingDecorator } from '/ocr/utils.js';
 
 const PERF_METHODS = [
 	// 'getSourceImageData',
@@ -193,17 +193,24 @@ export class CpuTetrisOCR extends TetrisOCR {
 	getDigit(pixel_data, max_check_index, is_red) {
 		const sums = new Float64Array(max_check_index);
 		const size = pixel_data.length >>> 2;
-		const red_scale = 255 / 155; // scale red values as if capped at 155
 
 		for (let p_idx = size; p_idx--; ) {
 			const offset_idx = p_idx << 2;
-			const pixel_luma = is_red
-				? Math.min(pixel_data[offset_idx] * red_scale, 255) // only consider red component for luma, with scaling and capped
-				: luma(
-						pixel_data[offset_idx],
-						pixel_data[offset_idx + 1],
-						pixel_data[offset_idx + 2]
-					);
+			let pixel_luma;
+
+			if (is_red) {
+				const contrastHigh = 128;
+				const contrastLow = 20;
+				const contrastedCorrectedRedRatio =
+					(pixel_data[offset_idx] - contrastLow) / (contrastHigh - contrastLow);
+				pixel_luma = clamp(255 * contrastedCorrectedRedRatio, 0, 255);
+			} else {
+				pixel_luma = luma(
+					pixel_data[offset_idx],
+					pixel_data[offset_idx + 1],
+					pixel_data[offset_idx + 2]
+				);
+			}
 
 			for (let t_idx = max_check_index; t_idx--; ) {
 				const diff = pixel_luma - this.digit_lumas[t_idx][p_idx];
