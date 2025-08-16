@@ -53,7 +53,7 @@ const MARKUP = html`
 					Capture Rate
 					<span class="select is-small">
 						<select id="capture_rate">
-							<option value="25">24 fps</option>
+							<option value="24">24 fps</option>
 							<option value="25">25 fps</option>
 							<option value="30">30 fps</option>
 							<option value="50">50 fps</option>
@@ -435,9 +435,33 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		this.ocr.config.save();
 	};
 
-	#onCaptureRateChange() {
-		// TODO: hard (?) changing the capture changes the stream, and therefore the video
-	}
+	#onCaptureRateChange = async () => {
+		const { capture_rate } = this.#domrefs;
+
+		const frame_rate = parseInt(capture_rate.value, 10);
+
+		this.ocr.config.frame_rate = frame_rate;
+		this.ocr.config.save();
+
+		const video = this.ocr.video;
+		const stream = video.srcObject;
+		const videoTrack = stream.getVideoTracks()[0];
+
+		const newConstraints = {
+			frameRate: { ideal: frame_rate },
+		};
+
+		try {
+			// Apply the new constraints
+			await videoTrack.applyConstraints(newConstraints);
+
+			// Check the settings again to confirm only the frame rate changed
+			const updatedSettings = videoTrack.getSettings();
+			console.log('New frame rate:', updatedSettings.frameRate);
+		} catch (error) {
+			console.error('Failed to update constraints:', error);
+		}
+	};
 
 	setOCR(ocr) {
 		if (this.ocr) {
@@ -453,6 +477,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			score7,
 			use_half_height,
 			handle_retron_levels_6_7,
+			capture_rate,
 			contrast_slider,
 			brightness_slider,
 		} = this.#domrefs;
@@ -483,8 +508,10 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			})
 		);
 
+		capture_rate.value = this.ocr.config.frame_rate || 60;
 		contrast_slider.value = this.ocr.config.contrast;
 		brightness_slider.value = this.ocr.config.brightness;
+
 		score7.checked = !!this.ocr.config.score7;
 		use_half_height.checked = !!this.ocr.config.use_half_height;
 		handle_retron_levels_6_7.checked =
