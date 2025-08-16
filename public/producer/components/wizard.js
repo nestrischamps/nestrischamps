@@ -40,7 +40,7 @@ const MARKUP = html`
 		<fieldset>
 			<legend>Wizard</legend>
 			<div class="field is-horizontal">
-				<div class="field-label is-normal">
+				<div class="field-label is-normal is-large-label">
 					<label class="label" for="device">Capture Method / Device</label>
 				</div>
 
@@ -56,8 +56,8 @@ const MARKUP = html`
 			</div>
 
 			<div class="field is-horizontal">
-				<div class="field-label is-normal">
-					<label class="label" for="rom">ROM</label>
+				<div class="field-label is-normal is-large-label">
+					<label class="label" for="rom">Field Preset</label>
 				</div>
 
 				<div class="field-body">
@@ -153,12 +153,27 @@ const MARKUP = html`
 	</div>
 `;
 
+const cssOverride = new CSSStyleSheet();
+cssOverride.replaceSync(`
+	:host {
+		display: block
+	}
+
+	.field-label.is-large-label {
+		min-width: 250px;
+	}
+`);
+
 export class NTC_Producer_Wizard extends NtcComponent {
 	#domrefs = null;
 	#pending_calibration = false; // we store the ref of interests
 
 	constructor() {
 		super();
+
+		window.BULMA_STYLESHEETS.then(() => {
+			this.shadow.adoptedStyleSheets.push(cssOverride);
+		});
 
 		this.shadow.innerHTML = MARKUP;
 
