@@ -369,7 +369,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		const config = this.ocr.config;
 
 		config.use_half_height = !!use_half_height.checked;
-		config.save();
 
 		if (config.use_half_height) {
 			// half the y and height of everything
@@ -397,6 +396,8 @@ export class NTC_Producer_Calibration extends NtcComponent {
 				this.ocr.capture_canvas.height = this.ocr.video.videoHeight;
 			}
 		}
+
+		config.save();
 	};
 
 	#onScore7Change = () => {

@@ -63,7 +63,8 @@ export class TetrisOCR extends EventTarget {
 				'loadedmetadata',
 				() => {
 					this.capture_canvas.width = this.video.videoWidth;
-					this.capture_canvas.height = this.video.videoHeight;
+					this.capture_canvas.height =
+						this.video.videoHeight >> (this.config.use_half_height ? 1 : 0);
 					resolve();
 				},
 				{ once: true }
