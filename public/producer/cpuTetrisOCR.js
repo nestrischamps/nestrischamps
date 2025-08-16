@@ -1,6 +1,11 @@
 import { TetrisOCR } from './TetrisOCR.js';
 import { crop, luma } from '/ocr/image_tools.js';
-import { PATTERN_MAX_INDEXES, SHINE_LUMA_THRESHOLD } from './constants.js';
+import {
+	PATTERN_MAX_INDEXES,
+	SHINE_LUMA_THRESHOLD,
+	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
+	GYM_PAUSE_LUMA_THRESHOLD,
+} from './constants.js';
 import { rgb2lab, timingDecorator } from '/ocr/utils.js';
 
 const PERF_METHODS = [
@@ -48,7 +53,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 	setConfig(config) {
 		super.setConfig(config);
 
-		for (const task of Object.values(this.all_tasks)) {
+		for (const task of Object.values(config.tasks)) {
 			task.canvas_ctx = task.canvas.getContext('2d', {
 				alpha: false,
 				willReadFrequently: true,
@@ -148,14 +153,12 @@ export class CpuTetrisOCR extends TetrisOCR {
 			res.instant_das = this.scanInstantDas(source_img);
 			res.cur_piece_das = this.scanCurPieceDas(source_img);
 			res.cur_piece = this.scanCurPiece(source_img);
+		} else {
+			res.gym_pause = this.scanGymPause(source_img);
 		}
 
 		if (this.config.tasks.T) {
 			Object.assign(res, this.scanPieceStats(source_img));
-		}
-
-		if (false && this.gym_pause_task) {
-			res.gym_pause = this.scanGymPause();
 		}
 
 		performance.mark(`ocr`);
@@ -527,8 +530,14 @@ export class CpuTetrisOCR extends TetrisOCR {
 		// that's because the bottom of the letters overlaps with block margins, which are black
 		// When the pause text is not visible, luma on these overlap is expected to be very low
 		// When pause text is visible, luma is expected to be high.
-
-		const task = this.gym_pause_task;
+		const field_task = this.config.tasks.field;
+		const img = crop(
+			source_img,
+			field_task.packing_pos.x + GYM_PAUSE_CROP_RELATIVE_TO_FIELD.x,
+			field_task.packing_pos.y + GYM_PAUSE_CROP_RELATIVE_TO_FIELD.y,
+			GYM_PAUSE_CROP_RELATIVE_TO_FIELD.w,
+			GYM_PAUSE_CROP_RELATIVE_TO_FIELD.h
+		);
 
 		const pix_refs = [
 			// 1 pixel for U
@@ -567,7 +576,10 @@ export class CpuTetrisOCR extends TetrisOCR {
 		);
 
 		// Make a memory efficient array for our needs
-		const field = new Uint32Array(200);
+		const field = {
+			shines: new Uint8Array(200),
+			colors: new Uint32Array(200),
+		};
 
 		// shine pixels
 		const shine_pix_refs = [
@@ -589,6 +601,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 		for (let ridx = 0; ridx < 20; ridx++) {
 			for (let cidx = 0; cidx < 10; cidx++) {
 				const block_offset = (ridx * row_width * 8 + cidx * 8) * 4;
+				const block_idx = ridx * 10 + cidx;
 
 				const has_shine = shine_pix_refs.some(([x, y]) => {
 					const col_idx = block_offset + y * row_width * 4 + x * 4;
@@ -597,8 +610,10 @@ export class CpuTetrisOCR extends TetrisOCR {
 					return luma(...col) > SHINE_LUMA_THRESHOLD;
 				});
 
+				field.shines[block_idx] = has_shine ? 1 : 0;
+
 				if (!has_shine) {
-					field[ridx * 10 + cidx] = 0; // we have black for sure!
+					field.colors[block_idx] = 0; // we have black for sure! no ned to compute colors from reference pixels
 					continue;
 				}
 
@@ -618,7 +633,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 					)
 					.map(v => Math.sqrt(v / pix_refs.length));
 
-				field[ridx * 10 + cidx] =
+				field.colors[block_idx] =
 					(channels[0] << 24) | (channels[1] << 16) | (channels[2] << 8) | 0xff; // ff for fully opaque
 			}
 		}

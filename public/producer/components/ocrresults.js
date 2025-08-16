@@ -123,7 +123,7 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 				const rows = Array(20)
 					.fill()
 					.map((_, idx) =>
-						value
+						value.colors
 							.slice(idx * 10, (idx + 1) * 10)
 							.map(v => (v ? 1 : 0))
 							.join('')

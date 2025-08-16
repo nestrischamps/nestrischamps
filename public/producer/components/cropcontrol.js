@@ -220,10 +220,7 @@ export class NTC_Crop_Control extends NtcComponent {
 			const color = `rgb(${results[0]},${results[1]},${results[2]})`;
 			res.querySelector(`.col_res`).style.backgroundColor = color;
 			res.querySelector(`pre`).textContent = color;
-		} else if (this.id != 'field') {
-			holder.querySelector(`pre`).innerHTML =
-				results === null ? '&nbsp;' : results;
-		} else {
+		} else if (this.id === 'field') {
 			const canvas = holder.querySelector(`.field_res`);
 			const ctx = canvas.getContext('2d', { alpha: false });
 
@@ -231,7 +228,7 @@ export class NTC_Crop_Control extends NtcComponent {
 			ctx.fillRect(0, 0, 158, 318);
 
 			for (let ridx = 0; ridx < 20; ridx++) {
-				const row = results.slice(ridx * 10, ridx * 10 + 10);
+				const row = results.colors.slice(ridx * 10, ridx * 10 + 10);
 
 				row.forEach((col, cidx) => {
 					const r = (col >> 24) & 0xff;
@@ -242,6 +239,9 @@ export class NTC_Crop_Control extends NtcComponent {
 					ctx.fillRect(cidx * 16, ridx * 16, 14, 14);
 				});
 			}
+		} else {
+			holder.querySelector(`pre`).innerHTML =
+				results === null ? '&nbsp;' : results;
 		}
 	}
 

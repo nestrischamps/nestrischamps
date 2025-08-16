@@ -464,7 +464,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		);
 
 		adjustments.replaceChildren(
-			...Object.entries(ocr.all_tasks).map(([name, task]) => {
+			...Object.entries(ocr.config.tasks).map(([name, task]) => {
 				const control = document.createElement('ntc-cropcontrol');
 
 				control.id = name;

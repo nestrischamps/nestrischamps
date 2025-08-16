@@ -150,36 +150,7 @@ export class TetrisOCR extends EventTarget {
 		this.pending_capture_reinit = true;
 		this.#fixPalette();
 
-		this.all_tasks = { ...this.config.tasks };
-
-		if (!this.config.tasks.instant_das) {
-			const field_crop = this.config.tasks.field.crop;
-
-			const scaleX = field_crop.w / TASK_RESIZE.field.w;
-			const scaleY = field_crop.h / TASK_RESIZE.field.h;
-
-			// we compute the gym_pause crop in relation to the field
-			const gym_pause_crop_coordinates = {
-				x: Math.round(
-					field_crop.x + GYM_PAUSE_CROP_RELATIVE_TO_FIELD.x * scaleX
-				),
-				y: Math.round(
-					field_crop.y + GYM_PAUSE_CROP_RELATIVE_TO_FIELD.y * scaleY
-				),
-				w: Math.round(GYM_PAUSE_CROP_RELATIVE_TO_FIELD.w * scaleX),
-				h: Math.round(GYM_PAUSE_CROP_RELATIVE_TO_FIELD.h * scaleY),
-			};
-
-			// Safety check on capture area size (zero size is not acceptable)
-			if (
-				gym_pause_crop_coordinates.w > 0 &&
-				gym_pause_crop_coordinates.h > 0
-			) {
-				this.all_tasks.gym_pause = { crop: gym_pause_crop_coordinates };
-			}
-		}
-
-		for (const [name, task] of Object.entries(this.all_tasks)) {
+		for (const [name, task] of Object.entries(this.config.tasks)) {
 			console.log({ name, task });
 
 			let resize_tuple;
