@@ -148,10 +148,9 @@ export class TetrisOCR extends EventTarget {
 		this.palette = this.palettes?.[config.palette]; // will reset to undefined when needed
 
 		this.pending_capture_reinit = true;
-		this.#fixPalette();
 
 		for (const [name, task] of Object.entries(this.config.tasks)) {
-			console.log({ name, task });
+			// console.log({ name, task });
 
 			let resize_tuple;
 
@@ -168,18 +167,6 @@ export class TetrisOCR extends EventTarget {
 			task.canvas = canvas;
 			task.packing_pos = this.configData.packing.positions[name];
 		}
-	}
-
-	#fixPalette() {
-		if (!this.palette) return;
-
-		this.palette = this.palette.map(colors => {
-			if (colors.length == 2) {
-				return [DEFAULT_COLOR_1, colors[0], colors[1]];
-			}
-
-			return colors;
-		});
 	}
 
 	async *#frameGenerator() {

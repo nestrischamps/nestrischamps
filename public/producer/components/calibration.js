@@ -308,6 +308,8 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			brightness_slider.value = 1;
 			this.#onBrightnessChange();
 		}
+
+		brightness_slider.focus();
 	};
 
 	#onContrastChange = () => {
@@ -330,6 +332,8 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			contrast_slider.value = 1;
 			this.#onContrastChange();
 		}
+
+		contrast_slider.focus();
 	};
 
 	#restartHidePartsTimeout() {

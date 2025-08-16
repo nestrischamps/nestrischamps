@@ -5,7 +5,6 @@ import {
 	playVideoFromDevice,
 	playVideoFromScreenCap,
 } from '../MediaUtils.js';
-import { appStore } from '../AppStore.js';
 import { NtcComponent } from './NtcComponent.js';
 import {
 	CONFIGS,
@@ -80,6 +79,12 @@ const MARKUP = html`
 										title="Capture score, level, lines, preview and field"
 									>
 										Minimal
+									</option>
+									<option
+										value="hdmi_1080_4x_minimal"
+										title="Capture from a multiview 4x HDMI capture"
+									>
+										Multiview 4x (HDMI 1080p) 4x
 									</option>
 									<option
 										value="retron_hdmi_169_classic"
@@ -633,8 +638,6 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				const camera_option = document.createElement('option');
 				camera_option.text = camera.label;
 				camera_option.value = camera.deviceId;
-
-				const config = appStore.getState().config;
 
 				if (config && config.device_id === camera.deviceId) {
 					camera_option.selected = true;

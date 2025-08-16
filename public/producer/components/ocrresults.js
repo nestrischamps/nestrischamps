@@ -59,12 +59,21 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 	setOCR(ocr) {
 		this.ocr = ocr;
 
-		ocr.addEventListener('frame', this.#handleFrame);
+		ocr.addEventListener('frame', this.#handleOCRFrame);
 	}
 
-	#handleFrame = ({ detail: { frame, perf } }) => {
-		this.#setFrameData(frame);
+	setGameTracker(game_tracker) {
+		this.game_tracker = game_tracker;
+
+		game_tracker.addEventListener('frame', this.#handleGameTrackerFrame);
+	}
+
+	#handleOCRFrame = ({ detail: { perf } }) => {
 		this.#setPerfData(perf);
+	};
+
+	#handleGameTrackerFrame = ({ detail: frame }) => {
+		this.#setFrameData(frame);
 	};
 
 	#setPerfData(perf) {
@@ -120,15 +129,22 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 			}
 
 			if (name === 'field') {
-				const rows = Array(20)
-					.fill()
-					.map((_, idx) =>
-						value.colors
-							.slice(idx * 10, (idx + 1) * 10)
-							.map(v => (v ? 1 : 0))
-							.join('')
-					);
-				dd.innerHTML = `${rows.join('<br/>')}`;
+				if (Array.isArray(value) || value instanceof Uint8Array) {
+					const rows = Array(20)
+						.fill()
+						.map((_, idx) => value.slice(idx * 10, (idx + 1) * 10).join(''));
+					dd.innerHTML = `${rows.join('<br/>')}`;
+				} else {
+					const rows = Array(20)
+						.fill()
+						.map((_, idx) =>
+							value.colors
+								.slice(idx * 10, (idx + 1) * 10)
+								.map(v => (v ? 1 : 0))
+								.join('')
+						);
+					dd.innerHTML = `${rows.join('<br/>')}`;
+				}
 			} else {
 				dd.textContent = value;
 			}

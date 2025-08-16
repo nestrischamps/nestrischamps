@@ -1,6 +1,6 @@
 import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
-import { appStore } from './AppStore.js';
+import loadPalettes, { getPalette } from '/ocr/palettes.js';
 
 function getConfigName() {
 	return QueryString.get('config') || 'config';
@@ -39,11 +39,11 @@ export function getGameTypeFromTasks(tasks) {
 			: BinaryFrame.GAME_TYPE.MINIMAL;
 }
 
-export function loadConfig() {
+export async function loadConfig() {
 	const config = localStorage.getItem(getConfigName());
 
 	if (config) {
-		const parsed = JSON.parse(config);
+		const parsed = JSON.parse(config); // TODO try..catch
 
 		if (!parsed.hasOwnProperty('game_type')) {
 			parsed.game_type = getGameTypeFromTasks(parsed.tasks);
@@ -55,13 +55,15 @@ export function loadConfig() {
 			saveConfig(this);
 		};
 
+		if (parsed.palette) {
+			parsed.palette_data = await getPalette(parsed.palette); // TODO report error
+		}
+
 		return parsed;
 	}
 }
 
 export function saveConfig(config) {
-	console.log('saveConfig');
-
 	const {
 		device_id,
 		game_type,
@@ -102,8 +104,6 @@ export function saveConfig(config) {
 	}
 
 	localStorage.setItem(getConfigName(), JSON.stringify(config_copy));
-
-	appStore.setState({ config });
 }
 
 export function clearConfigAndReset() {

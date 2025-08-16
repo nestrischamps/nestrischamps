@@ -113,6 +113,10 @@ export class NTC_Producer_Capture extends NtcComponent {
 		this.#domrefs.ocr_results.setOCR(ocr);
 		this.#domrefs.calibration.setOCR(ocr);
 	}
+
+	setGameTracker(gameTracker) {
+		this.#domrefs.ocr_results.setGameTracker(gameTracker);
+	}
 }
 
 customElements.define('ntc-capture', NTC_Producer_Capture);
