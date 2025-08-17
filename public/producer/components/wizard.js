@@ -87,26 +87,26 @@ const MARKUP = html`
 										Multiview 4x (HDMI 1080p) 4x
 									</option>
 									<option
-										value="retron_hdmi_169_classic"
-										title="Capture from a Retron with 16:9 aspect ratio"
+										value="retron1hd_hdmi_169_classic"
+										title="Capture from a Retron1HD with 16:9 aspect ratio"
 									>
 										Retron HDMI 16:9 (classic)
 									</option>
 									<option
-										value="retron_hdmi_43_classic"
-										title="Capture from a Retron with 4:3 aspect ratio"
+										value="retron1hd_hdmi_43_classic"
+										title="Capture from a Retron1HD with 4:3 aspect ratio"
 									>
 										Retron HDMI 4:3 (classic)
 									</option>
 									<option
-										value="retron_hdmi_169_minimal"
-										title="Capture from a Retron with 16:9 aspect ratio"
+										value="retron1hd_hdmi_169_minimal"
+										title="Capture from a Retron1HD with 16:9 aspect ratio"
 									>
 										Retron HDMI 16:9 (minimal)
 									</option>
 									<option
-										value="retron_hdmi_43_minimal"
-										title="Capture from a Retron with 4:3 aspect ratio"
+										value="retron1hd_hdmi_43_minimal"
+										title="Capture from a Retron1HD with 4:3 aspect ratio"
 									>
 										Retron HDMI 4:3 (minimal)
 									</option>
@@ -277,8 +277,8 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 		if (rom_selector.value === '') {
 			hideAndResetColorMatching();
-		} else if (/^retron_/.test(rom_selector.value)) {
-			this.#finalizeRetronConfig(rom_selector.value);
+		} else if (/^retron1hd_/.test(rom_selector.value)) {
+			this.#finalizeRetron1HdConfig(rom_selector.value);
 			return;
 		} else {
 			const game_type = CONFIGS[rom_selector.value].game_type;
@@ -459,10 +459,10 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		}
 	}
 
-	#finalizeRetronConfig(retron_rom_id) {
+	#finalizeRetron1HdConfig(retron1hd_rom_id) {
 		// 1 parse the rom id
-		const m = retron_rom_id.match(
-			/^retron_hdmi_(?<aspect>169|43)_(?<rom_id>classic|minimal)$/
+		const m = retron1hd_rom_id.match(
+			/^retron1hd_hdmi_(?<aspect>169|43)_(?<rom_id>classic|minimal)$/
 		);
 
 		if (!m) {
@@ -471,7 +471,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 		const { aspect, rom_id } = m.groups;
 
-		const config = this.#getRetronConfig(aspect, rom_id);
+		const config = this.#getRetron1HdConfig(aspect, rom_id);
 
 		this.#saveAndDispatchConfig(config);
 	}
@@ -533,7 +533,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		return config;
 	}
 
-	#getRetronConfig(aspect, rom_id) {
+	#getRetron1HdConfig(aspect, rom_id) {
 		const { device_selector } = this.#domrefs;
 		const device_id = device_selector.value;
 
