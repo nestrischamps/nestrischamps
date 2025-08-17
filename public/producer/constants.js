@@ -191,7 +191,6 @@ export const RETRON_HD_CONFIG = {
 	169: {
 		classic: {
 			score: { crop: { x: 954, y: 188, w: 230, h: 21 } },
-			score7: { crop: { x: 954, y: 188, w: 269, h: 21 } },
 			level: { crop: { x: 1033, y: 500, w: 72, h: 21 } },
 			lines: { crop: { x: 757, y: 68, w: 112, h: 21 } },
 			field: { crop: { x: 481, y: 140, w: 388, h: 477 } },
@@ -209,7 +208,6 @@ export const RETRON_HD_CONFIG = {
 		},
 		minimal: {
 			score: { crop: { x: 954, y: 188, w: 230, h: 21 } },
-			score7: { crop: { x: 954, y: 188, w: 269, h: 21 } },
 			level: { crop: { x: 1033, y: 500, w: 72, h: 21 } },
 			lines: { crop: { x: 757, y: 68, w: 112, h: 21 } },
 			field: { crop: { x: 481, y: 140, w: 388, h: 477 } },

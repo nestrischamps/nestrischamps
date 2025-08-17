@@ -264,12 +264,5 @@ async function initFromConfig(tabToOpen) {
 		await sleep(0);
 
 		initFromConfig('calibration');
-
-		// TODO guard this for cases where calibration is actually needed
-		setTimeout(() => {
-			alert(
-				'Rough calibration has been completed 🎉!\n\nYou now MUST inspect and fine tune all the fields (location and size) to make them pixel perfect!'
-			);
-		}, 100); // sad (and gross) delay
 	}
 })();

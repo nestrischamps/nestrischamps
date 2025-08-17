@@ -17,7 +17,7 @@ import {
 	getFieldCoordinates,
 	getCaptureCoordinates,
 } from '../../ocr/calibration.js';
-import { getDefaultOcrConfig, saveConfig } from '../ConfigUtils.js';
+import { getDefaultOcrConfig } from '../ConfigUtils.js';
 import { sleep } from '../timer.js';
 
 function css_size(css_pixel_width) {
@@ -440,6 +440,13 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		try {
 			config = this.#getConfig(...args);
 
+			// TODO guard this for cases where calibration is actually needed
+			setTimeout(() => {
+				alert(
+					'Rough calibration has been completed 🎉!\n\nYou NEED to inspect and fine-tune all the fields (location and size) to make them pixel perfect!'
+				);
+			}, 100); // sad (and gross) delay
+
 			this.#saveAndDispatchConfig(config);
 		} catch (err) {
 			alert(
@@ -478,15 +485,13 @@ export class NTC_Producer_Wizard extends NtcComponent {
 	#saveAndDispatchConfig(config) {
 		console.log({ config });
 
-		saveConfig(config);
+		config.save();
 
 		// 1. Create a custom event to notify parent app
 		const event = new CustomEvent('config-ready', {
 			bubbles: true, // Allow event to bubble up
 			composed: true, // Allow event to cross Shadow DOM boundary
-			detail: {
-				config,
-			},
+			detail: config,
 		});
 
 		// 2. Dispatch the event from this custom element instance
@@ -544,12 +549,14 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			...getDefaultOcrConfig(),
 			device_id,
 			game_type: BinaryFrame.GAME_TYPE[rom_id.toUpperCase()],
-			palette: 'retron_hdmi',
+			palette: rom_id === 'minimal' ? 'retron1hd' : '',
 		};
 
 		for (const [name, definition] of Object.entries(
 			RETRON_HD_CONFIG[aspect][rom_id]
 		)) {
+			if (name === 'score7') continue;
+
 			config.tasks[name] = Object.assign(
 				{},
 				REFERENCE_LOCATIONS[name], // all task parameters
