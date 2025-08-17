@@ -79,20 +79,28 @@ export async function getStream(config) {
 	}
 }
 
-export async function playVideoFromDevice(video, device_id, fps = 60) {
+export async function playVideoFromDevice(video, options = {}) {
 	console.log('playVideoFromDevice()');
+	const ideal = {
+		device_id: options.device_id || undefined,
+		fps: options.fps || 60,
+		height: options.height || 1080,
+	};
 
 	try {
 		const constraints = {
 			audio: false,
 			video: {
-				height: { ideal: 720 },
-				frameRate: { ideal: fps }, // Should we always try to get the highest the card can support?
+				height: { ideal: ideal.height },
+				frameRate: { ideal: ideal.fps }, // Should we try to get the highest the card can support?
+				// brightness: { ideal: ideal.brightness || 0 },
+				// contrast: { ideal: ideal.contrast || 140 },
+				// saturation: { ideal: ideal.saturation || 140 },
 			},
 		};
 
-		if (device_id) {
-			constraints.video.deviceId = { exact: device_id };
+		if (ideal.device_id) {
+			constraints.video.deviceId = { exact: ideal.device_id };
 		}
 
 		console.log(`Capture Constraints: ${JSON.stringify(constraints, null, 2)}`);
@@ -100,7 +108,7 @@ export async function playVideoFromDevice(video, device_id, fps = 60) {
 		const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
 		// we only prompt for permission with the first call
-		if (device_id === undefined) return;
+		if (ideal.device_id === undefined) return;
 
 		logStreamDetails(stream);
 

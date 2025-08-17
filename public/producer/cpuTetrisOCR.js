@@ -40,6 +40,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			alpha: false,
 			willReadFrequently: true,
 		});
+		this.output_ctx.imageSmoothingQuality = 'high';
 
 		this.digit_img = new ImageData(14, 14);
 		this.shine_img = new ImageData(2, 3);

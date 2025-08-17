@@ -45,25 +45,47 @@ export async function loadConfig() {
 	if (config) {
 		const parsed = JSON.parse(config); // TODO try..catch
 
-		if (!parsed.hasOwnProperty('game_type')) {
-			parsed.game_type = getGameTypeFromTasks(parsed.tasks);
-		}
+		if (parsed.mode === 'multiviewer') {
+			parsed.save = function () {
+				saveMultiviewerConfig(this);
+			};
 
-		Object.entries(parsed.tasks).forEach(([name, task]) => (task.name = name));
+			for (const playerConf of parsed.players) {
+				if (!playerConf.hasOwnProperty('game_type')) {
+					playerConf.game_type = getGameTypeFromTasks(playerConf.tasks);
+				}
 
-		parsed.save = function () {
-			saveConfig(this);
-		};
+				Object.entries(playerConf.tasks).forEach(
+					([name, task]) => (task.name = name)
+				);
+				playerConf.palette_data = await getPalette(parsed.palette); // TODO report error
+				playerConf.save = function () {
+					parsed.save();
+				};
+			}
+		} else {
+			if (!parsed.hasOwnProperty('game_type')) {
+				parsed.game_type = getGameTypeFromTasks(parsed.tasks);
+			}
 
-		if (parsed.palette) {
-			parsed.palette_data = await getPalette(parsed.palette); // TODO report error
+			Object.entries(parsed.tasks).forEach(
+				([name, task]) => (task.name = name)
+			);
+
+			parsed.save = function () {
+				saveConfig(this);
+			};
+
+			if (parsed.palette) {
+				parsed.palette_data = await getPalette(parsed.palette); // TODO report error
+			}
 		}
 
 		return parsed;
 	}
 }
 
-export function saveConfig(config) {
+function getSerializableConfigCopy(config) {
 	const {
 		device_id,
 		game_type,
@@ -103,6 +125,21 @@ export function saveConfig(config) {
 		config_copy.tasks[name] = { crop, pattern, luma, red_luma };
 	}
 
+	return config_copy;
+}
+
+export function saveConfig(config) {
+	const config_copy = getSerializableConfigCopy(config);
+	localStorage.setItem(getConfigName(), JSON.stringify(config_copy));
+}
+
+export function saveMultiviewerConfig(config) {
+	const config_copy = { ...config };
+
+	config_copy.players = config_copy.players.map(config =>
+		getSerializableConfigCopy(config)
+	);
+
 	localStorage.setItem(getConfigName(), JSON.stringify(config_copy));
 }
 
@@ -121,7 +158,7 @@ export function getDefaultOcrConfig() {
 	return {
 		game_type: 1,
 		palette: '',
-		frame_rate: 60,
+		frame_rate: 30,
 		focus_alarm: true,
 		allow_video_feed: false,
 		video_feed_device_id: null,

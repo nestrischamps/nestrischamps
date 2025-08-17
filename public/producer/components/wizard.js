@@ -17,26 +17,30 @@ import {
 	getFieldCoordinates,
 	getCaptureCoordinates,
 } from '../../ocr/calibration.js';
-import { getDefaultOcrConfig } from '../ConfigUtils.js';
+import { saveMultiviewerConfig, getDefaultOcrConfig } from '../ConfigUtils.js';
 import { sleep } from '../timer.js';
 
 function css_size(css_pixel_width) {
 	return parseFloat(css_pixel_width.replace(/px$/, ''));
 }
 
-function updateCanvasSizeIfNeeded(canvas, w, h) {
-	if (canvas.width != w || canvas.height != h) {
-		canvas.width = w;
-		canvas.height = h;
-
-		// must restore no smoothing after change of size
-		canvas.getContext('2d', { alpha: false }).imageSmoothingEnabled = false;
-	}
-}
-
 const MARKUP = html`
 	<div id="wizard" class="container" class="is-max-widescreen">
-		<fieldset>
+		<fieldset id="step1">
+			<legend>Capture Mode</legend>
+			<div class="block">
+				<p>Chose a capture method:</p>
+			</div>
+			<div class="block">
+				<button id="single" class="button is-light">
+					Single Player Capture
+				</button>
+			</div>
+			<div class="block">
+				<button id="multiviewer" class="button is-light">4x Multiviewer</button>
+			</div>
+		</fieldset>
+		<fieldset id="step2" class="is-hidden">
 			<legend>Wizard</legend>
 			<div class="field is-horizontal">
 				<div class="field-label is-normal is-large-label">
@@ -82,13 +86,6 @@ const MARKUP = html`
 											Minimal
 										</option>
 									</optgroup>
-									<option
-										value="hdmi_1080_4x_minimal"
-										title="Capture from a multiview 4x HDMI capture"
-										disabled
-									>
-										Multiview 4x (HDMI 1080p) 4x (coming soon!)
-									</option>
 									<optgroup
 										label="Retron1HD HDMI presets (start capture immediately)"
 									>
@@ -141,15 +138,27 @@ const MARKUP = html`
 			</div>
 
 			<div id="instructions" class="content notification is-warning is-hidden">
-				<h1 class="title">Please read these next-steps instructions!</h1>
+				<h1 class="title is-4">Please read these next-steps instructions!</h1>
 				<ol start="1">
-					<li>
-						With your selection above, your tetris capture should now be visible
-						in the video element below
+					<li class="mode multiviewer">
+						This multiviewer wizard assumes all 4 captures are
+						<strong>equivalent</strong>.
 					</li>
 					<li>
-						Start a game <strong>at level 0</strong>, and in the video below,
-						click somewhere BLACK in the central Tetris field.
+						With your selection above, your tetris capture should now be visible
+						in the video element below.
+					</li>
+					<li class="mode single">Start a game <strong>at level 0</strong>.</li>
+					<li class="mode single">
+						Click somewhere <strong>BLACK</strong> in the Tetris field.
+					</li>
+					<li class="mode multiviewer">
+						Have the player showing on the <strong>TOP-LEFT</strong> corner
+						start a game <strong>at level 0</strong>.
+					</li>
+					<li class="mode multiviewer">
+						For <strong>that player</strong>, click somewhere BLACK in the
+						player's Tetris field.
 					</li>
 				</ol>
 			</div>
@@ -179,6 +188,7 @@ cssOverride.replaceSync(`
 export class NTC_Producer_Wizard extends NtcComponent {
 	#domrefs = null;
 	#pending_calibration = false; // we store the ref of interests
+	#mode = 'single'; // single or multiviewer
 
 	constructor() {
 		super();
@@ -190,6 +200,10 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		this.shadow.innerHTML = MARKUP;
 
 		this.#domrefs = {
+			step1: this.shadow.getElementById('step1'),
+			step2: this.shadow.getElementById('step2'),
+			single: this.shadow.getElementById('single'),
+			multiviewer: this.shadow.getElementById('multiviewer'),
 			device_selector: this.shadow.getElementById('device'),
 			palette_selector: this.shadow.getElementById('palette'),
 			rom_selector: this.shadow.getElementById('rom'),
@@ -203,6 +217,16 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		this.#domrefs.video.controls = false;
 		this.#domrefs.video.style.cursor = 'crosshair';
 
+		this.#domrefs.single.addEventListener('click', () => {
+			this.#mode = 'single';
+			this.#showStep2();
+		});
+
+		this.#domrefs.multiviewer.addEventListener('click', () => {
+			this.#mode = 'multiviewer';
+			this.#showStep2();
+		});
+
 		this.#domrefs.device_selector.addEventListener(
 			'change',
 			this.#deviceSelectorChange
@@ -214,6 +238,23 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		this.#domrefs.video.addEventListener('click', this.#videoClick);
 
 		this.#updatePaletteList();
+	}
+
+	#showStep2() {
+		const { step1, step2 } = this.#domrefs;
+		step1.classList.add('is-hidden');
+		step2.classList.remove('is-hidden');
+
+		step2.querySelector('legend').textContent = `Wizard - ${
+			this.#mode === 'single' ? 'Single Player' : '4xMultiviewer'
+		}`;
+
+		[...step2.querySelectorAll(`.mode.${this.#mode}`)].forEach(elmt =>
+			elmt.classList.remove('is-hidden')
+		);
+		[...step2.querySelectorAll(`.mode:not(.${this.#mode})`)].forEach(elmt =>
+			elmt.classList.add('is-hidden')
+		);
 	}
 
 	async #updatePaletteList() {
@@ -259,7 +300,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				playVideoFromScreenCap(video);
 			} else if (device_id !== '') {
 				video.ntcType = 'device';
-				playVideoFromDevice(video, device_id);
+				playVideoFromDevice(video, { device_id, fps: 30 });
 			}
 		}
 
@@ -332,13 +373,24 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		const ratioX = event.offsetX / css_size(video_styles.width);
 		const ratioY = event.offsetY / css_size(video_styles.height);
 
+		if (this.#mode === 'multiviewer') {
+			// click is only valid in top-left corner
+			if (ratioX > 0.5 || ratioY > 0.5) return;
+		}
+
 		const floodStartPoint = [
 			Math.round(video.videoWidth * ratioX),
 			Math.round(video.videoHeight * ratioY),
 		];
 
 		const video_capture = document.createElement('canvas');
+
+		video_capture.width = video.videoWidth;
+		video_capture.height = video.videoHeight;
+
 		const video_capture_ctx = video_capture.getContext('2d', { alpha: false });
+		video_capture_ctx.imageSmoothingEnabled = false;
+		video_capture_ctx.imageSmoothingQuality;
 
 		const bitmap = await createImageBitmap(
 			video,
@@ -348,16 +400,10 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			video.videoHeight
 		);
 
-		updateCanvasSizeIfNeeded(
-			video_capture,
-			video.videoWidth,
-			video.videoHeight
-		);
-
 		await sleep(0); // wait one tick for canvas to be updated ... just in case
 
 		if (video.ntcType === 'device') {
-			video_capture_ctx.filter = 'brightness(1.65) contrast(1.65)';
+			video_capture_ctx.filter = 'brightness(1.45) contrast(1.65)';
 		} else {
 			video_capture_ctx.filter = 'contrast(1.5)';
 		}
@@ -460,6 +506,8 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				`Unexpected Error: ${err.message}. Please try again or contact NTC devs.`
 			);
 
+			const { device_selector, rom_selector, palette_selector } = this.#domrefs;
+
 			device_selector.disabled = false;
 			rom_selector.disabled = false;
 			palette_selector.disabled = false;
@@ -514,6 +562,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		}
 
 		const config = {
+			mode: this.#mode,
 			device_id,
 		};
 
@@ -530,18 +579,59 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		// below here we are in device or window capture
 		const game_type = CONFIGS[rom_type].game_type;
 
-		Object.assign(config, getDefaultOcrConfig(), {
-			game_type,
-			palette: palette_selector.value,
-			brightness: device_id === 'window' ? 1 : 1.75,
-			tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
-		});
+		if (this.#mode === 'single') {
+			Object.assign(config, getDefaultOcrConfig(), {
+				game_type,
+				palette: palette_selector.value,
+				brightness: device_id === 'window' ? 1 : 1.75,
+				tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
+			});
+		} else if (this.#mode === 'multiviewer') {
+			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
+				const ui_xywh = { ...tetris_ui_in_video_xywh };
+
+				// add the offset to derive the placements in each of the 4 quadrants
+				ui_xywh.x += x;
+				ui_xywh.y += y;
+
+				const playerConfig = Object.assign(getDefaultOcrConfig(), {
+					game_type,
+					palette: palette_selector.value,
+					brightness: 1,
+					tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
+				});
+
+				delete playerConfig.use_worker_for_interval;
+				delete playerConfig.focus_alarm;
+				delete playerConfig.frame_rate;
+				delete playerConfig.save;
+
+				return playerConfig;
+			});
+			config.save = function () {
+				saveMultiviewerConfig(this);
+			};
+		}
 
 		return config;
 	}
 
+	#getMultiviewerOffsets() {
+		const { video } = this.#domrefs;
+
+		return [
+			{ x: 0, y: 0 },
+			{ x: Math.floor(video.videoWidth / 2), y: 0 },
+			{ x: 0, y: Math.floor(video.videoHeight / 2) },
+			{
+				x: Math.floor(video.videoWidth / 2),
+				y: Math.floor(video.videoHeight / 2),
+			},
+		];
+	}
+
 	#getRetron1HdConfig(aspect, rom_id) {
-		const { device_selector } = this.#domrefs;
+		const { video, device_selector } = this.#domrefs;
 		const device_id = device_selector.value;
 
 		if (!device_id) {
@@ -553,22 +643,71 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		}
 
 		const config = {
-			...getDefaultOcrConfig(),
+			mode: this.#mode,
 			device_id,
-			game_type: BinaryFrame.GAME_TYPE[rom_id.toUpperCase()],
-			palette: rom_id === 'minimal' ? 'retron1hd' : '',
 		};
 
-		for (const [name, definition] of Object.entries(
-			RETRON_HD_CONFIG[aspect][rom_id]
-		)) {
-			if (name === 'score7') continue;
+		const game_type = BinaryFrame.GAME_TYPE[rom_id.toUpperCase()];
 
-			config.tasks[name] = Object.assign(
-				{},
-				REFERENCE_LOCATIONS[name], // all task parameters
-				definition // retron-specific crop values
-			);
+		if (this.#mode === 'single') {
+			Object.assign(config, getDefaultOcrConfig(), {
+				game_type,
+				palette: rom_id === 'minimal' ? 'retron1hd' : '',
+			});
+
+			for (const [name, definition] of Object.entries(
+				RETRON_HD_CONFIG[aspect][rom_id]
+			)) {
+				if (name === 'score7') continue;
+
+				config.tasks[name] = Object.assign(
+					{},
+					REFERENCE_LOCATIONS[name], // all task parameters
+					definition // retron-specific crop values
+				);
+			}
+		} else if (this.#mode === 'multiviewer') {
+			const retronCaptureSize = { w: 1280, h: 720 }; // TODO move to constants
+			const scaleX = video.videoWidth / retronCaptureSize.w;
+			const scaleY = video.videoHeight / retronCaptureSize.h;
+
+			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
+				const playerConfig = Object.assign(getDefaultOcrConfig(), {
+					game_type,
+					palette: rom_id === 'minimal' ? 'retron1hd' : '',
+				});
+
+				delete playerConfig.use_worker_for_interval;
+				delete playerConfig.focus_alarm;
+				delete playerConfig.frame_rate;
+				delete playerConfig.save;
+
+				for (const [name, definition] of Object.entries(
+					RETRON_HD_CONFIG[aspect][rom_id]
+				)) {
+					if (name === 'score7') continue;
+
+					playerConfig.tasks[name] = Object.assign(
+						{},
+						REFERENCE_LOCATIONS[name], // all task parameters
+						definition // retron-specific crop values
+					);
+
+					// adjust crop coordinates to account for the scale
+					const crop = playerConfig.tasks[name].crop;
+					playerConfig.tasks[name].crop = {
+						x: x + Math.round(crop.x * scaleX),
+						y: y + Math.round(crop.y * scaleY),
+						w: Math.round(crop.w * scaleX),
+						h: Math.round(crop.h * scaleY),
+					};
+				}
+
+				return playerConfig;
+			});
+			config.save = function () {
+				saveMultiviewerConfig(this);
+			};
 		}
 
 		return config;

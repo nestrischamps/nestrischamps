@@ -233,6 +233,10 @@ async function initFromConfig(tabToOpen) {
 
 	if (config.device_id === 'everdrive') {
 		initEverDriveCapture(config, tabToOpen);
+	} else if (config.mode === 'multiviewer') {
+		// TEMP: cheat to show TL player...
+		Object.assign(config, config.players[0]);
+		initOCRCapture(config, tabToOpen);
 	} else {
 		initOCRCapture(config, tabToOpen);
 	}

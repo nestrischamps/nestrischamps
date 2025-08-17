@@ -14,20 +14,28 @@ async function getSavedPalette() {
 	return null;
 }
 
-export async function getPalette(name) {
+const palettePromises = {};
+
+export function getPalette(name) {
 	if (name === '_saved') {
 		return getSavedPalette();
 	}
 
-	const response = await fetch(`/ocr/palettes/${name}.json`);
-	const json = await response.json();
+	if (!palettePromises[name]) {
+		palettePromises[name] = (async () => {
+			const response = await fetch(`/ocr/palettes/${name}.json`);
+			const json = await response.json();
 
-	return json.map(colors => {
-		if (colors.length === 2) {
-			colors.unshift(DEFAULT_COLOR_1);
-		}
-		return colors;
-	});
+			return json.map(colors => {
+				if (colors.length === 2) {
+					colors.unshift(DEFAULT_COLOR_1);
+				}
+				return colors;
+			});
+		})();
+	}
+
+	return palettePromises[name];
 }
 
 async function _loadPalettes() {
