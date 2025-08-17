@@ -1,9 +1,5 @@
 import { timer } from './timer.js';
-import {
-	CONFIGS,
-	TASK_RESIZE,
-	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
-} from './constants.js';
+import { CONFIGS, TASK_RESIZE } from './constants.js';
 import { luma } from '/ocr/image_tools.js';
 
 const DIGITS = '0123456789ABCDEF'.split('');
