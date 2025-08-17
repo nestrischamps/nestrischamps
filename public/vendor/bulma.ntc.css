@@ -1,0 +1,28 @@
+fieldset {
+    border: 2px solid #ddd; /* Light grey border for light mode */
+    padding: 1rem 1.5rem ;
+    margin: 1rem;
+    border-radius: 8px; /* Slightly rounded corners */
+    background-color: #f9f9f9; /* Light background for the fieldset */
+    transition:
+        border-color 0.3s ease,
+        background-color 0.3s ease; /* Smooth transition for theme changes */
+}
+
+legend {
+    font-size: 1.15rem;
+    font-weight: bold;
+    padding: 0 0.5rem; /* Space around the text within the border */
+    background-color: transparent; /* Ensures no background behind the text */
+    transition: color 0.3s ease; /* Smooth transition for text color */
+    text-transform: capitalize;
+}
+
+/* --- Dark Mode Overrides --- */
+/* Apply these styles when the user's system prefers a dark color scheme */
+@media (prefers-color-scheme: dark) {
+    fieldset {
+        border-color: #555; /* Darker grey border for dark mode */
+        background-color: rgb(26, 28, 32); /* Dark background for the fieldset */
+    }
+}
