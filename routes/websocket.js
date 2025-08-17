@@ -110,7 +110,7 @@ export default function init(server, wss) {
 		}
 
 		m = request.nc_url.pathname.match(
-			/^\/ws\/room\/(u\/([a-z0-9_-]+)\/)?(producer|emu)\/([a-zA-Z0-9-]+)/
+			/^\/ws\/room\/(u\/([a-z0-9_-]+)\/)?(producer2?|emu)\/([a-zA-Z0-9-]+)/
 		);
 
 		request.is_secret_producer = !!m;
