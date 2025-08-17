@@ -1,4 +1,4 @@
-const LIST = ['easiercap'];
+const LIST = ['easiercap', 'retron1hd'];
 
 const DEFAULT_COLOR_1 = [0xf0, 0xf0, 0xf0];
 

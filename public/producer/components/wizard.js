@@ -65,51 +65,58 @@ const MARKUP = html`
 							<div class="select is-fullwidth">
 								<select id="rom">
 									<option value="">-</option>
-									<option
-										value="classic"
-										title="Minimal + Colors and Piece stats"
-									>
-										Classic
-									</option>
-									<option value="das_trainer" title="Minimal + DAS stats">
-										Das Trainer
-									</option>
-									<option
-										value="minimal"
-										title="Capture score, level, lines, preview and field"
-									>
-										Minimal
-									</option>
+									<optgroup label="ROM presets (require click-in-field below)">
+										<option
+											value="classic"
+											title="Minimal + Colors and Piece stats"
+										>
+											Classic
+										</option>
+										<option value="das_trainer" title="Minimal + DAS stats">
+											Das Trainer
+										</option>
+										<option
+											value="minimal"
+											title="Capture score, level, lines, preview and field"
+										>
+											Minimal
+										</option>
+									</optgroup>
 									<option
 										value="hdmi_1080_4x_minimal"
 										title="Capture from a multiview 4x HDMI capture"
+										disabled
 									>
-										Multiview 4x (HDMI 1080p) 4x
+										Multiview 4x (HDMI 1080p) 4x (coming soon!)
 									</option>
-									<option
-										value="retron1hd_hdmi_169_classic"
-										title="Capture from a Retron1HD with 16:9 aspect ratio"
+									<optgroup
+										label="Retron1HD HDMI presets (start capture immediately)"
 									>
-										Retron HDMI 16:9 (classic)
-									</option>
-									<option
-										value="retron1hd_hdmi_43_classic"
-										title="Capture from a Retron1HD with 4:3 aspect ratio"
-									>
-										Retron HDMI 4:3 (classic)
-									</option>
-									<option
-										value="retron1hd_hdmi_169_minimal"
-										title="Capture from a Retron1HD with 16:9 aspect ratio"
-									>
-										Retron HDMI 16:9 (minimal)
-									</option>
-									<option
-										value="retron1hd_hdmi_43_minimal"
-										title="Capture from a Retron1HD with 4:3 aspect ratio"
-									>
-										Retron HDMI 4:3 (minimal)
-									</option>
+										<option
+											value="retron1hd_hdmi_169_classic"
+											title="Capture from a Retron1HD with 16:9 aspect ratio"
+										>
+											Retron HDMI 16:9 (classic)
+										</option>
+										<option
+											value="retron1hd_hdmi_43_classic"
+											title="Capture from a Retron1HD with 4:3 aspect ratio"
+										>
+											Retron HDMI 4:3 (classic)
+										</option>
+										<option
+											value="retron1hd_hdmi_169_minimal"
+											title="Capture from a Retron1HD with 16:9 aspect ratio"
+										>
+											Retron HDMI 16:9 (minimal)
+										</option>
+										<option
+											value="retron1hd_hdmi_43_minimal"
+											title="Capture from a Retron1HD with 4:3 aspect ratio"
+										>
+											Retron HDMI 4:3 (minimal)
+										</option>
+									</optgroup>
 								</select>
 							</div>
 						</div>
@@ -118,7 +125,7 @@ const MARKUP = html`
 			</div>
 
 			<div class="field is-horizontal is-hidden" id="color_matching">
-				<div class="field-label is-normal">
+				<div class="field-label is-normal is-large-label">
 					<label class="label" for="palette">Color matching</label>
 				</div>
 
