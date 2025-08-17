@@ -48,8 +48,12 @@ async function _loadPalettes() {
 	return _palettes;
 }
 
-let palettes = _loadPalettes();
+let palettes = null;
 
 export default function loadPalettes() {
-	return palettes; // everybody shares the same promise!
+	if (!palettes) {
+		palettes = _loadPalettes(); // lazy loading the palettes
+	}
+
+	return palettes; // all callers shares the same promise!
 }
