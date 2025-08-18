@@ -1,5 +1,6 @@
 import './components/wizard.js';
 import './components/capture.js';
+import './components/multiview/index.js';
 
 import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
@@ -14,6 +15,8 @@ import { CpuTetrisOCR } from './cpuTetrisOCR.js';
 import { peerServerOptions } from '/views/constants.js';
 
 import speak from '/views/tts.js';
+import { CaptureDriver } from './CaptureDriver.js';
+import { Player } from './Player.js';
 
 const body = document.querySelector('body');
 const notice = document.querySelector('div.notice');
@@ -90,7 +93,7 @@ function connect() {
 	}
 
 	console.log('Creating Connection');
-	connection = new Connection();
+	connection = new Connection('ws://localhost:5001/ws/room/producer2/PLAYER1');
 
 	connection.onMessage = function (frame) {
 		try {
@@ -161,11 +164,34 @@ async function initEverDriveCapture(config, tabToOpen) {
 	initCaptureFromEverdrive(config.frame_rate); // TODO
 }
 
+async function initMultiViewerCapture(config) {
+	const capture = document.createElement('ntc-multiview');
+
+	capture.id = 'capture';
+	document.body.prepend(capture);
+
+	capture.addPlayer();
+	capture.addPlayer();
+	capture.addPlayer();
+	capture.addPlayer();
+
+	return capture;
+
+	const captureDriver = new CaptureDriver(config);
+
+	const ocr = new CpuTetrisOCR(stream, config);
+	const gameTracker = new GameTracker(config);
+}
+
 async function initOCRCapture(config, tabToOpen) {
 	console.log('initOCRCapture');
 
-	const stream = await getStream(config);
-	const ocr = new CpuTetrisOCR(stream, config);
+	const driver = new CaptureDriver(stream, config);
+	const player = new Player(config);
+
+	driver.addCapture(player);
+
+	const ocr = new CpuTetrisOCR(config);
 	const gameTracker = new GameTracker(config);
 
 	let start_time = Date.now();
@@ -232,15 +258,12 @@ async function initFromConfig(tabToOpen) {
 	const config = await loadConfig();
 
 	if (config.device_id === 'everdrive') {
-		initEverDriveCapture(config, tabToOpen);
+		initEverDriveCapture(config, 'ocr_results');
 	} else if (config.mode === 'multiviewer') {
-		// TEMP: cheat to show TL player...
-		Object.assign(config, config.players[0]);
-		initOCRCapture(config, tabToOpen);
+		initMultiViewerCapture(config);
 	} else {
 		initOCRCapture(config, tabToOpen);
 	}
-	// TODO: handle more init logic
 }
 
 (async function main() {

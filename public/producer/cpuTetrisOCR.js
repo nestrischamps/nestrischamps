@@ -6,10 +6,9 @@ import {
 	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
 	GYM_PAUSE_LUMA_THRESHOLD,
 } from './constants.js';
-import { rgb2lab, clamp, timingDecorator } from '/ocr/utils.js';
+import { clamp, timingDecorator } from '/ocr/utils.js';
 
 const PERF_METHODS = [
-	// 'getSourceImageData',
 	'scanScore',
 	'scanLevel',
 	'scanLines',
@@ -26,9 +25,13 @@ const PERF_METHODS = [
 	'scanGymPause',
 ];
 
+let perfPrefix = 0;
+
 export class CpuTetrisOCR extends TetrisOCR {
 	constructor(stream, config) {
 		super(stream, config);
+
+		this.perfPrefix = ++perfPrefix;
 
 		this.capture_ctx = this.capture_canvas.getContext('2d', {
 			alpha: false,
@@ -67,12 +70,12 @@ export class CpuTetrisOCR extends TetrisOCR {
 	async processVideoFrame(videoFrame) {
 		const { width, height } = this.capture_canvas;
 
-		performance.mark(`start`);
+		performance.mark(`${this.perfPrefix}-start`);
 
 		this.capture_ctx.filter = this.#getCanvasFilters();
 		this.capture_ctx.drawImage(videoFrame || this.video, 0, 0, width, height);
 
-		performance.mark(`draw`);
+		performance.mark(`${this.perfPrefix}-draw`);
 
 		// extract the regions of interes
 		this.capture_ctx.filter = 'none';
@@ -108,7 +111,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			);
 		});
 
-		performance.mark(`get_areas`);
+		performance.mark(`${this.perfPrefix}-get_areas`);
 
 		if (this.config.show_parts) {
 			// draw the orange regions on the capture canvas
@@ -125,7 +128,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			});
 		}
 
-		performance.mark(`highlight`);
+		performance.mark(`${this.perfPrefix}-highlight`);
 
 		const source_img = this.output_ctx.getImageData(
 			0,
@@ -134,7 +137,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			this.output_canvas.height
 		);
 
-		performance.mark(`get_img_data`);
+		performance.mark(`${this.perfPrefix}-get_img_data`);
 
 		// scan (i.e. ORC) all the regions
 		const res = {
@@ -164,15 +167,39 @@ export class CpuTetrisOCR extends TetrisOCR {
 			Object.assign(res, this.scanPieceStats(source_img));
 		}
 
-		performance.mark(`ocr`);
-		performance.mark(`end`);
+		performance.mark(`${this.perfPrefix}-ocr`);
+		performance.mark(`${this.perfPrefix}-end`);
 
-		performance.measure('draw', `start`, `draw`);
-		performance.measure('get_areas', `draw`, `get_areas`);
-		performance.measure('highlight', `get_areas`, `highlight`);
-		performance.measure('get_img_data', `highlight`, `get_img_data`);
-		performance.measure('ocr', `get_img_data`, `ocr`);
-		performance.measure('total', `start`, `end`);
+		performance.measure(
+			`${this.perfPrefix}-draw`,
+			`${this.perfPrefix}-start`,
+			`${this.perfPrefix}-draw`
+		);
+		performance.measure(
+			`${this.perfPrefix}-get_areas`,
+			`${this.perfPrefix}-draw`,
+			`${this.perfPrefix}-get_areas`
+		);
+		performance.measure(
+			`${this.perfPrefix}-highlight`,
+			`${this.perfPrefix}-get_areas`,
+			`${this.perfPrefix}-highlight`
+		);
+		performance.measure(
+			`${this.perfPrefix}-get_img_data`,
+			`${this.perfPrefix}-highlight`,
+			`${this.perfPrefix}-get_img_data`
+		);
+		performance.measure(
+			`${this.perfPrefix}-ocr`,
+			`${this.perfPrefix}-get_img_data`,
+			`${this.perfPrefix}-ocr`
+		);
+		performance.measure(
+			`${this.perfPrefix}-total`,
+			`${this.perfPrefix}-start`,
+			`${this.perfPrefix}-end`
+		);
 
 		return res;
 	}

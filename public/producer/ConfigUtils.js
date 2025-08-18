@@ -15,10 +15,14 @@ export function hasConfig() {
 	// for now guard against initial calibration not completed
 	try {
 		const parsed = JSON.parse(maybeConfig);
+
 		if (parsed?.device_id === 'everdrive') return true;
 
-		// For OCR capture, we check that the task list is valid
+		// TODO validate config
+		if (parsed.mode === 'multiviewer') return true;
 
+		// For OCR capture, we check that the task list is valid
+		// TODO: validate properly
 		if (!parsed?.tasks) return false;
 
 		const tasks = Object.values(parsed.tasks);
@@ -33,7 +37,7 @@ export function hasConfig() {
 
 export function getGameTypeFromTasks(tasks) {
 	return tasks.T
-		? BinaryFrame.GAME_TYPE.CLASSIC
+		? BinaryFrame.GAME_TYPE.CLASSICcapture
 		: tasks.cur_piece_das
 			? BinaryFrame.GAME_TYPE.DAS_TRAINER
 			: BinaryFrame.GAME_TYPE.MINIMAL;

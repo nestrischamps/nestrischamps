@@ -16,25 +16,21 @@ const MARKUP = html`
 			<ul>
 				<li data-target="settings" class="is-active">
 					<a>
-						<span class="icon is-small"><i class="fas fa-image"></i></span>
 						<span>Settings</span>
 					</a>
 				</li>
 				<li data-target="ocr_results">
 					<a>
-						<span class="icon is-small"><i class="fas fa-music"></i></span>
 						<span>Data</span>
 					</a>
 				</li>
 				<li data-target="calibration">
 					<a>
-						<span class="icon is-small"><i class="fas fa-film"></i></span>
 						<span>Calibration</span>
 					</a>
 				</li>
 				<li data-target="room">
 					<a>
-						<span class="icon is-small"><i class="fas fa-file-alt"></i></span>
 						<span>Room View</span>
 					</a>
 				</li>

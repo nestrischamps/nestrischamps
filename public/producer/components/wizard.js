@@ -788,9 +788,9 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				camera_option.text = camera.label;
 				camera_option.value = camera.deviceId;
 
-				if (config && config.device_id === camera.deviceId) {
-					camera_option.selected = true;
-				}
+				// if (config && config.device_id === camera.deviceId) {
+				// 	camera_option.selected = true;
+				// }
 
 				return camera_option;
 			})

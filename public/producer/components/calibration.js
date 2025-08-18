@@ -541,7 +541,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 	#handleFrame = event => {
 		const {
-			detail: { frame, perf },
+			detail: { frame },
 		} = event;
 
 		Object.entries(frame).forEach(([name, value]) => {
