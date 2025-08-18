@@ -58,7 +58,7 @@ export async function getStream(config) {
 				audio: false,
 				video: {
 					deviceId: { exact: config.device_id },
-					height: { ideal: 720 },
+					height: { ideal: config.mode === 'multiviewer' ? 1080 : 720 },
 					frameRate: { ideal: config.frame_rate || default_frame_rate }, // Should we always try to get the highest the card can support?
 				},
 			};
@@ -84,7 +84,7 @@ export async function playVideoFromDevice(video, options = {}) {
 	const ideal = {
 		device_id: options.device_id || undefined,
 		fps: options.fps || 60,
-		height: options.height || 1080,
+		height: options.height || 720,
 	};
 
 	try {

@@ -300,7 +300,11 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				playVideoFromScreenCap(video);
 			} else if (device_id !== '') {
 				video.ntcType = 'device';
-				playVideoFromDevice(video, { device_id, fps: 30 });
+				playVideoFromDevice(video, {
+					device_id,
+					fps: 30,
+					height: this.#mode === 'multiviewer' ? 1080 : 720,
+				});
 			}
 		}
 
@@ -390,17 +394,6 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 		const video_capture_ctx = video_capture.getContext('2d', { alpha: false });
 		video_capture_ctx.imageSmoothingEnabled = false;
-		video_capture_ctx.imageSmoothingQuality;
-
-		const bitmap = await createImageBitmap(
-			video,
-			0,
-			0,
-			video.videoWidth,
-			video.videoHeight
-		);
-
-		await sleep(0); // wait one tick for canvas to be updated ... just in case
 
 		if (video.ntcType === 'device') {
 			video_capture_ctx.filter = 'brightness(1.45) contrast(1.65)';
@@ -408,7 +401,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			video_capture_ctx.filter = 'contrast(1.5)';
 		}
 
-		video_capture_ctx.drawImage(bitmap, 0, 0);
+		video_capture_ctx.drawImage(video, 0, 0);
 
 		await sleep(0); // wait one tick for everything to be drawn nicely... just in case
 
@@ -562,7 +555,6 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		}
 
 		const config = {
-			mode: this.#mode,
 			device_id,
 		};
 
@@ -576,6 +568,8 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			throw new Error('No rom selected');
 		}
 
+		config.mode = this.#mode;
+
 		// below here we are in device or window capture
 		const game_type = CONFIGS[rom_type].game_type;
 
@@ -587,18 +581,19 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
 			});
 		} else if (this.#mode === 'multiviewer') {
+			config.frame_rate = getDefaultOcrConfig().frame_rate;
 			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
-				const ui_xywh = { ...tetris_ui_in_video_xywh };
+				const ui_xywh = [...tetris_ui_in_video_xywh];
 
 				// add the offset to derive the placements in each of the 4 quadrants
-				ui_xywh.x += x;
-				ui_xywh.y += y;
+				ui_xywh[0] += x;
+				ui_xywh[1] += y;
 
 				const playerConfig = Object.assign(getDefaultOcrConfig(), {
 					game_type,
 					palette: palette_selector.value,
 					brightness: 1,
-					tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
+					tasks: this.#getTasks(rom_type, ui_xywh),
 				});
 
 				delete playerConfig.use_worker_for_interval;
@@ -671,6 +666,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			const scaleX = video.videoWidth / retronCaptureSize.w;
 			const scaleY = video.videoHeight / retronCaptureSize.h;
 
+			config.frame_rate = getDefaultOcrConfig().frame_rate;
 			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
 				const playerConfig = Object.assign(getDefaultOcrConfig(), {
 					game_type,
