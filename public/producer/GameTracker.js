@@ -58,7 +58,7 @@ export default class GameTracker extends EventTarget {
 		return this.start_level + 1 + Math.floor((lines - this.transition) / 10);
 	}
 
-	async processFrame({ perf, frame: last_frame }) {
+	async processFrame(last_frame) {
 		if (this.frame_buffer.length < FRAME_BUFFER_MAXSIZE) {
 			this.frame_buffer.push(last_frame);
 			return null;

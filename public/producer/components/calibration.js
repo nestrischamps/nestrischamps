@@ -133,6 +133,10 @@ const ATTRIBUTES = {
 		name: 'enable-show-parts',
 		init: 'true',
 	},
+	enableHalfHeight: {
+		name: 'enable-use-half-height',
+		init: 'true',
+	},
 	enableCaptureRate: {
 		name: 'enable-capture-rate',
 		init: 'true',
@@ -337,6 +341,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	};
 
 	#restartHidePartsTimeout() {
+		return;
 		this.#hidePartsTID = clearTimeout(this.#hidePartsTID);
 		this.#hidePartsTID = setTimeout(() => {
 			const { show_parts } = this.#domrefs;
@@ -361,7 +366,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			[...capture.querySelectorAll('canvas')].forEach(canvas =>
 				canvas.classList.remove('is-hidden')
 			);
-			this.ocr.video.style.width = null;
 		} else {
 			this.#hidePartsTID = clearTimeout(this.#hidePartsTID);
 
@@ -371,7 +375,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			[...capture.querySelectorAll('canvas')].forEach(canvas =>
 				canvas.classList.add('is-hidden')
 			);
-			this.ocr.video.style.width = '500px';
 		}
 	};
 
@@ -493,12 +496,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			brightness_slider,
 		} = this.#domrefs;
 
-		capture.replaceChildren(
-			ocr.video,
-			ocr.capture_canvas,
-			ocr.digit_canvas_1,
-			ocr.output_canvas
-		);
+		capture.replaceChildren(ocr.capture_canvas, ocr.output_canvas);
 
 		adjustments.replaceChildren(
 			...Object.entries(ocr.config.tasks).map(([name, task]) => {
@@ -540,9 +538,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	}
 
 	#handleFrame = event => {
-		const {
-			detail: { frame },
-		} = event;
+		const { detail: frame } = event;
 
 		Object.entries(frame).forEach(([name, value]) => {
 			const control = this.shadow.getElementById(name);

@@ -25,17 +25,16 @@ const PERF_METHODS = [
 	'scanGymPause',
 ];
 
-let perfPrefix = 0;
+let perfSuffix = 0;
 
 export class CpuTetrisOCR extends TetrisOCR {
-	constructor(stream, config) {
-		super(stream, config);
+	constructor(config) {
+		super(config);
 
-		this.perfPrefix = ++perfPrefix;
+		this.perfSuffix = ++perfSuffix;
 
 		this.capture_ctx = this.capture_canvas.getContext('2d', {
 			alpha: false,
-			willReadFrequently: true,
 		});
 		this.capture_ctx.imageSmoothingEnabled = false;
 
@@ -51,7 +50,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 		// decorate relevant methods to capture timings
 		PERF_METHODS.forEach(name => {
 			const method = this[name].bind(this);
-			this[name] = timingDecorator(name, method);
+			this[name] = timingDecorator(`${name}-${this.perfSuffix}`, method);
 		});
 	}
 
@@ -67,15 +66,25 @@ export class CpuTetrisOCR extends TetrisOCR {
 		}
 	}
 
-	async processVideoFrame(videoFrame) {
+	async processVideoFrame(frame) {
+		const { videoFrame, video, digit_lumas } = frame;
 		const { width, height } = this.capture_canvas;
 
-		performance.mark(`${this.perfPrefix}-start`);
+		// dirty lazy init actions?
+		if (!this.digit_lumas) this.digit_lumas = digit_lumas;
+		if (!this.capture_canvas._ntc_initialized) {
+			this.capture_canvas._ntc_initialized = true;
+			this.capture_canvas.width = video.videoWidth;
+			this.capture_canvas.height =
+				video.videoHeight >> (this.config.use_half_height ? 1 : 0);
+		}
+
+		performance.mark(`start-${this.perfSuffix}`);
 
 		this.capture_ctx.filter = this.#getCanvasFilters();
-		this.capture_ctx.drawImage(videoFrame || this.video, 0, 0, width, height);
+		this.capture_ctx.drawImage(videoFrame || video, 0, 0, width, height);
 
-		performance.mark(`${this.perfPrefix}-draw`);
+		performance.mark(`draw-${this.perfSuffix}`);
 
 		// extract the regions of interes
 		this.capture_ctx.filter = 'none';
@@ -111,7 +120,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			);
 		});
 
-		performance.mark(`${this.perfPrefix}-get_areas`);
+		performance.mark(`get_areas-${this.perfSuffix}`);
 
 		if (this.config.show_parts) {
 			// draw the orange regions on the capture canvas
@@ -128,7 +137,25 @@ export class CpuTetrisOCR extends TetrisOCR {
 			});
 		}
 
-		performance.mark(`${this.perfPrefix}-highlight`);
+		performance.mark(`highlight-${this.perfSuffix}`);
+
+		// const offscreen = new OffscreenCanvas(
+		// 	this.output_canvas.width,
+		// 	this.output_canvas.height
+		// );
+		// const offscreen_ctx = offscreen.getContext('2d', {
+		// 	alpha: false,
+		// });
+
+		// // flatten image / diconnect pipeline!
+		// offscreen_ctx.drawImage(this.output_canvas, 0, 0);
+
+		// const source_img = offscreen_ctx.getImageData(
+		// 	0,
+		// 	0,
+		// 	this.output_canvas.width,
+		// 	this.output_canvas.height
+		// );
 
 		const source_img = this.output_ctx.getImageData(
 			0,
@@ -137,7 +164,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 			this.output_canvas.height
 		);
 
-		performance.mark(`${this.perfPrefix}-get_img_data`);
+		performance.mark(`get_img_data-${this.perfSuffix}`);
 
 		// scan (i.e. ORC) all the regions
 		const res = {
@@ -167,41 +194,44 @@ export class CpuTetrisOCR extends TetrisOCR {
 			Object.assign(res, this.scanPieceStats(source_img));
 		}
 
-		performance.mark(`${this.perfPrefix}-ocr`);
-		performance.mark(`${this.perfPrefix}-end`);
+		performance.mark(`ocr-${this.perfSuffix}`);
+		performance.mark(`end-${this.perfSuffix}`);
 
 		performance.measure(
-			`${this.perfPrefix}-draw`,
-			`${this.perfPrefix}-start`,
-			`${this.perfPrefix}-draw`
+			`draw-${this.perfSuffix}`,
+			`start-${this.perfSuffix}`,
+			`draw-${this.perfSuffix}`
 		);
 		performance.measure(
-			`${this.perfPrefix}-get_areas`,
-			`${this.perfPrefix}-draw`,
-			`${this.perfPrefix}-get_areas`
+			`get_areas-${this.perfSuffix}`,
+			`draw-${this.perfSuffix}`,
+			`get_areas-${this.perfSuffix}`
 		);
 		performance.measure(
-			`${this.perfPrefix}-highlight`,
-			`${this.perfPrefix}-get_areas`,
-			`${this.perfPrefix}-highlight`
+			`highlight-${this.perfSuffix}`,
+			`get_areas-${this.perfSuffix}`,
+			`highlight-${this.perfSuffix}`
 		);
 		performance.measure(
-			`${this.perfPrefix}-get_img_data`,
-			`${this.perfPrefix}-highlight`,
-			`${this.perfPrefix}-get_img_data`
+			`get_img_data-${this.perfSuffix}`,
+			`highlight-${this.perfSuffix}`,
+			`get_img_data-${this.perfSuffix}`
 		);
 		performance.measure(
-			`${this.perfPrefix}-ocr`,
-			`${this.perfPrefix}-get_img_data`,
-			`${this.perfPrefix}-ocr`
+			`ocr-${this.perfSuffix}`,
+			`get_img_data-${this.perfSuffix}`,
+			`ocr-${this.perfSuffix}`
 		);
 		performance.measure(
-			`${this.perfPrefix}-total`,
-			`${this.perfPrefix}-start`,
-			`${this.perfPrefix}-end`
+			`total-${this.perfSuffix}`,
+			`start-${this.perfSuffix}`,
+			`end-${this.perfSuffix}`
 		);
 
-		return res;
+		const event = new CustomEvent('frame', {
+			detail: res,
+		});
+		this.dispatchEvent(event);
 	}
 
 	#getCanvasFilters() {

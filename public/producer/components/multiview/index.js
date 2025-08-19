@@ -16,8 +16,19 @@ const MARKUP = html`
 			</ul>
 		</div>
 	</div>
-	<div id="content" class="container is-fluid">
-		<div id="settings" class="is-active">Hello<br />Where is this??</div>
+	<div id="content" class="container mt-5 is-fluid">
+		<div id="settings" class="is-active">
+			<div class="columns">
+				<fieldset id="source" class="column">
+					<legend>Source</legend>
+				</fieldset>
+
+				<fieldset class="column">
+					<legend>OCR Performance (in ms)</legend>
+					<dl id="perf_data"></dl>
+				</fieldset>
+			</div>
+		</div>
 	</div>
 `;
 
@@ -34,10 +45,39 @@ cssOverride.replaceSync(`
     #content > *.is-active {
         display: block;
     }
+
+	#source {
+		text-align: center;
+	}
+
+	video {
+		width: 500px;
+	}
+
+	dl {
+		display: inline-grid;
+		grid-template-columns: max-content auto;
+		font-family: monospace;
+		margin: 1em 0;
+		column-gap: 1em;
+	}
+
+	dt {
+		grid-column-start: 1;
+		text-align: right;
+	}
+
+	dd {
+		grid-column-start: 2;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}	
 `);
 
 export class NTC_MultiView extends NtcComponent {
 	#domrefs;
+	#driver;
 	#players;
 
 	constructor() {
@@ -54,6 +94,8 @@ export class NTC_MultiView extends NtcComponent {
 		this.#domrefs = {
 			tabs: this.shadow.getElementById('tabs'),
 			content: this.shadow.getElementById('content'),
+			source: this.shadow.getElementById('source'),
+			perf_data: this.shadow.getElementById('perf_data'),
 		};
 
 		// top level listener to handle tabs
@@ -76,6 +118,19 @@ export class NTC_MultiView extends NtcComponent {
 		pane.classList.add('is-active');
 	};
 
+	setDriver(driver) {
+		const { source } = this.#domrefs;
+		this.#driver = driver;
+
+		for (const player of this.#driver.players) {
+			this.addPlayer(player);
+		}
+
+		source.appendChild(this.#driver.getVideo());
+
+		this.#driver.addEventListener('frame', this.#handleFrame);
+	}
+
 	addPlayer(player) {
 		const { tabs, content } = this.#domrefs;
 
@@ -90,11 +145,60 @@ export class NTC_MultiView extends NtcComponent {
 
 		const cal = document.createElement('ntc-calibration');
 		cal.id = `player-${playerId}`;
+		cal.setAttribute('enable-show-parts', 'false');
+		cal.setAttribute('enable-use-half-height', 'false');
+		cal.setAttribute('enable-capture-rate', 'false');
+		cal.setOCR(player.ocr);
 
 		tabs.querySelector('ul').appendChild(tab);
 		content.appendChild(cal);
 
 		this.#players.push(player);
+	}
+
+	#handleFrame = () => {
+		const perf = {};
+
+		performance.getEntriesByType('measure').forEach(m => {
+			// discard browser performance measurements -_-
+			if (m.name.startsWith('browser::')) return;
+			if (m.name.startsWith('invoke-')) return;
+			if (m.name.startsWith('inline-')) return;
+			if (m.name.startsWith('DOM-')) return;
+			if (m.name.startsWith('ANALYZE_')) return;
+
+			perf[m.name] = m.duration.toFixed(3);
+		});
+
+		this.#setPerfData(perf);
+	};
+
+	#setPerfData(perf) {
+		const { perf_data } = this.#domrefs;
+
+		for (const [name, value] of Object.entries(perf)) {
+			let dt = perf_data.querySelector(`dt.${name}`);
+
+			if (dt) {
+				const dd = dt.nextSibling;
+				if (value === null) {
+					dd.remove();
+					dt.remove();
+				} else {
+					dd.textContent = value;
+				}
+			} else if (value !== null) {
+				const dt = document.createElement('dt');
+				const dd = document.createElement('dd');
+
+				dt.classList.add(name);
+				dt.textContent = name;
+				dd.textContent = value;
+
+				perf_data.appendChild(dt);
+				perf_data.appendChild(dd);
+			}
+		}
 	}
 }
 

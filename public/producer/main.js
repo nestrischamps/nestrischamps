@@ -170,23 +170,26 @@ async function initMultiViewerCapture(config) {
 	capture.id = 'capture';
 	document.body.prepend(capture);
 
-	capture.addPlayer();
-	capture.addPlayer();
-	capture.addPlayer();
-	capture.addPlayer();
+	const driver = new CaptureDriver(config);
+
+	let playerNum = (value => {
+		return /^[123]\d+$/.test(value) ? parseInt(value, 10) : 1;
+	})(QueryString.get('player_start'));
+
+	for (const playerConfig of config.players) {
+		const player = new Player(playerNum, playerConfig);
+		driver.addPlayer(player);
+	}
+
+	capture.setDriver(driver);
 
 	return capture;
-
-	const captureDriver = new CaptureDriver(config);
-
-	const ocr = new CpuTetrisOCR(stream, config);
-	const gameTracker = new GameTracker(config);
 }
 
 async function initOCRCapture(config, tabToOpen) {
 	console.log('initOCRCapture');
 
-	const driver = new CaptureDriver(stream, config);
+	const driver = new CaptureDriver(config);
 	const player = new Player(config);
 
 	driver.addCapture(player);
