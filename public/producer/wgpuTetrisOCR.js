@@ -295,6 +295,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 	}
 
 	async copyPackedRegionsToTasks() {
+		// expensive :( ==> need to rutn off with hide parts as before
 		// Use createImageBitmap to create a snapshot of the WebGPU output
 		const imageBitmap = await createImageBitmap(this.output_canvas);
 

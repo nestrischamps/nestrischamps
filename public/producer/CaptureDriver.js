@@ -51,7 +51,9 @@ export class CaptureDriver extends EventTarget {
 
 	async #getGPU() {
 		if (navigator.gpu?.requestAdapter) {
-			const adapter = await navigator.gpu.requestAdapter();
+			const adapter = await navigator.gpu.requestAdapter({
+				powerPreference: 'high-performance',
+			});
 			const device = await adapter.requestDevice();
 			const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
 
@@ -179,6 +181,12 @@ export class CaptureDriver extends EventTarget {
 			return;
 		}
 
+		const now = Date.now();
+		if (this.then) {
+			console.log('elapsed: ', now - this.then);
+		}
+		this.then = now;
+
 		this.#working = true;
 
 		performance.clearMarks();
@@ -222,6 +230,8 @@ export class CaptureDriver extends EventTarget {
 			`player-driver-start-${this.driverSuffix}`,
 			`player-driver-end-${this.driverSuffix}`
 		);
+
+		console.log('work', Date.now() - now);
 
 		this.dispatchEvent(new CustomEvent('frame'));
 
