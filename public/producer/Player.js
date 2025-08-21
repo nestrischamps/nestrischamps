@@ -3,6 +3,7 @@ import Connection from '/js/connection.js';
 
 import GameTracker from './GameTracker.js';
 import { CpuTetrisOCR } from './cpuTetrisOCR.js';
+import { WGpuTetrisOCR } from './wgpuTetrisOCR.js';
 
 export class Player extends EventTarget {
 	#startTime;
@@ -15,17 +16,19 @@ export class Player extends EventTarget {
 		this.num = num;
 		this.config = config;
 
-		this.ocr = new CpuTetrisOCR(config);
-		this.gameTracker = new GameTracker(config);
-
 		this.#startTime = Date.now();
 		this.#lastFrame = { field: [] };
+
+		this.gameTracker = new GameTracker(config);
+		this.gameTracker.addEventListener('frame', this.#handleFrame);
+
+		this.ocr = navigator.gpu?.requestAdapter
+			? new WGpuTetrisOCR(this.config)
+			: new CpuTetrisOCR(this.config);
 
 		this.ocr.addEventListener('frame', ({ detail: frame }) => {
 			this.gameTracker.processFrame(frame);
 		});
-
-		this.gameTracker.addEventListener('frame', this.#handleFrame);
 	}
 
 	processVideoFrame(frame) {

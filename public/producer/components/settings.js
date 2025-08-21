@@ -129,7 +129,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 		this.#domrefs.vdo_ninja.addEventListener('change', this.#onVdoNinjaChange);
 
 		if (QueryString.get('timer') === '1') {
-			timer_control.classList.remove('is_hidden');
+			this.#domrefs.timer_control.classList.remove('is_hidden');
 		}
 
 		this.resetDevices();

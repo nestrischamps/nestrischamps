@@ -18,6 +18,7 @@ export class CaptureDriver extends EventTarget {
 	#working;
 	#stream;
 	#video;
+	#gpu = null;
 
 	constructor(config) {
 		super();
@@ -34,6 +35,7 @@ export class CaptureDriver extends EventTarget {
 
 		Promise.all([
 			this.#init(),
+			this.#getGPU(),
 			this.#waitForVideoReady(),
 			this.#loadDigitTemplates(),
 		]).then(() => {
@@ -45,6 +47,20 @@ export class CaptureDriver extends EventTarget {
 		this.#stream = await getStream(this.config);
 		this.#video.srcObject = this.#stream;
 		this.#video.play();
+	}
+
+	async #getGPU() {
+		if (navigator.gpu?.requestAdapter) {
+			const adapter = await navigator.gpu.requestAdapter();
+			const device = await adapter.requestDevice();
+			const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
+
+			this.#gpu = {
+				adapter,
+				device,
+				canvasFormat,
+			};
+		}
 	}
 
 	addPlayer(player) {
@@ -171,6 +187,7 @@ export class CaptureDriver extends EventTarget {
 		performance.mark(`player-driver-start-${this.driverSuffix}`);
 
 		const frame = {
+			gpu: this.#gpu,
 			videoFrame,
 			video: this.#video,
 			digit_lumas: this.digit_lumas,
@@ -184,7 +201,7 @@ export class CaptureDriver extends EventTarget {
 			performance.mark(`player-start-${this.driverSuffix}-${playerIdx}`);
 
 			try {
-				await player.processVideoFrame(frame || this.#video);
+				await player.processVideoFrame(frame);
 			} catch (err) {
 				console.warn(err);
 			}

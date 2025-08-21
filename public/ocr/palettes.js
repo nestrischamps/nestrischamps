@@ -17,6 +17,8 @@ async function getSavedPalette() {
 const palettePromises = {};
 
 export function getPalette(name) {
+	if (!name) return null;
+
 	if (name === '_saved') {
 		return getSavedPalette();
 	}
