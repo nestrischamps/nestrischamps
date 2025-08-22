@@ -88,7 +88,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		super.setConfig(config);
 	}
 
-	#initGpuAssets(video, gpu) {
+	#initGpuAssets({ video, gpu }) {
 		const { device, canvasFormat } = gpu;
 
 		this.capture_canvas._ntc_initialized = true;
@@ -179,15 +179,6 @@ export class WGpuTetrisOCR extends TetrisOCR {
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 		});
 
-		// Update the globals buffer with current sizes
-		const globalsData = new Float32Array([
-			this.output_canvas.width,
-			this.output_canvas.height, // outputSize
-			video.videoWidth,
-			video.videoHeight, // inputSize
-		]);
-		device.queue.writeBuffer(this.#globalsBuffer, 0, globalsData);
-
 		for (const task of Object.values(this.config.tasks)) {
 			task.canvas_ctx = task.canvas.getContext('2d', { alphga: false });
 			task.canvas_ctx.imageSmoothingEnabled = false;
@@ -204,8 +195,25 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		}
 	}
 
-	renderExtractedRegions(gpu) {
+	renderExtractedRegions({ video, gpu }) {
 		const { device } = gpu;
+
+		// Update the globals buffer with current sizes
+		const globalsData = new Float32Array([
+			this.output_canvas.width, // outputSize
+			this.output_canvas.height,
+			video.videoWidth, // inputSize
+			video.videoHeight,
+			this.config.brightness, // color corrections
+			this.config.contrast,
+		]);
+		// console.log([
+		// 	this.config.brightness,
+		// 	typeof this.config.brightness,
+		// 	this.config.contrast,
+		// 	typeof this.config.contrast,
+		// ]); // outpus [1, 1] as expected
+		device.queue.writeBuffer(this.#globalsBuffer, 0, globalsData);
 
 		// Create the main bind group for the global uniforms and texture.
 		// This now correctly bundles globals, inputSampler, and inputTexture
@@ -298,6 +306,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		// expensive :( ==> need to rutn off with hide parts as before
 		// Use createImageBitmap to create a snapshot of the WebGPU output
 		const imageBitmap = await createImageBitmap(this.output_canvas);
+		// return;
 
 		for (const name in this.config.tasks) {
 			const task = this.config.tasks[name];
@@ -347,7 +356,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		// dirty lazy init actions?
 		if (!this.digit_lumas) this.digit_lumas = digit_lumas;
 		if (!this.capture_canvas._ntc_initialized) {
-			this.#initGpuAssets(video, gpu);
+			this.#initGpuAssets(frame);
 		}
 
 		this.drawHighlights(frame);
@@ -366,7 +375,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 			`gpu-end-${this.perfSuffix}`
 		);
 
-		this.renderExtractedRegions(gpu);
+		this.renderExtractedRegions(frame);
 
 		await gpu.device.queue.onSubmittedWorkDone();
 
@@ -377,20 +386,6 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		// 	detail: {},
 		// });
 		// this.dispatchEvent(event);
-	}
-
-	#getCanvasFilters() {
-		const filters = [];
-
-		if (this.config.brightness > 1) {
-			filters.push(`brightness(${this.config.brightness})`);
-		}
-
-		if (this.config.contrast !== 1) {
-			filters.push(`contrast(${this.config.contrast})`);
-		}
-
-		return filters.length ? filters.join(' ') : 'none';
 	}
 
 	getDigit(pixel_data, max_check_index, is_red) {

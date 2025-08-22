@@ -182,10 +182,10 @@ export class CaptureDriver extends EventTarget {
 		}
 
 		const now = Date.now();
-		if (this.then) {
-			console.log('elapsed: ', now - this.then);
-		}
-		this.then = now;
+		// if (this.then) {
+		// 	console.log('elapsed: ', now - this.then);
+		// }
+		// this.then = now;
 
 		this.#working = true;
 
@@ -231,7 +231,7 @@ export class CaptureDriver extends EventTarget {
 			`player-driver-end-${this.driverSuffix}`
 		);
 
-		console.log('work', Date.now() - now);
+		// console.log('work', Date.now() - now);
 
 		this.dispatchEvent(new CustomEvent('frame'));
 

@@ -12,6 +12,8 @@ struct Region {
 struct Globals {
   outputSize: vec2<f32>,
   inputSize: vec2<f32>,
+  brightness: f32,
+  contrast: f32,
 };
 
 @group(0) @binding(0) var<uniform> globals: Globals;
@@ -31,6 +33,18 @@ fn main(@location(0) uvOutput: vec2<f32>) -> @location(0) vec4<f32> {
 
   var color = textureSampleBaseClampToEdge(inputTexture, inputSampler, uvClamped);
 
+
+  // Apply contrast first: pivot around 0.5
+  let contrast_rgb = (color.rgb - vec3<f32>(0.5)) * vec3<f32>(globals.contrast) + vec3<f32>(0.5);
+  color = vec4<f32>(contrast_rgb, color.a);
+
+  // Then apply brightness
+  let brightness_rgb = color.rgb * vec3<f32>(globals.brightness);
+  color = vec4<f32>(brightness_rgb, color.a);
+
+  // Clamp the color to ensure it stays in the [0, 1] range after adjustments
+  color = clamp(color, vec4<f32>(0.0), vec4<f32>(1.0));
+
   let transformType = u32(region.transformType);
 
   // Apply transform based on uniform
@@ -46,7 +60,7 @@ fn main(@location(0) uvOutput: vec2<f32>) -> @location(0) vec4<f32> {
     color = vec4<f32>(luma_value, luma_value, luma_value, color.a);
   }
   else if (transformType == TRANSFORM_RED_LUMA) {
-    let constrastHigh = 0.50;
+    let constrastHigh = 0.65;
     let constrastLow = 0.08;
     let r = clamp((color.r - constrastLow) / (constrastHigh - constrastLow), 0.0, 1.0);
 
