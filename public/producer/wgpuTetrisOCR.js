@@ -300,10 +300,25 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		device.queue.submit([commandEncoder.finish()]);
 	}
 
+	#getCanvasFilters() {
+		const filters = [];
+
+		if (this.config.brightness > 1) {
+			filters.push(`brightness(${this.config.brightness})`);
+		}
+
+		if (this.config.contrast !== 1) {
+			filters.push(`contrast(${this.config.contrast})`);
+		}
+
+		return filters.length ? filters.join(' ') : 'none';
+	}
+
 	extractAndHighlightRegions(frame) {
 		const { videoFrame, video } = frame;
 
 		// --- 2D Canvas Drawing (Original Video + Highlights) ---
+		this.capture_ctx.filter = this.#getCanvasFilters();
 		this.capture_ctx.drawImage(
 			videoFrame || video,
 			0,
