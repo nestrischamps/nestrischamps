@@ -140,7 +140,7 @@ export class NTC_MultiView extends NtcComponent {
 		tab.dataset.target = `player-${playerId}`;
 
 		const a = document.createElement('a');
-		a.textContent = `Player ${playerId}`;
+		a.textContent = `Player ${player.num}`;
 		tab.appendChild(a);
 
 		const cal = document.createElement('ntc-calibration');

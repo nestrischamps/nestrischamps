@@ -173,11 +173,11 @@ async function initMultiViewerCapture(config) {
 	const driver = new CaptureDriver(config);
 
 	let playerNum = (value => {
-		return /^[123]\d+$/.test(value) ? parseInt(value, 10) : 1;
-	})(QueryString.get('player_start'));
+		return /^([1-9]|[123]\d+)$/.test(value) ? parseInt(value, 10) : 1;
+	})(QueryString.get('first_player'));
 
 	for (const playerConfig of config.players) {
-		const player = new Player(playerNum, playerConfig);
+		const player = new Player(playerNum++, playerConfig);
 		driver.addPlayer(player);
 	}
 
