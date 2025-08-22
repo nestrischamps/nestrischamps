@@ -185,7 +185,7 @@ export class CaptureDriver extends EventTarget {
 		// if (this.then) {
 		// 	console.log('elapsed: ', now - this.then);
 		// }
-		// this.then = now;
+		this.then = now;
 
 		this.#working = true;
 

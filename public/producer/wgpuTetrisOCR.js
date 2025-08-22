@@ -30,10 +30,9 @@ const PERF_METHODS = [
 	'scanCurPiece',
 	'scanGymPause',
 
-	'drawHighlights',
+	'extractAndHighlightRegions',
 	'processVideoFrame',
 	'renderExtractedRegions',
-	'copyPackedRegionsToTasks',
 ];
 
 async function loadShaderSource(url) {
@@ -180,8 +179,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		});
 
 		for (const task of Object.values(this.config.tasks)) {
-			task.canvas_ctx = task.canvas.getContext('2d', { alphga: false });
-			task.canvas_ctx.imageSmoothingEnabled = false;
+			task.canvas_ctx = task.canvas.getContext('2d', { alpha: false });
 
 			task.regionBuffer = device.createBuffer({
 				size: 48, // 9xf32 + padding
@@ -302,29 +300,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		device.queue.submit([commandEncoder.finish()]);
 	}
 
-	async copyPackedRegionsToTasks() {
-		// expensive :( ==> need to rutn off with hide parts as before
-		// Use createImageBitmap to create a snapshot of the WebGPU output
-		const imageBitmap = await createImageBitmap(this.output_canvas);
-		// return;
-
-		for (const name in this.config.tasks) {
-			const task = this.config.tasks[name];
-			task.canvas_ctx.drawImage(
-				imageBitmap,
-				task.packing_pos.x,
-				task.packing_pos.y,
-				task.crop.w,
-				task.crop.h,
-				0,
-				0,
-				task.crop.w,
-				task.crop.h
-			);
-		}
-	}
-
-	drawHighlights(frame) {
+	extractAndHighlightRegions(frame) {
 		const { videoFrame, video } = frame;
 
 		// --- 2D Canvas Drawing (Original Video + Highlights) ---
@@ -339,6 +315,19 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		this.capture_ctx.fillStyle = '#FFA50080'; // Transparent orange
 		for (const name in this.config.tasks) {
 			const task = this.config.tasks[name];
+
+			task.canvas_ctx.drawImage(
+				this.capture_canvas,
+				task.crop.x,
+				task.crop.y,
+				task.crop.w,
+				task.crop.h,
+				0,
+				0,
+				task.canvas.width,
+				task.canvas.height
+			);
+
 			this.capture_ctx.fillRect(
 				task.crop.x,
 				task.crop.y,
@@ -359,7 +348,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 			this.#initGpuAssets(frame);
 		}
 
-		this.drawHighlights(frame);
+		this.extractAndHighlightRegions(frame);
 
 		performance.mark(`start-${this.perfSuffix}`);
 
@@ -378,9 +367,6 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		this.renderExtractedRegions(frame);
 
 		await gpu.device.queue.onSubmittedWorkDone();
-
-		// --- Copy extracted regions to their specific task canvases ---
-		await this.copyPackedRegionsToTasks();
 
 		// const event = new CustomEvent('frame', {
 		// 	detail: {},
