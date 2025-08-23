@@ -1,5 +1,6 @@
 import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
+import { u32ToRgba } from '/ocr/utils.js';
 
 const MARKUP = html`
 	<fieldset>
@@ -231,11 +232,8 @@ export class NTC_Crop_Control extends NtcComponent {
 				const row = results.colors.slice(ridx * 10, ridx * 10 + 10);
 
 				row.forEach((col, cidx) => {
-					const r = (col >> 24) & 0xff;
-					const g = (col >> 16) & 0xff;
-					const b = (col >> 8) & 0xff;
-					const a = ((col >> 0) & 0xff) / 255;
-					ctx.fillStyle = `rgb(${r},${g},${b},${a})`;
+					const [r, g, b] = u32ToRgba(col);
+					ctx.fillStyle = `rgb(${r},${g},${b})`;
 					ctx.fillRect(cidx * 16, ridx * 16, 14, 14);
 				});
 			}

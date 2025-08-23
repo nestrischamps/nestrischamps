@@ -1,16 +1,6 @@
 // ============================================
-// WebGPU OCR Compute – TypeScript host code
+// WebGPU OCR Compute – Javascript host code
 // ============================================
-
-// export type IVec2 = { x: number; y: number };
-// export type MatchJob = { x: number; y: number; refIndex: number };
-
-// export type Offsets = {
-// 	boardColorOffsets: IVec2[]; // length 4
-// 	boardShineOffsets: IVec2[]; // length 3
-// 	refColorOffsets: IVec2[]; // length 4
-// 	shine14Offsets: IVec2[]; // length 3
-// };
 
 export class OcrCompute {
 	device;
@@ -245,21 +235,20 @@ export class OcrCompute {
 	// 2) Board analysis
 	// -----------------------------
 
-	async analyzeBoard(params) {
+	prepMatchNonDigitsGPUAssets(params) {
 		const {
-			inputTexture,
 			texWidth,
 			texHeight,
 			threshold255,
 			boardPositions,
 			refBlockPositions,
-			shine14Positions,
+			pieceBlockPositions,
 			offsets,
 		} = params;
 
 		const numBlocks = boardPositions.length;
 		const numRefBlocks = refBlockPositions.length;
-		const numShineSpots = shine14Positions.length;
+		const numShineSpots = pieceBlockPositions.length;
 
 		// Uniforms
 		const boardUniform = new Uint32Array([
@@ -291,13 +280,19 @@ export class OcrCompute {
 			packIVec2(refBlockPositions),
 			GPUBufferUsage.STORAGE
 		);
-		const shine14Buf = this.makeBuffer(
-			packIVec2(shine14Positions),
+		const shineBuf = this.makeBuffer(
+			packIVec2(pieceBlockPositions),
 			GPUBufferUsage.STORAGE
 		);
 
 		// Offsets buffer, in exact layout expected by WGSL
-		const offs = new Int32Array((4 + 3 + 4 + 3) * 2);
+		const offs = new Int32Array(
+			2 *
+				(offsets.boardColorOffsets.length +
+					offsets.boardShineOffsets.length +
+					offsets.refColorOffsets.length +
+					offsets.pieceBlockPositions.length)
+		);
 		let k = 0;
 		for (const v of offsets.boardColorOffsets) {
 			offs[k++] = v.x | 0;
@@ -311,25 +306,56 @@ export class OcrCompute {
 			offs[k++] = v.x | 0;
 			offs[k++] = v.y | 0;
 		}
-		for (const v of offsets.shine14Offsets) {
+		for (const v of offsets.pieceBlockPositions) {
 			offs[k++] = v.x | 0;
 			offs[k++] = v.y | 0;
 		}
 		const offsBuf = this.makeBuffer(offs, GPUBufferUsage.STORAGE);
 
 		// Output buffer sizes
-		const boardColorsBytes = 200 * 4 * 4; // 200 vec4<f32>
+		const boardColorsBytes = 200 * 4; // 200 u32
 		const boardShinesBytes = 200 * 4; // 200 u32
-		const refColorsBytes = 3 * 4 * 4; // 3 vec4<f32>
-		const shine14Bytes = 14 * 4; // 14 u32
+		const refColorsBytes = 3 * 4; // 3 u32
+		const shineBytes = 28 * 4; // 28 u32
 		const totalBytes =
-			boardColorsBytes + boardShinesBytes + refColorsBytes + shine14Bytes;
+			boardColorsBytes + boardShinesBytes + refColorsBytes + shineBytes;
 
 		// We will write into a single slab that matches WGSL layout. The layout there is sequential.
 		const outBuf = this.makeEmptyBuffer(
 			totalBytes,
 			GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
 		);
+
+		this.matchNonDigitsAssets = {
+			numBlocks,
+			numRefBlocks,
+			numShineSpots,
+			totalBytes,
+
+			ubo,
+			boardPosBuf,
+			offsBuf,
+			outBuf,
+			refPosBuf,
+			shineBuf,
+		};
+	}
+
+	async analyzeBoard(params) {
+		const { inputTexture } = params;
+		const {
+			numBlocks,
+			numRefBlocks,
+			numShineSpots,
+			totalBytes,
+
+			ubo,
+			boardPosBuf,
+			offsBuf,
+			outBuf,
+			refPosBuf,
+			shineBuf,
+		} = this.matchNonDigitsAssets;
 
 		// Bind group
 		const bindGroup = this.boardPipeline.getBindGroupLayout(0);
@@ -338,11 +364,20 @@ export class OcrCompute {
 			entries: [
 				{ binding: 0, resource: inputTexture.createView() },
 				{ binding: 1, resource: { buffer: ubo } },
-				{ binding: 2, resource: { buffer: boardPosBuf } },
+				{
+					binding: 2,
+					resource: { buffer: boardPosBuf },
+				},
 				{ binding: 3, resource: { buffer: offsBuf } },
 				{ binding: 4, resource: { buffer: outBuf } },
-				{ binding: 5, resource: { buffer: refPosBuf } },
-				{ binding: 6, resource: { buffer: shine14Buf } },
+				{
+					binding: 5,
+					resource: { buffer: refPosBuf },
+				},
+				{
+					binding: 6,
+					resource: { buffer: shineBuf },
+				},
 			],
 		});
 
@@ -364,28 +399,24 @@ export class OcrCompute {
 
 		// Read back once, then slice views according to the fixed layout
 		const raw = await this.readBuffer(outBuf, totalBytes);
-		const f32 = new Float32Array(raw);
 		const u32 = new Uint32Array(raw);
 
-		let offF = 0,
-			offU = 0;
-		const boardColors = f32.subarray(offF, offF + 200 * 4);
-		offF += 200 * 4;
-		offU = offF;
+		// TODO: get rid of hardcoded values
+		let offU = 0;
+		const boardColors = u32.subarray(offU, offU + 200);
+		offU += 200;
 		const boardShines = u32.subarray(offU, offU + 200);
 		offU += 200;
-		offF = offU;
-		const refColors = f32.subarray(offF, offF + 3 * 4);
-		offF += 12;
-		offU = offF;
-		const shine14 = u32.subarray(offU, offU + 14);
+		const refColors = u32.subarray(offU, offU + 3);
+		offU += 3;
+		const shine = u32.subarray(offU);
 
 		// Return slices as copies to avoid holding the large buffer. Copy by new typed arrays.
 		return {
-			boardColors: new Float32Array(boardColors),
+			boardColors: new Uint32Array(boardColors),
 			boardShines: new Uint32Array(boardShines),
-			refColors: new Float32Array(refColors),
-			shine14: new Uint32Array(shine14),
+			refColors: new Uint32Array(refColors),
+			shine: new Uint32Array(shine),
 		};
 	}
 }

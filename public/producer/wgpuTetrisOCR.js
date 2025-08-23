@@ -1,12 +1,6 @@
 import { TetrisOCR } from './TetrisOCR.js';
-import { crop, luma } from '/ocr/image_tools.js';
-import {
-	PATTERN_MAX_INDEXES,
-	SHINE_LUMA_THRESHOLD,
-	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
-	GYM_PAUSE_LUMA_THRESHOLD,
-} from './constants.js';
-import { clamp, findMinIndex, timingDecorator } from '/ocr/utils.js';
+import { PATTERN_MAX_INDEXES } from './constants.js';
+import { findMinIndex, u32ToRgba } from '/ocr/utils.js';
 import { OcrCompute } from './ocrCompute.js';
 
 const TRANSFORM_TYPES = {
@@ -17,6 +11,14 @@ const TRANSFORM_TYPES = {
 
 async function loadShaderSource(url) {
 	return await fetch(url).then(res => res.text());
+}
+
+function getRgbTriplet(typedArr, idx) {
+	return [
+		Math.floor(typedArr[idx + 0] * 255),
+		Math.floor(typedArr[idx + 1] * 255),
+		Math.floor(typedArr[idx + 2] * 255),
+	];
 }
 
 export class WGpuTetrisOCR extends TetrisOCR {
@@ -199,10 +201,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		}
 	}
 
-	#initGpuComputeAssets() {
-		const { device } = this.#gpu;
-		this.ocrCompute = new OcrCompute(device, this.#shaders.compute);
-
+	#prepGpuComputeDigitAssets() {
 		const digitSize = 14;
 		const digitSizeWBorder = 16;
 		const jobs = [];
@@ -242,6 +241,115 @@ export class WGpuTetrisOCR extends TetrisOCR {
 			numRefs: 16, // maximum 16 reference digits to compare against
 			jobs,
 		});
+	}
+
+	#prepGpuComputeNonDigitAssets() {
+		this.nonDigitFields = this.configData.fields
+			.filter(name => !this.config.tasks[name].pattern)
+			.map(name => ({ name, task: this.config.tasks[name] }));
+
+		const boardPackingPos = this.config.tasks.field.packing_pos;
+		const blockSize = 8;
+		const boardPositions = new Array(200).fill(0).map((_, idx) => {
+			const col = idx % 10;
+			const row = Math.floor(idx / 10);
+			return {
+				x: boardPackingPos.x + col * blockSize,
+				y: boardPackingPos.y + row * blockSize,
+			};
+		});
+
+		// Provide 3 reference block top-left positions
+		const refBlockPositions = this.config.tasks.color1
+			? [
+					this.config.tasks.color1.packing_pos,
+					this.config.tasks.color2.packing_pos,
+					this.config.tasks.color3.packing_pos,
+				]
+			: [
+					{ x: 0, y: 0 },
+					{ x: 0, y: 0 },
+					{ x: 0, y: 0 },
+				];
+
+		// Provide 14 shine-only top-left positions
+		const previewBlockShineOffsets = [
+			// I
+			[0, 4],
+			[8, 4],
+			[16, 4],
+			[28, 4], // not top-left corner, but since I block are white, should work
+
+			// Top Row - 3 blocks
+			[4, 0],
+			[12, 0],
+			[20, 0],
+
+			// Bottom Row - 3 blocks
+			[4, 8],
+			[12, 8],
+			[20, 8],
+
+			// O
+			[8, 0],
+			[16, 0],
+			[8, 8],
+			[16, 8],
+		];
+
+		const pieceBlockPositions = [
+			// preview
+			...previewBlockShineOffsets.map(xy => ({
+				x: xy[0],
+				y: xy[1],
+			})),
+			// TODO: current piece goes here (das trainer)
+			...previewBlockShineOffsets.map(xy => ({
+				x: xy[0],
+				y: xy[1],
+			})),
+		];
+
+		// Shared offsets for sampling, relative to each block top-left
+		const offsets = {
+			boardColorOffsets: [
+				{ x: 2, y: 4 },
+				{ x: 3, y: 3 },
+				{ x: 4, y: 4 },
+				{ x: 4, y: 2 },
+			],
+			boardShineOffsets: [
+				{ x: 1, y: 1 },
+				{ x: 1, y: 2 },
+				{ x: 2, y: 1 },
+			],
+			refColorOffsets: [
+				{ x: 3, y: 2 },
+				{ x: 3, y: 3 },
+				{ x: 2, y: 3 },
+			],
+			pieceBlockPositions,
+		};
+
+		const threshold255 = 100;
+
+		this.ocrCompute.prepMatchNonDigitsGPUAssets({
+			texWidth: this.output_canvas.width,
+			texHeight: this.output_canvas.height,
+			threshold255,
+			boardPositions,
+			refBlockPositions,
+			pieceBlockPositions,
+			offsets,
+		});
+	}
+
+	#initGpuComputeAssets() {
+		const { device } = this.#gpu;
+		this.ocrCompute = new OcrCompute(device, this.#shaders.compute);
+
+		this.#prepGpuComputeDigitAssets();
+		this.#prepGpuComputeNonDigitAssets();
 	}
 
 	#initGpuAssets(frame) {
@@ -431,7 +539,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 	}
 
 	// this function OCRs ALL digits in one job, and then aggregate the results into a meaning structure
-	async doDigitOCR(frame) {
+	async doDigitOCR() {
 		// run on gpu
 		const sse = await this.ocrCompute.matchDigits({
 			inputTexture: this.temp_output_txt,
@@ -455,6 +563,30 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		return res;
 	}
 
+	async doNonDigitOCR() {
+		// run on gpu
+		const { boardColors, boardShines, refColors, shine } =
+			await this.ocrCompute.analyzeBoard({
+				inputTexture: this.temp_output_txt,
+			});
+
+		const res = {};
+
+		if (this.config.tasks.color1) {
+			res.color1 = u32ToRgba(refColors[0]);
+			res.color2 = u32ToRgba(refColors[1]);
+			res.color3 = u32ToRgba(refColors[2]);
+		}
+
+		return {
+			...res,
+			field: {
+				colors: boardColors,
+				shines: boardShines,
+			},
+		};
+	}
+
 	async processVideoFrame(frame) {
 		if (!this.#ready) return;
 
@@ -463,10 +595,11 @@ export class WGpuTetrisOCR extends TetrisOCR {
 
 		await this.#gpu.device.queue.onSubmittedWorkDone(); // is this needed?
 
-		const digitRes = await this.doDigitOCR(frame);
+		const digitRes = await this.doDigitOCR();
+		const nonDigitRes = await this.doNonDigitOCR();
 
 		const event = new CustomEvent('frame', {
-			detail: digitRes,
+			detail: { ...digitRes, ...nonDigitRes },
 		});
 		this.dispatchEvent(event);
 	}

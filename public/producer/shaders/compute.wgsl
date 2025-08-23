@@ -90,7 +90,7 @@ struct BoardGlobals {
   threshold255:  u32, // shine threshold in 0..255, avoids f32 in uniforms
   numBlocks:     u32, // 200
   numRefBlocks:  u32, // 3
-  numShineSpots: u32, // 14
+  numShineSpots: u32, // 28
   _pad0:         u32,
 };
 @group(0) @binding(1) var<uniform> B: BoardGlobals;
@@ -102,27 +102,27 @@ struct IVec2 { x: i32, y: i32, };
 
 // Shared offsets used by tasks
 struct Offsets {
-  boardColorOffsets: array<IVec2, 4>,   // relative to a board block top-left
-  boardShineOffsets: array<IVec2, 3>,
-  refColorOffsets:   array<IVec2, 4>,   // relative to a ref block top-left
-  shine14Offsets:    array<IVec2, 3>,   // relative to a shine-spot top-left
+  boardColorOffsets:   array<IVec2, 4>,   // relative to a board block top-left
+  boardShineOffsets:   array<IVec2, 3>,
+  refColorOffsets:     array<IVec2, 3>,   // relative to a ref block top-left
+  pieceBlockPositions: array<IVec2, 28>,   // relative to a shine-spot top-left
 };
 @group(0) @binding(3) var<storage, read> offs: Offsets;
 
 // Output slabs, fixed max sizes
 struct BoardOutputs {
-  boardColors: array<vec4<f32>, 200>, // RGBA, A is 1.0
-  boardShines: array<u32, 200>,       // 0 or 1
-  refColors:   array<vec4<f32>, 3>,
-  shine14:     array<u32, 14>,        // 0 or 1
+  boardColors: array<u32, 200>, // RGBA, A is 1.0
+  boardShines: array<u32, 200>, // 0 or 1
+  refColors:   array<u32, 3>,
+  shine:       array<u32, 28>,  // 0 or 1
 };
 @group(0) @binding(4) var<storage, read_write> outBuf: BoardOutputs;
 
 // Positions for 3 reference blocks, top-left
 @group(0) @binding(5) var<storage, read> refBlockPos: array<IVec2>;
 
-// Positions for 14 shine-only checks, top-left
-@group(0) @binding(6) var<storage, read> shine14Pos: array<IVec2>;
+// Positions for 28 shine-only checks, top-left
+@group(0) @binding(6) var<storage, read> shinePos: array<IVec2>;
 
 fn loadTexelClampedB(x: i32, y: i32) -> vec4<f32> {
   let cx = clamp(x, 0, i32(B.texWidth) - 1);
@@ -146,7 +146,7 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
       sum = sum + c;
     }
     let avg = sum / 4.0;
-    outBuf.boardColors[id] = vec4<f32>(avg, 1.0);
+    outBuf.boardColors[id] = pack4x8unorm(vec4<f32>(avg, 1.0));
 
     // Shine test on 3 points
     var s: u32 = 0u;
@@ -159,7 +159,7 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
     return;
   }
 
-  // 2) 3 reference blocks: average 4 colors
+  // 2) 3 reference blocks: average 3 colors
   let refIdx = id - B.numBlocks;
   if (refIdx < B.numRefBlocks) {
     let p = refBlockPos[refIdx];
@@ -169,21 +169,24 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
       let c = loadTexelClampedB(p.x + o.x, p.y + o.y).rgb;
       sum = sum + c;
     }
-    let avg = sum / 4.0;
-    outBuf.refColors[refIdx] = vec4<f32>(avg, 1.0);
+    let avg = sum / 3.0;
+    outBuf.refColors[refIdx] = pack4x8unorm(vec4<f32>(avg, 1.0));
     return;
   }
 
-  // 3) 14 shine-only spots: any of 3 points above threshold
+  // 3) 28 shine-only spots: any of 3 points above threshold
   let sIdx = id - B.numBlocks - B.numRefBlocks;
   if (sIdx < B.numShineSpots) {
-    let p = shine14Pos[sIdx];
+    let p = shinePos[sIdx];
     var s: u32 = 0u;
     for (var j: u32 = 0u; j < 3u; j = j + 1u) {
-      let o = offs.shine14Offsets[j];
+      let o = offs.pieceBlockPositions[j];
       let L = luma(loadTexelClampedB(p.x + o.x, p.y + o.y).rgb);
-      if (L > thr) { s = 1u; }
+      if (L > thr) { 
+        s = 1u;
+        break;
+      }
     }
-    outBuf.shine14[sIdx] = s;
+    outBuf.shine[sIdx] = s;
   }
 }

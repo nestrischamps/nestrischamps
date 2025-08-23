@@ -34,6 +34,15 @@ export function findMinIndex(arr) {
 	return minIndex;
 }
 
+export function u32ToRgba(u) {
+	return [
+		(u >>> 0) & 0xff, // R
+		(u >>> 8) & 0xff, // G
+		(u >>> 16) & 0xff, // B
+		(u >>> 24) & 0xff, // A
+	];
+}
+
 export function rgb2lab_normalizeRgbChannel(channel) {
 	channel /= 255;
 
