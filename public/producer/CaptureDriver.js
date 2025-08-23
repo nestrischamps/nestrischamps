@@ -132,6 +132,13 @@ export class CaptureDriver extends EventTarget {
 
 			return lumas;
 		});
+
+		// one time compute of digit lumas as a flattened array of f32 values in range [0,1]
+		this.digit_lumas_f32 = new Float32Array(
+			this.digit_lumas
+				.flatMap(typedArr => Array.from(typedArr))
+				.map(v => v / 255)
+		);
 	}
 
 	async #waitForVideoReady() {
@@ -199,6 +206,7 @@ export class CaptureDriver extends EventTarget {
 			videoFrame,
 			video: this.#video,
 			digit_lumas: this.digit_lumas,
+			digit_lumas_f32: this.digit_lumas_f32,
 		};
 
 		let playerIdx = 0;
