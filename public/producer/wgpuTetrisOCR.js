@@ -13,14 +13,6 @@ async function loadShaderSource(url) {
 	return await fetch(url).then(res => res.text());
 }
 
-function getRgbTriplet(typedArr, idx) {
-	return [
-		Math.floor(typedArr[idx + 0] * 255),
-		Math.floor(typedArr[idx + 1] * 255),
-		Math.floor(typedArr[idx + 2] * 255),
-	];
-}
-
 export class WGpuTetrisOCR extends TetrisOCR {
 	#gpu = null;
 	#ready = false;
@@ -273,7 +265,8 @@ export class WGpuTetrisOCR extends TetrisOCR {
 				];
 
 		// Provide 14 shine-only top-left positions
-		const previewBlockShineOffsets = [
+		const previewPos = this.config.tasks.preview.packing_pos;
+		const previewBlockPositionOffsets = [
 			// I
 			[0, 4],
 			[8, 4],
@@ -299,14 +292,14 @@ export class WGpuTetrisOCR extends TetrisOCR {
 
 		const pieceBlockPositions = [
 			// preview
-			...previewBlockShineOffsets.map(xy => ({
-				x: xy[0],
-				y: xy[1],
+			...previewBlockPositionOffsets.map(xy => ({
+				x: xy[0] + previewPos.x,
+				y: xy[1] + previewPos.y,
 			})),
 			// TODO: current piece goes here (das trainer)
-			...previewBlockShineOffsets.map(xy => ({
-				x: xy[0],
-				y: xy[1],
+			...previewBlockPositionOffsets.map(xy => ({
+				x: xy[0] + previewPos.x,
+				y: xy[1] + previewPos.y,
 			})),
 		];
 
@@ -328,7 +321,11 @@ export class WGpuTetrisOCR extends TetrisOCR {
 				{ x: 3, y: 3 },
 				{ x: 2, y: 3 },
 			],
-			pieceBlockPositions,
+			pieceBlockShineOffsets: [
+				{ x: 0, y: 0 },
+				{ x: 1, y: 1 },
+				{ x: 1, y: 2 },
+			],
 		};
 
 		const threshold255 = 100;
@@ -565,7 +562,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 
 	async doNonDigitOCR() {
 		// run on gpu
-		const { boardColors, boardShines, refColors, shine } =
+		const { boardColors, boardShines, refColors, shines } =
 			await this.ocrCompute.analyzeBoard({
 				inputTexture: this.temp_output_txt,
 			});
@@ -580,11 +577,61 @@ export class WGpuTetrisOCR extends TetrisOCR {
 
 		return {
 			...res,
+			preview: this.#getPreviewFromShines(shines.subarray(0, 14)),
 			field: {
 				colors: boardColors,
 				shines: boardShines,
 			},
 		};
+	}
+
+	#getPreviewFromShines(shines) {
+		// 14 shines represent possible block placements in the preview area
+		// this replicates the logic from cpuTetrisOCR
+		// Trying side i blocks
+		const I = shines.subarray(0, 4);
+		if (I[0] && I[3]) {
+			return 'I';
+		}
+
+		// now trying the 3x2 matrix for T, L, J, S, Z
+		const top_row = shines.subarray(4, 7);
+		const bottom_row = shines.subarray(7, 10);
+
+		if (top_row[0] && top_row[1] && top_row[2]) {
+			// J, T, L
+			if (bottom_row[0]) {
+				return 'L';
+			}
+			if (bottom_row[1]) {
+				return 'T';
+			}
+			if (bottom_row[2]) {
+				return 'J';
+			}
+
+			return null;
+		}
+
+		if (top_row[1] && top_row[2]) {
+			if (bottom_row[0] && bottom_row[1]) {
+				return 'S';
+			}
+		}
+
+		if (top_row[0] && top_row[1]) {
+			if (bottom_row[1] && bottom_row[2]) {
+				return 'Z';
+			}
+		}
+
+		// lastly check for O
+		const O = shines.subarray(10, 14);
+		if (O[0] && O[1] && O[2] && O[3]) {
+			return 'O';
+		}
+
+		return null;
 	}
 
 	async processVideoFrame(frame) {

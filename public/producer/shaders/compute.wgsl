@@ -102,10 +102,10 @@ struct IVec2 { x: i32, y: i32, };
 
 // Shared offsets used by tasks
 struct Offsets {
-  boardColorOffsets:   array<IVec2, 4>,   // relative to a board block top-left
-  boardShineOffsets:   array<IVec2, 3>,
-  refColorOffsets:     array<IVec2, 3>,   // relative to a ref block top-left
-  pieceBlockPositions: array<IVec2, 28>,   // relative to a shine-spot top-left
+  boardColorOffsets:      array<IVec2, 4>,   // relative to a board block top-left
+  boardShineOffsets:      array<IVec2, 3>,
+  refColorOffsets:        array<IVec2, 3>,   // relative to a ref block top-left
+  pieceBlockShineOffsets: array<IVec2, 3>,   // relative to a shine-spot top-left
 };
 @group(0) @binding(3) var<storage, read> offs: Offsets;
 
@@ -153,7 +153,10 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
     for (var j: u32 = 0u; j < 3u; j = j + 1u) {
       let o = offs.boardShineOffsets[j];
       let L = luma(loadTexelClampedB(p.x + o.x, p.y + o.y).rgb);
-      if (L > thr) { s = 1u; }
+      if (L > thr) {
+        s = 1u;
+        break;
+      }
     }
     outBuf.boardShines[id] = s;
     return;
@@ -164,7 +167,7 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
   if (refIdx < B.numRefBlocks) {
     let p = refBlockPos[refIdx];
     var sum = vec3<f32>(0.0, 0.0, 0.0);
-    for (var i: u32 = 0u; i < 4u; i = i + 1u) {
+    for (var i: u32 = 0u; i < 3u; i = i + 1u) {
       let o = offs.refColorOffsets[i];
       let c = loadTexelClampedB(p.x + o.x, p.y + o.y).rgb;
       sum = sum + c;
@@ -180,7 +183,7 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
     let p = shinePos[sIdx];
     var s: u32 = 0u;
     for (var j: u32 = 0u; j < 3u; j = j + 1u) {
-      let o = offs.pieceBlockPositions[j];
+      let o = offs.pieceBlockShineOffsets[j];
       let L = luma(loadTexelClampedB(p.x + o.x, p.y + o.y).rgb);
       if (L > thr) { 
         s = 1u;

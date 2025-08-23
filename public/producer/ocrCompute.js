@@ -291,7 +291,7 @@ export class OcrCompute {
 				(offsets.boardColorOffsets.length +
 					offsets.boardShineOffsets.length +
 					offsets.refColorOffsets.length +
-					offsets.pieceBlockPositions.length)
+					offsets.pieceBlockShineOffsets.length)
 		);
 		let k = 0;
 		for (const v of offsets.boardColorOffsets) {
@@ -306,7 +306,7 @@ export class OcrCompute {
 			offs[k++] = v.x | 0;
 			offs[k++] = v.y | 0;
 		}
-		for (const v of offsets.pieceBlockPositions) {
+		for (const v of offsets.pieceBlockShineOffsets) {
 			offs[k++] = v.x | 0;
 			offs[k++] = v.y | 0;
 		}
@@ -409,14 +409,14 @@ export class OcrCompute {
 		offU += 200;
 		const refColors = u32.subarray(offU, offU + 3);
 		offU += 3;
-		const shine = u32.subarray(offU);
+		const shines = u32.subarray(offU);
 
 		// Return slices as copies to avoid holding the large buffer. Copy by new typed arrays.
 		return {
 			boardColors: new Uint32Array(boardColors),
 			boardShines: new Uint32Array(boardShines),
 			refColors: new Uint32Array(refColors),
-			shine: new Uint32Array(shine),
+			shines: new Uint32Array(shines),
 		};
 	}
 }
