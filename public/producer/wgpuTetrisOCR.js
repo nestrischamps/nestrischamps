@@ -15,35 +15,12 @@ const TRANSFORM_TYPES = {
 	RED_LUMA: 2,
 };
 
-const PERF_METHODS = [
-	// 'scanScore',
-	// 'scanLevel',
-	// 'scanLines',
-	// 'scanColor1',
-	// 'scanColor2',
-	// 'scanColor3',
-	// 'scanPreview',
-	// 'scanField',
-	// 'scanPieceStats',
-
-	// 'scanInstantDas',
-	// 'scanCurPieceDas',
-	// 'scanCurPiece',
-	// 'scanGymPause',
-
-	'extractAndHighlightRegions',
-	'processVideoFrame',
-	'renderExtractedRegions',
-	'doDigitOCR',
-];
-
 async function loadShaderSource(url) {
 	return await fetch(url).then(res => res.text());
 }
 
-let perfSuffix = 0;
-
 export class WGpuTetrisOCR extends TetrisOCR {
+	#gpu = null;
 	#ready = false;
 	#shaders;
 
@@ -55,18 +32,43 @@ export class WGpuTetrisOCR extends TetrisOCR {
 	constructor(config) {
 		super(config);
 
-		this.perfSuffix = ++perfSuffix;
+		this.#gpu = this.#getGPU();
 
-		this.digit_img = new ImageData(14, 14);
-		this.shine_img = new ImageData(2, 3);
+		this.instrument(
+			'extractAndHighlightRegions',
+			'processVideoFrame',
+			'renderExtractedRegions',
+			'doDigitOCR'
+		);
 
-		// decorate relevant methods to capture timings
-		PERF_METHODS.forEach(name => {
-			const method = this[name].bind(this);
-			this[name] = timingDecorator(`${name}-${this.perfSuffix}`, method);
+		Promise.all([
+			this.#getGPU(),
+			this.#loadShaders(),
+			this.loadDigitTemplates(),
+		]).then(() => {
+			this.#initGpuAssets();
+			this.#ready = true;
 		});
+	}
 
-		this.#loadShaders();
+	async loadDigitTemplates() {
+		const digit_lumas = await TetrisOCR.loadDigitTemplates();
+
+		this.digit_lumas_f32 = new Float32Array(
+			digit_lumas.flatMap(typedArr => Array.from(typedArr)).map(v => v / 255)
+		);
+	}
+
+	async #getGPU() {
+		const adapter = await navigator.gpu.requestAdapter();
+		const device = await adapter.requestDevice();
+		const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
+
+		this.#gpu = {
+			adapter,
+			device,
+			canvasFormat,
+		};
 	}
 
 	async #loadShaders() {
@@ -81,36 +83,26 @@ export class WGpuTetrisOCR extends TetrisOCR {
 			fragment,
 			compute,
 		};
-
-		this.#ready = true;
 	}
 
 	setConfig(config) {
 		super.setConfig(config);
 	}
 
-	#initGpuAssets({ video, gpu }) {
-		const { device, canvasFormat } = gpu;
-
-		this.capture_canvas._ntc_initialized = true;
-		this.capture_canvas.width = video.videoWidth;
-		this.capture_canvas.height =
-			video.videoHeight >> (this.config.use_half_height ? 1 : 0);
-
-		this.capture_ctx = this.capture_canvas.getContext('2d');
-		this.capture_ctx.imageSmoothingEnabled = false;
+	#initGpuRenderAssets() {
+		const { device, canvasFormat } = this.#gpu;
 
 		this.output_ctx = this.output_canvas.getContext('webgpu');
 		this.output_ctx.configure({
-			device: gpu.device,
-			format: gpu.canvasFormat,
+			device: device,
+			format: canvasFormat,
 			alphaMode: 'opaque',
 			usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
 		});
 
-		this.temp_output_txt = gpu.device.createTexture({
+		this.temp_output_txt = device.createTexture({
 			size: [this.output_canvas.width, this.output_canvas.height],
-			format: gpu.canvasFormat,
+			format: canvasFormat,
 			usage:
 				GPUTextureUsage.RENDER_ATTACHMENT |
 				GPUTextureUsage.TEXTURE_BINDING |
@@ -205,12 +197,65 @@ export class WGpuTetrisOCR extends TetrisOCR {
 				entries: [{ binding: 0, resource: { buffer: task.regionBuffer } }],
 			});
 		}
-
-		this.ocrCompute = new OcrCompute(device, this.#shaders.compute);
 	}
 
-	renderExtractedRegions({ video, gpu }) {
-		const { device } = gpu;
+	#initGpuComputeAssets() {
+		const { device } = this.#gpu;
+		this.ocrCompute = new OcrCompute(device, this.#shaders.compute);
+
+		const digitSize = 14;
+		const digitSizeWBorder = 16;
+		const jobs = [];
+
+		this.digitFields = this.configData.fields
+			.filter(name => this.config.tasks[name].pattern)
+			.map(name => ({ name, task: this.config.tasks[name] }));
+
+		// prepare all jobs
+		this.digitFields.forEach(({ task }) => {
+			const { x, y } = task.packing_pos;
+
+			task.patternJobs = [];
+			task.pattern.split('').forEach((pid, pidx) => {
+				const maxIndex = PATTERN_MAX_INDEXES[pid] || 1;
+				const digitJobs = [];
+
+				for (let refIndex = 0; refIndex < maxIndex; refIndex++) {
+					const job = {
+						x: x + digitSizeWBorder * pidx,
+						y,
+						refIndex,
+					};
+					digitJobs.push(job);
+					jobs.push(job);
+				}
+
+				task.patternJobs.push(digitJobs);
+			});
+		});
+
+		this.ocrCompute.prepMatchDigitsGPUAssets({
+			texWidth: this.output_canvas.width,
+			texHeight: this.output_canvas.height,
+			digitSize,
+			refDigits: this.digit_lumas_f32,
+			numRefs: 16, // maximum 16 reference digits to compare against
+			jobs,
+		});
+	}
+
+	#initGpuAssets(frame) {
+		this.#initGpuRenderAssets(frame);
+		this.#initGpuComputeAssets(frame);
+	}
+
+	renderExtractedRegions({ videoFrame, video }) {
+		const { device } = this.#gpu;
+
+		// assign to instance to ensure it is not garbage collected
+		this.inputTexture = this.#gpu.device.importExternalTexture({
+			source: videoFrame || video,
+		});
 
 		// Update the globals buffer with current sizes
 		const globalsData = new Float32Array([
@@ -243,7 +288,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 				},
 				{
 					binding: 1,
-					resource: gpu.device.createSampler({
+					resource: device.createSampler({
 						magFilter: 'linear',
 						minFilter: 'linear',
 						addressModeU: 'clamp-to-edge',
@@ -257,7 +302,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 			],
 		});
 
-		const commandEncoder = gpu.device.createCommandEncoder();
+		const commandEncoder = device.createCommandEncoder();
 
 		// --- Render all regions to the main output canvas ---
 		const mainPass = commandEncoder.beginRenderPass({
@@ -339,6 +384,16 @@ export class WGpuTetrisOCR extends TetrisOCR {
 	extractAndHighlightRegions(frame) {
 		const { videoFrame, video } = frame;
 
+		if (!this.capture_canvas._ntc_initialized) {
+			this.capture_canvas._ntc_initialized = true;
+			this.capture_canvas.width = video.videoWidth;
+			this.capture_canvas.height =
+				video.videoHeight >> (this.config.use_half_height ? 1 : 0);
+
+			this.capture_ctx = this.capture_canvas.getContext('2d', { alpha: false });
+			this.capture_ctx.imageSmoothingEnabled = false;
+		}
+
 		// --- 2D Canvas Drawing (Original Video + Highlights) ---
 		this.capture_ctx.filter = this.#getCanvasFilters();
 		this.capture_ctx.drawImage(
@@ -350,6 +405,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		);
 
 		this.capture_ctx.fillStyle = '#FFA50080'; // Transparent orange
+
 		for (const name in this.config.tasks) {
 			const task = this.config.tasks[name];
 
@@ -376,54 +432,16 @@ export class WGpuTetrisOCR extends TetrisOCR {
 
 	// this function OCRs ALL digits in one job, and then aggregate the results into a meaning structure
 	async doDigitOCR(frame) {
-		const digitSize = 14;
-		const digitSizeWBorder = 16;
-
-		const jobs = [];
-
-		const digitFields = this.configData.fields
-			.filter(name => this.config.tasks[name].pattern)
-			.map(name => ({ name, task: this.config.tasks[name] }));
-
-		// prepare all jobs
-		digitFields.forEach(({ name, task }) => {
-			const { x, y } = task.packing_pos;
-
-			task.patternJobs = [];
-			task.pattern.split('').forEach((pid, pidx) => {
-				const maxIndex = PATTERN_MAX_INDEXES[pid] || 1;
-				const digitJobs = [];
-
-				for (let refIndex = 0; refIndex < maxIndex; refIndex++) {
-					const job = {
-						x: x + digitSizeWBorder * pidx,
-						y,
-						refIndex,
-					};
-					digitJobs.push(job);
-					jobs.push(job);
-				}
-
-				task.patternJobs.push(digitJobs);
-			});
-		});
-
 		// run on gpu
 		const sse = await this.ocrCompute.matchDigits({
 			inputTexture: this.temp_output_txt,
-			texWidth: this.output_canvas.width,
-			texHeight: this.output_canvas.height,
-			digitSize,
-			refDigits: frame.digit_lumas_f32,
-			numRefs: 16, // maximum 16 reference digits to compare against
-			jobs,
 		});
 
 		// process result (find minima matches)
 		const res = {};
 		let curSseIdx = 0;
 
-		digitFields.forEach(({ name, task }) => {
+		this.digitFields.forEach(({ name, task }) => {
 			res[name] = task.patternJobs.map(digitJobs => {
 				const lumaSses = sse.subarray(curSseIdx, curSseIdx + digitJobs.length);
 				const indexMatch = findMinIndex(lumaSses);
@@ -440,38 +458,15 @@ export class WGpuTetrisOCR extends TetrisOCR {
 	async processVideoFrame(frame) {
 		if (!this.#ready) return;
 
-		const { gpu, videoFrame, video, digit_lumas } = frame;
-
-		// dirty lazy init actions?
-		if (!this.digit_lumas) this.digit_lumas = digit_lumas;
-		if (!this.capture_canvas._ntc_initialized) {
-			this.#initGpuAssets(frame);
-		}
-
 		this.extractAndHighlightRegions(frame);
-
-		performance.mark(`start-${this.perfSuffix}`);
-
-		this.inputTexture = gpu.device.importExternalTexture({
-			source: videoFrame || video,
-		});
-
-		performance.mark(`gpu-end-${this.perfSuffix}`);
-
-		performance.measure(
-			`gpu-copy-to-input-texture-${this.perfSuffix}`,
-			`start-${this.perfSuffix}`,
-			`gpu-end-${this.perfSuffix}`
-		);
-
 		this.renderExtractedRegions(frame);
 
-		await gpu.device.queue.onSubmittedWorkDone();
+		await this.#gpu.device.queue.onSubmittedWorkDone(); // is this needed?
 
-		const res = await this.doDigitOCR(frame);
+		const digitRes = await this.doDigitOCR(frame);
 
 		const event = new CustomEvent('frame', {
-			detail: res,
+			detail: digitRes,
 		});
 		this.dispatchEvent(event);
 	}

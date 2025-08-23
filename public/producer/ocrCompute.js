@@ -160,16 +160,8 @@ export class OcrCompute {
 	// 1) Digit matching
 	// -----------------------------
 
-	async matchDigits(params) {
-		const {
-			inputTexture,
-			texWidth,
-			texHeight,
-			digitSize,
-			refDigits,
-			numRefs,
-			jobs,
-		} = params;
+	prepMatchDigitsGPUAssets(params) {
+		const { texWidth, texHeight, digitSize, refDigits, numRefs, jobs } = params;
 
 		// Uniforms
 		const refStride = digitSize * digitSize; // 196
@@ -207,6 +199,19 @@ export class OcrCompute {
 			GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC
 		);
 
+		this.matchDigitsAssets = {
+			numJobs,
+			ubo,
+			jobsBuf,
+			refsBuf,
+			outBuf,
+		};
+	}
+
+	async matchDigits(params) {
+		const { inputTexture } = params;
+		const { numJobs, ubo, jobsBuf, refsBuf, outBuf } = this.matchDigitsAssets;
+
 		// Bind group
 		const bindGroup = this.matchPipeline.getBindGroupLayout(0);
 		const bg = this.device.createBindGroup({
@@ -225,7 +230,7 @@ export class OcrCompute {
 		const pass = encoder.beginComputePass();
 		pass.setPipeline(this.matchPipeline);
 		pass.setBindGroup(0, bg);
-		const wgSize = 64;
+		const wgSize = 64; // hardcoded :( what is a good value here?
 		const numWg = Math.ceil(numJobs / wgSize);
 		pass.dispatchWorkgroups(numWg);
 		pass.end();

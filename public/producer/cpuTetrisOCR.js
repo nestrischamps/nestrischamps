@@ -8,35 +8,13 @@ import {
 } from './constants.js';
 import { clamp, timingDecorator } from '/ocr/utils.js';
 
-const PERF_METHODS = [
-	'scanScore',
-	'scanLevel',
-	'scanLines',
-	'scanColor1',
-	'scanColor2',
-	'scanColor3',
-	'scanPreview',
-	'scanField',
-	'scanPieceStats',
-
-	'scanInstantDas',
-	'scanCurPieceDas',
-	'scanCurPiece',
-	'scanGymPause',
-];
-
-let perfSuffix = 0;
-
 export class CpuTetrisOCR extends TetrisOCR {
+	#ready = false;
+
 	constructor(config) {
 		super(config);
 
 		this.perfSuffix = ++perfSuffix;
-
-		this.capture_ctx = this.capture_canvas.getContext('2d', {
-			alpha: false,
-		});
-		this.capture_ctx.imageSmoothingEnabled = false;
 
 		this.output_ctx = this.output_canvas.getContext('2d', {
 			alpha: false,
@@ -47,10 +25,26 @@ export class CpuTetrisOCR extends TetrisOCR {
 		this.digit_img = new ImageData(14, 14);
 		this.shine_img = new ImageData(2, 3);
 
-		// decorate relevant methods to capture timings
-		PERF_METHODS.forEach(name => {
-			const method = this[name].bind(this);
-			this[name] = timingDecorator(`${name}-${this.perfSuffix}`, method);
+		this.instrument(
+			'scanScore',
+			'scanLevel',
+			'scanLines',
+			'scanColor1',
+			'scanColor2',
+			'scanColor3',
+			'scanPreview',
+			'scanField',
+			'scanPieceStats',
+
+			'scanInstantDas',
+			'scanCurPieceDas',
+			'scanCurPiece',
+			'scanGymPause'
+		);
+
+		Promise.all([TetrisOCR.loadDigitTemplates()]).then(([digit_lumas]) => {
+			this.digit_lumas = digit_lumas;
+			this.#ready = true;
 		});
 	}
 
@@ -67,16 +61,20 @@ export class CpuTetrisOCR extends TetrisOCR {
 	}
 
 	async processVideoFrame(frame) {
-		const { videoFrame, video, digit_lumas } = frame;
+		if (!this.#ready) return;
+
+		const { videoFrame, video } = frame;
 		const { width, height } = this.capture_canvas;
 
 		// dirty lazy init actions?
-		if (!this.digit_lumas) this.digit_lumas = digit_lumas;
 		if (!this.capture_canvas._ntc_initialized) {
 			this.capture_canvas._ntc_initialized = true;
 			this.capture_canvas.width = video.videoWidth;
 			this.capture_canvas.height =
 				video.videoHeight >> (this.config.use_half_height ? 1 : 0);
+
+			this.capture_ctx = this.capture_canvas.getContext('2d', { alpha: false });
+			this.capture_ctx.imageSmoothingEnabled = false;
 		}
 
 		performance.mark(`start-${this.perfSuffix}`);
