@@ -1,3 +1,4 @@
+import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
 import Connection from '/js/connection.js';
 
@@ -5,12 +6,14 @@ import GameTracker from './GameTracker.js';
 import { CpuTetrisOCR } from './cpuTetrisOCR.js';
 import { WGpuTetrisOCR } from './wgpuTetrisOCR.js';
 
+const send_binary = QueryString.get('binary') !== '0';
+
 export class Player extends EventTarget {
 	#startTime;
 	#lastFrame;
 	#connection = null;
 
-	constructor(num, config) {
+	constructor(config, num = null) {
 		super();
 
 		this.num = num;
@@ -29,6 +32,27 @@ export class Player extends EventTarget {
 		this.ocr.addEventListener('frame', ({ detail: frame }) => {
 			// this.gameTracker.processFrame(frame);
 		});
+
+		this.is_player = false;
+		this.notice = document.createElement('div');
+
+		this.API = {
+			setViewPeerId: _view_peer_id => {
+				this.view_peer_id = _view_peer_id;
+			},
+
+			makePlayer: (player_index, _view_meta) => {
+				this.is_player = true;
+				this.view_meta = _view_meta;
+			},
+
+			dropPlayer() {
+				this.is_player = false;
+				this.view_meta = null;
+			},
+		};
+
+		this.connect();
 	}
 
 	processVideoFrame(frame) {
@@ -78,4 +102,81 @@ export class Player extends EventTarget {
 			this.#connection?.send(data);
 		}
 	};
+
+	connect() {
+		if (this.#connection) {
+			this.#connection.close();
+		}
+
+		console.log('Creating Connection');
+
+		if (this.num === null) {
+			this.#connection = new Connection();
+		} else {
+			// multiviewer mode, we connect by static player secret
+			const url = new URL(location);
+			url.protocol = url.protocol.match(/^https/i) ? 'wss:' : 'ws:';
+			url.pathname = `/ws${url.pathname}`.replace(
+				/(\/+)?$/,
+				`/PLAYER${this.num}`
+			);
+
+			console.log(`Using custom url: ${url.toString()}`);
+
+			this.#connection = new Connection(url.toString());
+		}
+
+		this.#connection.onMessage = frame => {
+			try {
+				const [method, ...args] = frame;
+
+				if (this.API.hasOwnProperty(method)) {
+					this.API[method](...args);
+				} else {
+					console.log(`Command ${method} received but not supported`);
+				}
+			} catch (e) {
+				console.log(`Could not process command ${frame[0]}`);
+				console.error(e);
+			}
+		};
+
+		this.#connection.onKicked = reason => {
+			this.resetNotice();
+			this.notice.classList.add('error');
+			this.notice.textContent = `WARNING! The connection has been kicked because [${reason}]. The page will NOT attempt to reconnect.`;
+			this.notice.classList.remove('is-hidden');
+		};
+
+		this.#connection.onBreak = () => {
+			this.resetNotice();
+			this.notice.classList.add('warning');
+			this.notice.textContent = `WARNING! The page is disconnected. It will try to reconnect automatically.`;
+			this.notice.classList.remove('is-hidden');
+		};
+
+		this.#connection.onResume = this.resetNotice;
+
+		this.#connection.onInit = () => {
+			// if (peer) {
+			// 	peer.removeAllListeners();
+			// 	peer.destroy();
+			// 	peer = null;
+			// }
+			// peer = new Peer(this.#connection.id, peerServerOptions);
+			// peer.on('open', err => {
+			// 	console.log(Date.now(), 'peer opened', peer.id);
+			// 	//startSharingVideoFeed();
+			// });
+			// peer.on('error', err => {
+			// 	console.log(`Peer error: ${err.message}`);
+			// 	peer.retryTO = clearTimeout(peer.retryTO); // there should only be one retry scheduled
+			// 	// peer.retryTO = setTimeout(startSharingVideoFeed, 1500); // we assume this will succeed at some point?? 😰😅
+			// });
+		};
+
+		return this.#connection;
+	}
+
+	resetNotice = () => {};
 }
