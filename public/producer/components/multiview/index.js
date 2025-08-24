@@ -1,5 +1,6 @@
 import { NtcComponent } from '../NtcComponent.js';
 import { html } from '../../StringUtils.js';
+import { clearConfigAndReset } from '../../ConfigUtils.js';
 
 import '../calibration.js';
 import '../PerfResults.js';
@@ -19,6 +20,17 @@ const MARKUP = html`
 	</div>
 	<div id="content" class="container mt-5 is-fluid">
 		<div id="settings" class="is-active">
+			<div class="colums">
+				<fieldset>
+					<legend>Controls</legend>
+
+					<div class="field">
+						<button id="clear_config" class="button is-light">
+							Clear config and Restart
+						</button>
+					</div>
+				</fieldset>
+			</div>
 			<div class="columns">
 				<fieldset id="source" class="column">
 					<legend>Source</legend>
@@ -76,11 +88,13 @@ export class NTC_MultiView extends NtcComponent {
 			tabs: this.shadow.getElementById('tabs'),
 			content: this.shadow.getElementById('content'),
 			source: this.shadow.getElementById('source'),
+			clear_config: this.shadow.getElementById('clear_config'),
 			perf_data: this.shadow.getElementById('perf_data'),
 		};
 
 		// top level listener to handle tabs
 		this.#domrefs.tabs.addEventListener('click', this.#handleTabClick);
+		this.#domrefs.clear_config.addEventListener('click', clearConfigAndReset);
 	}
 
 	#handleTabClick = event => {
