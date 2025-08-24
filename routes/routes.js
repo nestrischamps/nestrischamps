@@ -118,7 +118,7 @@ router.get(
 );
 
 router.get(
-	/^\/room\/u\/([^/]+)\/(producer2|emu)/,
+	/^\/room\/u\/([^/]+)\/(producer2?|emu)/,
 	middlewares.assertSession,
 	middlewares.checkToken,
 	async (req, res) => {
