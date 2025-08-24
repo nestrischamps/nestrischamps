@@ -13,6 +13,12 @@ fn luma(rgb: vec3<f32>) -> f32 {
 
 ///////////////////////////////////////////////
 // Pipeline 1: Digit matching
+// 
+// This assumes the digits were processed to greyscale (i.e. lumas)
+// during the render pass. That means we can OCR ALL digits in one go 
+// for ALL digit fields (i.e. score / lines / level / das / piece stats)
+// Take a look at wwgpuTetrisOCR for details.
+//
 ///////////////////////////////////////////////
 
 @group(0) @binding(0) var inputTex_match: texture_2d<f32>;
@@ -80,6 +86,18 @@ fn match_digits(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 ///////////////////////////////////////////////
 // Pipeline 2: Board analysis, all-in-one
+//
+// Specifically:
+// - inspect 200 board blocks for colors and shines
+// - inspect 3 reference colors
+// - inspect a set of posiible block locations for shines 
+//     - that's for preview (all roms) and cur_piece (das_trainer)
+// 
+// Note: ref color tasks are always done even when we
+// they are not needed, but it's fine, it's more trouble
+// to optimize them away than to run them in parallel with
+// everything else on the gpu
+//
 ///////////////////////////////////////////////
 
 @group(0) @binding(0) var inputTex_board: texture_2d<f32>;
@@ -130,6 +148,7 @@ fn loadTexelClampedB(x: i32, y: i32) -> vec4<f32> {
   return textureLoad(inputTex_board, vec2<i32>(cx, cy), 0);
 }
 
+// 256 implies ALL tasks can run entirely in parallel (200 blocks + 3 ref colors + 28 shine spots)
 @compute @workgroup_size(256)
 fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
   let id = gid.x;
@@ -164,7 +183,20 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
 
   // 2) 3 reference blocks: average 3 colors
   let refIdx = id - B.numBlocks;
-  if (refIdx < B.numRefBlocks) {
+  if (refIdx == 0) {
+    // find the highest seen R, G, B from each pixels
+    let p = refBlockPos[refIdx];
+    var white = vec3<f32>(0.0, 0.0, 0.0);
+    for (var i: u32 = 0u; i < 3u; i = i + 1u) {
+      let o = offs.refColorOffsets[i];
+      let c = loadTexelClampedB(p.x + o.x, p.y + o.y).rgb;
+      white = max(white, c);
+    }
+    outBuf.refColors[refIdx] = pack4x8unorm(vec4<f32>(white, 1.0));
+    return;    
+  }
+  else if (refIdx < B.numRefBlocks) {
+    // average colors at reference pixels
     let p = refBlockPos[refIdx];
     var sum = vec3<f32>(0.0, 0.0, 0.0);
     for (var i: u32 = 0u; i < 3u; i = i + 1u) {
@@ -177,7 +209,7 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
     return;
   }
 
-  // 3) 28 shine-only spots: any of 3 points above threshold
+  // 3) 28 shine-only spots(preview: 14, curPiece: 14): any of 3 points above threshold
   let sIdx = id - B.numBlocks - B.numRefBlocks;
   if (sIdx < B.numShineSpots) {
     let p = shinePos[sIdx];
