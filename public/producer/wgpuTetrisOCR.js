@@ -547,7 +547,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		let curSseIdx = 0;
 
 		this.digitFields.forEach(({ name, task }) => {
-			res[name] = task.patternJobs.map(digitJobs => {
+			const matches = task.patternJobs.map(digitJobs => {
 				const lumaSses = sse.subarray(curSseIdx, curSseIdx + digitJobs.length);
 				const indexMatch = findMinIndex(lumaSses);
 
@@ -555,6 +555,8 @@ export class WGpuTetrisOCR extends TetrisOCR {
 
 				return indexMatch ? indexMatch - 1 : null;
 			});
+
+			res[name] = matches.some(v => v === null) ? null : matches;
 		});
 
 		return res;
