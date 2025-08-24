@@ -578,10 +578,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		return {
 			...res,
 			preview: this.#getPreviewFromShines(shines.subarray(0, 14)),
-			field: {
-				colors: boardColors,
-				shines: boardShines,
-			},
+			field: boardColors, // includes shine in alpha channel
 		};
 	}
 

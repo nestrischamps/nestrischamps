@@ -1,6 +1,7 @@
 import ScoreFixer from '/ocr/ScoreFixer.js';
 import { PIECES, TRANSITIONS } from '/views/constants.js';
 import { getNextGameId } from './gameid.js';
+import { u32ToRgba } from '/ocr/utils.js';
 
 const FRAME_BUFFER_MAXSIZE = 3; // all tracked changes are stable over 2 frames - using 3 for safety
 const DEFAULT_COLOR_0 = [0x00, 0x00, 0x00];
@@ -373,30 +374,24 @@ export default class GameTracker extends EventTarget {
 	}
 
 	// Match the block colors to the nearest reference colors
+	// field is a u32[]
 	matchField(field, refColors) {
-		const { shines, colors } = field;
 		const index_offset = refColors.length === 4 ? 0 : 1; // length of colors is either 3 or 4
 
 		// iterates with shines.map(), since shines is a Uint8ClampedArray
-		return shines.map((blockShine, blockIdx) => {
-			if (!blockShine) return 0; // black block
+		return field.map(blockColor => {
+			const [r, g, b, shine] = u32ToRgba(blockColor);
 
-			const blockColor = colors[blockIdx];
-
-			const channels = [
-				(blockColor >> 24) & 0xff,
-				(blockColor >> 16) & 0xff,
-				(blockColor >> 8) & 0xff,
-			];
+			if (shine === 0) return 0; // black block
 
 			let min_diff = 0xffffffff;
 			let min_idx = -1;
 
-			refColors.forEach((col, col_idx) => {
-				const sum = col.reduce(
-					(acc, c, idx) => acc + (c - channels[idx]) * (c - channels[idx]),
-					0
-				);
+			refColors.forEach(([refR, refG, refB], col_idx) => {
+				const sum =
+					(refR - r) * (refR - r) +
+					(refG - g) * (refG - g) +
+					(refB - b) * (refB - b);
 
 				if (sum < min_diff) {
 					min_diff = sum;

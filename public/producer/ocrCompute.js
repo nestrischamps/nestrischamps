@@ -313,12 +313,10 @@ export class OcrCompute {
 		const offsBuf = this.makeBuffer(offs, GPUBufferUsage.STORAGE);
 
 		// Output buffer sizes
-		const boardColorsBytes = 200 * 4; // 200 u32
-		const boardShinesBytes = 200 * 4; // 200 u32
+		const boardColorsAndShinesBytes = 200 * 4; // 200 u32
 		const refColorsBytes = 3 * 4; // 3 u32
 		const shineBytes = 28 * 4; // 28 u32
-		const totalBytes =
-			boardColorsBytes + boardShinesBytes + refColorsBytes + shineBytes;
+		const totalBytes = boardColorsAndShinesBytes + refColorsBytes + shineBytes;
 
 		// We will write into a single slab that matches WGSL layout. The layout there is sequential.
 		const outBuf = this.makeEmptyBuffer(
@@ -405,8 +403,6 @@ export class OcrCompute {
 		let offU = 0;
 		const boardColors = u32.subarray(offU, offU + 200);
 		offU += 200;
-		const boardShines = u32.subarray(offU, offU + 200);
-		offU += 200;
 		const refColors = u32.subarray(offU, offU + 3);
 		offU += 3;
 		const shines = u32.subarray(offU);
@@ -414,7 +410,6 @@ export class OcrCompute {
 		// Return slices as copies to avoid holding the large buffer. Copy by new typed arrays.
 		return {
 			boardColors: new Uint32Array(boardColors),
-			boardShines: new Uint32Array(boardShines),
 			refColors: new Uint32Array(refColors),
 			shines: new Uint32Array(shines),
 		};

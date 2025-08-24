@@ -39,7 +39,7 @@ export function u32ToRgba(u) {
 		(u >>> 0) & 0xff, // R
 		(u >>> 8) & 0xff, // G
 		(u >>> 16) & 0xff, // B
-		(u >>> 24) & 0xff, // A
+		(u >>> 24) & 0xff, // A (or shine ho ho ho!)
 	];
 }
 

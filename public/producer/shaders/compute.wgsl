@@ -129,8 +129,7 @@ struct Offsets {
 
 // Output slabs, fixed max sizes
 struct BoardOutputs {
-  boardColors: array<u32, 200>, // RGBA, A is 1.0
-  boardShines: array<u32, 200>, // 0 or 1
+  boardColors: array<u32, 200>, // RGBS, S is the shine (hijacking alpha!)
   refColors:   array<u32, 3>,
   shine:       array<u32, 28>,  // 0 or 1
 };
@@ -165,19 +164,21 @@ fn analyze_everything(@builtin(global_invocation_id) gid: vec3<u32>) {
       sum = sum + c;
     }
     let avg = sum / 4.0;
-    outBuf.boardColors[id] = pack4x8unorm(vec4<f32>(avg, 1.0));
 
     // Shine test on 3 points
-    var s: u32 = 0u;
+    var s: f32 = 0.0;
     for (var j: u32 = 0u; j < 3u; j = j + 1u) {
       let o = offs.boardShineOffsets[j];
       let L = luma(loadTexelClampedB(p.x + o.x, p.y + o.y).rgb);
       if (L > thr) {
-        s = 1u;
+        s = 1.0;
         break;
       }
     }
-    outBuf.boardShines[id] = s;
+
+    // bundle the rgb colors, and shine as alpha into a single u32
+    outBuf.boardColors[id] = pack4x8unorm(vec4<f32>(avg, s));
+
     return;
   }
 
