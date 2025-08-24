@@ -6,15 +6,13 @@ import {
 	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
 	GYM_PAUSE_LUMA_THRESHOLD,
 } from './constants.js';
-import { clamp, timingDecorator } from '/ocr/utils.js';
+import { clamp, rgbaToU32 } from '/ocr/utils.js';
 
 export class CpuTetrisOCR extends TetrisOCR {
 	#ready = false;
 
 	constructor(config) {
 		super(config);
-
-		this.perfSuffix = ++perfSuffix;
 
 		this.output_ctx = this.output_canvas.getContext('2d', {
 			alpha: false,
@@ -84,7 +82,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 		performance.mark(`draw-${this.perfSuffix}`);
 
-		// extract the regions of interes
+		// extract the regions of interest
 		this.capture_ctx.filter = 'none';
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
@@ -648,10 +646,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 		);
 
 		// Make a memory efficient array for our needs
-		const field = {
-			shines: new Uint8Array(200),
-			colors: new Uint32Array(200),
-		};
+		const field = new Uint32Array(200);
 
 		// shine pixels
 		const shine_pix_refs = [
@@ -682,10 +677,8 @@ export class CpuTetrisOCR extends TetrisOCR {
 					return luma(...col) > SHINE_LUMA_THRESHOLD;
 				});
 
-				field.shines[block_idx] = has_shine ? 1 : 0;
-
 				if (!has_shine) {
-					field.colors[block_idx] = 0; // we have black for sure! no ned to compute colors from reference pixels
+					field[block_idx] = rgbaToU32(0, 0, 0, 0); // we have black for sure! no ned to compute colors from reference pixels
 					continue;
 				}
 
@@ -705,8 +698,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 					)
 					.map(v => Math.sqrt(v / pix_refs.length));
 
-				field.colors[block_idx] =
-					(channels[0] << 24) | (channels[1] << 16) | (channels[2] << 8) | 0xff; // ff for fully opaque
+				field[block_idx] = rgbaToU32(...channels, 0xff); // 0xff indicates has-shine!
 			}
 		}
 

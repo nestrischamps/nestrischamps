@@ -43,6 +43,15 @@ export function u32ToRgba(u) {
 	];
 }
 
+export function rgbaToU32(r, g, b, a) {
+	return (
+		((r & 0xff) << 0) |
+		((g & 0xff) << 8) |
+		((b & 0xff) << 16) |
+		((a & 0xff) << 24)
+	);
+}
+
 export function rgb2lab_normalizeRgbChannel(channel) {
 	channel /= 255;
 

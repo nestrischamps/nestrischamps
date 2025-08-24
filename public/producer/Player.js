@@ -7,6 +7,9 @@ import { CpuTetrisOCR } from './cpuTetrisOCR.js';
 import { WGpuTetrisOCR } from './wgpuTetrisOCR.js';
 
 const send_binary = QueryString.get('binary') !== '0';
+const force_cpu = QueryString.get('cpu') === '1';
+
+console.log({ force_cpu });
 
 export class Player extends EventTarget {
 	#startTime;
@@ -25,9 +28,10 @@ export class Player extends EventTarget {
 		this.gameTracker = new GameTracker(config);
 		this.gameTracker.addEventListener('frame', this.#handleFrame);
 
-		this.ocr = navigator.gpu?.requestAdapter
-			? new WGpuTetrisOCR(this.config)
-			: new CpuTetrisOCR(this.config);
+		this.ocr =
+			navigator.gpu?.requestAdapter && !force_cpu
+				? new WGpuTetrisOCR(this.config)
+				: new CpuTetrisOCR(this.config);
 
 		this.ocr.addEventListener('frame', ({ detail: frame }) => {
 			this.gameTracker.processFrame(frame);

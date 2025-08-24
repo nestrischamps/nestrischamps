@@ -232,7 +232,8 @@ export class NTC_Crop_Control extends NtcComponent {
 				const row = results.subarray(ridx * 10, ridx * 10 + 10);
 
 				row.forEach((col, cidx) => {
-					const [r, g, b] = u32ToRgba(col);
+					const [r, g, b, shine] = u32ToRgba(col);
+					if (shine <= 0) return;
 					ctx.fillStyle = `rgb(${r},${g},${b})`;
 					ctx.fillRect(cidx * 16, ridx * 16, 14, 14);
 				});
