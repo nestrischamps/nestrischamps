@@ -30,7 +30,7 @@ export class Player extends EventTarget {
 			: new CpuTetrisOCR(this.config);
 
 		this.ocr.addEventListener('frame', ({ detail: frame }) => {
-			// this.gameTracker.processFrame(frame);
+			this.gameTracker.processFrame(frame);
 		});
 
 		this.is_player = false;

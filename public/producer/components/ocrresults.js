@@ -1,5 +1,6 @@
 import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
+import './PerfResults.js';
 
 const MARKUP = html`
 	<div id="ocr_results" class="columns container is-fluid">
@@ -9,43 +10,16 @@ const MARKUP = html`
 		</fieldset>
 		<fieldset class="column">
 			<legend>OCR Performance (in ms)</legend>
-			<dl id="perf_data"></dl>
+			<ntc-perfresults id="perf_data"></ntc-perfresults>
 		</fieldset>
 	</div>
 `;
-
-const cssOverride = new CSSStyleSheet();
-cssOverride.replaceSync(`
-	dl {
-		display: inline-grid;
-		grid-template-columns: max-content auto;
-		font-family: monospace;
-		margin: 1em 0;
-		column-gap: 1em;
-	}
-
-	dt {
-		grid-column-start: 1;
-		text-align: right;
-	}
-
-	dd {
-		grid-column-start: 2;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-`);
 
 export class NTC_Producer_OcrResults extends NtcComponent {
 	#domrefs;
 
 	constructor() {
 		super();
-
-		window.BULMA_STYLESHEETS.then(() => {
-			this.shadow.adoptedStyleSheets.push(cssOverride);
-		});
 
 		this.shadow.innerHTML = MARKUP;
 		this.style.display = 'block';
@@ -68,41 +42,13 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 		game_tracker.addEventListener('frame', this.#handleGameTrackerFrame);
 	}
 
-	#handleOCRFrame = ({ detail: { perf } }) => {
-		this.#setPerfData(perf);
+	#handleOCRFrame = () => {
+		this.#domrefs.perf_data.showPerfData();
 	};
 
 	#handleGameTrackerFrame = ({ detail: frame }) => {
 		this.#setFrameData(frame);
 	};
-
-	#setPerfData(perf) {
-		const { perf_data } = this.#domrefs;
-
-		for (const [name, value] of Object.entries(perf)) {
-			let dt = perf_data.querySelector(`dt.${name}`);
-
-			if (dt) {
-				const dd = dt.nextSibling;
-				if (value === null) {
-					dd.remove();
-					dt.remove();
-				} else {
-					dd.textContent = value;
-				}
-			} else if (value !== null) {
-				const dt = document.createElement('dt');
-				const dd = document.createElement('dd');
-
-				dt.classList.add(name);
-				dt.textContent = name;
-				dd.textContent = value;
-
-				perf_data.appendChild(dt);
-				perf_data.appendChild(dd);
-			}
-		}
-	}
 
 	#setFrameData(data) {
 		if (!data) return;
@@ -129,7 +75,11 @@ export class NTC_Producer_OcrResults extends NtcComponent {
 			}
 
 			if (name === 'field') {
-				if (Array.isArray(value) || value instanceof Uint8Array) {
+				if (
+					Array.isArray(value) ||
+					value instanceof Uint8Array ||
+					value instanceof Uint32Array
+				) {
 					const rows = Array(20)
 						.fill()
 						.map((_, idx) => value.slice(idx * 10, (idx + 1) * 10).join(''));

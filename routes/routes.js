@@ -111,12 +111,14 @@ router.get(
 				? '/ocr/ocr.html'
 				: '/emu/index.html';
 
+		console.log([req.path, tplPath]);
+
 		res.sendFile(path.join(path.resolve(), `public${tplPath}`));
 	}
 );
 
 router.get(
-	/^\/room\/u\/([^/]+)\/(producer|emu)/,
+	/^\/room\/u\/([^/]+)\/(producer2|emu)/,
 	middlewares.assertSession,
 	middlewares.checkToken,
 	async (req, res) => {
@@ -127,14 +129,13 @@ router.get(
 			return;
 		}
 
-		res.sendFile(
-			path.join(
-				path.resolve(),
-				`public${
-					/producer/.test(req.path) ? '/ocr/ocr.html' : '/emu/index.html'
-				}`
-			)
-		);
+		const tplPath = /producer2/.test(req.path)
+			? '/producer/index.html'
+			: /producer/.test(req.path)
+				? '/ocr/ocr.html'
+				: '/emu/index.html';
+
+		res.sendFile(path.join(path.resolve(), `public${tplPath}`));
 	}
 );
 

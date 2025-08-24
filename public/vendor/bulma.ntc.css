@@ -18,6 +18,26 @@ legend {
     text-transform: capitalize;
 }
 
+dl {
+    display: inline-grid;
+    grid-template-columns: max-content auto;
+    font-family: monospace;
+    margin: 1em 0;
+    column-gap: 1em;
+}
+
+dt {
+    grid-column-start: 1;
+    text-align: right;
+}
+
+dd {
+    grid-column-start: 2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}	
+
 /* --- Dark Mode Overrides --- */
 /* Apply these styles when the user's system prefers a dark color scheme */
 @media (prefers-color-scheme: dark) {

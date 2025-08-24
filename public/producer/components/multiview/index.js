@@ -2,6 +2,7 @@ import { NtcComponent } from '../NtcComponent.js';
 import { html } from '../../StringUtils.js';
 
 import '../calibration.js';
+import '../PerfResults.js';
 
 const MARKUP = html`
 	<div class="container is-fluid mt-5">
@@ -25,7 +26,7 @@ const MARKUP = html`
 
 				<fieldset class="column">
 					<legend>OCR Performance (in ms)</legend>
-					<dl id="perf_data"></dl>
+					<ntc-perfresults id="perf_data"></ntc-perfresults>
 				</fieldset>
 			</div>
 		</div>
@@ -53,26 +54,6 @@ cssOverride.replaceSync(`
 	video {
 		width: 500px;
 	}
-
-	dl {
-		display: inline-grid;
-		grid-template-columns: max-content auto;
-		font-family: monospace;
-		margin: 1em 0;
-		column-gap: 1em;
-	}
-
-	dt {
-		grid-column-start: 1;
-		text-align: right;
-	}
-
-	dd {
-		grid-column-start: 2;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}	
 `);
 
 export class NTC_MultiView extends NtcComponent {
@@ -157,49 +138,8 @@ export class NTC_MultiView extends NtcComponent {
 	}
 
 	#handleFrame = () => {
-		const perf = {};
-
-		performance.getEntriesByType('measure').forEach(m => {
-			// discard browser performance measurements -_-
-			if (m.name.startsWith('browser::')) return;
-			if (m.name.startsWith('invoke-')) return;
-			if (m.name.startsWith('inline-')) return;
-			if (m.name.startsWith('DOM-')) return;
-			if (m.name.startsWith('ANALYZE_')) return;
-
-			perf[m.name] = m.duration.toFixed(3);
-		});
-
-		this.#setPerfData(perf);
+		this.perf_data.showPerfResults();
 	};
-
-	#setPerfData(perf) {
-		const { perf_data } = this.#domrefs;
-
-		for (const [name, value] of Object.entries(perf)) {
-			let dt = perf_data.querySelector(`dt.${name}`);
-
-			if (dt) {
-				const dd = dt.nextSibling;
-				if (value === null) {
-					dd.remove();
-					dt.remove();
-				} else {
-					dd.textContent = value;
-				}
-			} else if (value !== null) {
-				const dt = document.createElement('dt');
-				const dd = document.createElement('dd');
-
-				dt.classList.add(name);
-				dt.textContent = name;
-				dd.textContent = value;
-
-				perf_data.appendChild(dt);
-				perf_data.appendChild(dd);
-			}
-		}
-	}
 }
 
 customElements.define('ntc-multiview', NTC_MultiView);

@@ -4,7 +4,6 @@ import { getNextGameId } from './gameid.js';
 
 const FRAME_BUFFER_MAXSIZE = 3; // all tracked changes are stable over 2 frames - using 3 for safety
 const DEFAULT_COLOR_0 = [0x00, 0x00, 0x00];
-const DEFAULT_COLOR_1 = [0xf0, 0xf0, 0xf0];
 
 function peek(arr, offset = 0) {
 	return arr[arr.length - (offset + 1)];
@@ -354,6 +353,8 @@ export default class GameTracker extends EventTarget {
 		}
 
 		colors.push(res.color1, res.color2, res.color3);
+
+		// console.log(colors);
 
 		if (this.config.handle_retron_levels_6_7 === false) {
 			// undefined defaults to true; only explicit false is considered

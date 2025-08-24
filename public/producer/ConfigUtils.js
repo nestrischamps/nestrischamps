@@ -1,9 +1,9 @@
 import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
-import loadPalettes, { getPalette } from '/ocr/palettes.js';
+import { getPalette } from '/ocr/palettes.js';
 
 function getConfigName() {
-	return QueryString.get('config') || 'config';
+	return QueryString.get('config') || 'config_v2';
 }
 
 export function hasConfig() {
