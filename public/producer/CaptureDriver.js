@@ -1,3 +1,4 @@
+import QueryString from '/js/QueryString.js';
 import { sleep, timer } from './timer.js';
 import { getStream } from './MediaUtils.js';
 
@@ -55,10 +56,40 @@ export class CaptureDriver extends EventTarget {
 	}
 
 	async #startFrameCapture() {
-		console.log('#startFrameCapture');
+		const driverMode = (value =>
+			/^(mstp|callback)$/.test(value) ? value : 'interval')(
+			QueryString.get('capdriver')
+		);
 
-		if ('MediaStreamTrackProcessor' in window) {
-			console.log('MediaStreamTrackProcessor is supported');
+		const MediaStreamTrackProcessorSupported =
+			'MediaStreamTrackProcessor' in window;
+
+		let trackFps = null;
+
+		try {
+			const track = this.#video.srcObject?.getVideoTracks()[0];
+			trackFps = track.getSettings().frameRate;
+			if (trackFps) {
+				console.log(`Track's frameRate: ${trackFps}fps`);
+			}
+		} catch (err) {
+			// ignore 🤷
+		}
+
+		console.log(
+			`#startFrameCapture: ${JSON.stringify(
+				{
+					driverMode,
+					trackFps,
+					MediaStreamTrackProcessorSupported,
+				},
+				null,
+				2
+			)}`
+		);
+
+		if (driverMode === 'mstp' && MediaStreamTrackProcessorSupported) {
+			console.log('Using MediaStreamTrackProcessor in driver');
 			for await (const frame of this.#frameGenerator()) {
 				try {
 					await this.#work(frame);
@@ -67,9 +98,22 @@ export class CaptureDriver extends EventTarget {
 				}
 				frame.close();
 			}
+		} else if (driverMode === 'callback') {
+			console.log('Using requestVideoFrameCallback in driver');
+			const tick = async () => {
+				try {
+					await this.#work();
+				} catch (err) {
+					console.warn(err);
+				}
+				this.#video.requestVideoFrameCallback(tick);
+			};
+			this.#video.requestVideoFrameCallback(tick);
 		} else {
-			console.log('MediaStreamTrackProcessor is NOT supported');
-			const frame_ms = 1000 / (this.config.frame_rate || 30);
+			const frame_rate = trackFps || this.config.frame_rate || 30;
+			const frame_ms = 1000 / frame_rate; // at ms accuracy, it drifts
+
+			console.log(`Using Interval in driver at ${frame_rate}fps`);
 
 			this.captureIntervalId = timer.setInterval(async () => {
 				await this.#work();
