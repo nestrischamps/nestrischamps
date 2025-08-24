@@ -304,7 +304,7 @@ export default function init(server, wss) {
 		} else if (pathname.startsWith('/ws/room/admin')) {
 			console.log(`MatchRoom: ${user.login}: Admin connected`);
 			user.getHostRoom().setAdmin(connection);
-		} else if (/^\/ws\/room\/(producer|emu)/.test(pathname)) {
+		} else if (/^\/ws\/room\/(producer2?|emu)/.test(pathname)) {
 			console.log(`PrivateRoom: ${user.login}: Producer connected`);
 			user.setProducerConnection(connection, {
 				match: false,
@@ -342,6 +342,7 @@ export default function init(server, wss) {
 				}
 				/** */
 
+				case 'producer2':
 				case 'producer':
 				case 'emu': {
 					console.log(
