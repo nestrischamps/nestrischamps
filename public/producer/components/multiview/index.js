@@ -138,7 +138,7 @@ export class NTC_MultiView extends NtcComponent {
 	}
 
 	#handleFrame = () => {
-		this.perf_data.showPerfResults();
+		this.#domrefs.perf_data.showPerfData();
 	};
 }
 
