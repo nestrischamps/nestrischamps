@@ -1,6 +1,12 @@
 import Connection from '/js/connection.js';
 import { peerServerOptions } from '/views/constants.js';
 
+import '/producer/components/calibration.js';
+
+import { CaptureDriver } from '/producer/CaptureDriver.js';
+import { CpuTetrisOCR } from '/producer/cpuTetrisOCR.js';
+import { WGpuTetrisOCR } from '/producer/wgpuTetrisOCR.js';
+
 const dom = {
 	roomid: document.querySelector('#roomid'),
 	producer_count: document.querySelector('#producer_count'),
@@ -184,7 +190,7 @@ class Player {
 			const peerid = `${connection.id}-${this.idx}`;
 			const peer = (this.peer = new Peer(peerid, peerServerOptions));
 
-			const overlay = document.createElement('div');
+			const overlay = document.createElement('ntc-calibration');
 
 			// Style it to cover 100% of the viewport
 			Object.assign(overlay.style, {
@@ -195,22 +201,38 @@ class Player {
 				height: '100vh',
 				backgroundColor: 'rgba(0, 0, 0, 0.5)', // example semi-transparent background
 				zIndex: '9999', // make sure it's on top
+				overflowY: 'auto', // adds scroll only when needed
+				overflowX: 'hidden', // optional: prevent horizontal scroll
 			});
 
 			document.body.appendChild(overlay);
 
-			const video = document.createElement('video');
-			video.autoplay = true;
-			overlay.appendChild(video);
+			let driver;
+			let ocr;
 
 			peer.on('call', call => {
 				console.log(call.metadata);
 
 				// TODO: verify it's a known peer?
 				call.on('stream', remoteStream => {
-					video.srcObject = remoteStream;
+					const config = call.metadata.config;
+					config.save = function () {};
+
+					ocr = navigator.gpu?.requestAdapter
+						? new WGpuTetrisOCR(config)
+						: new CpuTetrisOCR(config);
+
+					overlay.setOCR(ocr);
+
+					driver = new CaptureDriver(config, remoteStream);
+					driver.addPlayer({
+						processVideoFrame(frame) {
+							ocr.processVideoFrame(frame);
+						},
+					});
 				});
 				call.answer();
+				// call.send(); No send on mediaConnections
 			});
 
 			peer.on('open', id => {

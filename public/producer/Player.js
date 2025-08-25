@@ -4,6 +4,8 @@ import Connection from '/js/connection.js';
 
 import { peerServerOptions } from '/views/constants.js';
 
+import { getSerializableConfigCopy } from './ConfigUtils.js';
+
 import GameTracker from './GameTracker.js';
 import { CpuTetrisOCR } from './cpuTetrisOCR.js';
 import { WGpuTetrisOCR } from './wgpuTetrisOCR.js';
@@ -62,8 +64,15 @@ export class Player extends EventTarget {
 
 			requestRemoteCalibration: admin_peer_id => {
 				console.log('requestRemoteCalibration', admin_peer_id);
-				this.#peer.call(admin_peer_id, this._driver.getVideo().srcObject, {
-					config: { foo: [1, 5, 8] },
+				const video = this._driver.getVideo();
+				this.#peer.call(admin_peer_id, video.srcObject, {
+					metadata: {
+						video: {
+							width: video.videoWidth,
+							height: video.videoHeight,
+						},
+						config: getSerializableConfigCopy(this.config),
+					},
 				});
 				// makes a call to admin caller and pass config
 				// need access to driver

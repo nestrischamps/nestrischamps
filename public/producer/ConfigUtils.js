@@ -89,7 +89,7 @@ export async function loadConfig() {
 	}
 }
 
-function getSerializableConfigCopy(config) {
+export function getSerializableConfigCopy(config) {
 	const {
 		device_id,
 		game_type,

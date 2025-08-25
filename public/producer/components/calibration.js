@@ -155,7 +155,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 	constructor() {
 		super();
 
-		window.BULMA_STYLESHEETS.then(() => {
+		this._bulmaSheets.then(() => {
 			this.shadow.adoptedStyleSheets.push(cssOverride);
 		});
 

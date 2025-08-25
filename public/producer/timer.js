@@ -22,11 +22,17 @@ export const timer = {
 	callbacks: {},
 	worker: null,
 	setInterval: function (callback, ms) {
+		if (!this.worker) {
+			return setInterval(callback, ms);
+		}
 		this.callbacks[++this.callid] = callback;
 		this.worker.postMessage(['setInterval', ms, this.callid]);
 		return this.callid;
 	},
 	clearInterval: function (id) {
+		if (!this.worker) {
+			return clearInterval(id);
+		}
 		delete this.callbacks[id];
 		this.worker.postMessage(['clearInterval', id]);
 	},
