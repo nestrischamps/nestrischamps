@@ -2,6 +2,8 @@ import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
 import Connection from '/js/connection.js';
 
+import { peerServerOptions } from '/views/constants.js';
+
 import GameTracker from './GameTracker.js';
 import { CpuTetrisOCR } from './cpuTetrisOCR.js';
 import { WGpuTetrisOCR } from './wgpuTetrisOCR.js';
@@ -15,6 +17,7 @@ export class Player extends EventTarget {
 	#startTime;
 	#lastFrame;
 	#connection = null;
+	#peer;
 
 	constructor(config, num = null) {
 		super();
@@ -48,12 +51,25 @@ export class Player extends EventTarget {
 			makePlayer: (player_index, _view_meta) => {
 				this.is_player = true;
 				this.view_meta = _view_meta;
+				// startSharingVideoFeed();
 			},
 
 			dropPlayer() {
 				this.is_player = false;
 				this.view_meta = null;
+				// stopSharingVideoFeed();
 			},
+
+			requestRemoteCalibration: admin_peer_id => {
+				console.log('requestRemoteCalibration', admin_peer_id);
+				this.#peer.call(admin_peer_id, this._driver.getVideo().srcObject, {
+					config: { foo: [1, 5, 8] },
+				});
+				// makes a call to admin caller and pass config
+				// need access to driver
+			},
+
+			setVdoNinjaURL: () => {},
 		};
 
 		this.connect();
@@ -162,21 +178,21 @@ export class Player extends EventTarget {
 		this.#connection.onResume = this.resetNotice;
 
 		this.#connection.onInit = () => {
-			// if (peer) {
-			// 	peer.removeAllListeners();
-			// 	peer.destroy();
-			// 	peer = null;
-			// }
-			// peer = new Peer(this.#connection.id, peerServerOptions);
-			// peer.on('open', err => {
-			// 	console.log(Date.now(), 'peer opened', peer.id);
-			// 	//startSharingVideoFeed();
-			// });
-			// peer.on('error', err => {
-			// 	console.log(`Peer error: ${err.message}`);
-			// 	peer.retryTO = clearTimeout(peer.retryTO); // there should only be one retry scheduled
-			// 	// peer.retryTO = setTimeout(startSharingVideoFeed, 1500); // we assume this will succeed at some point?? 😰😅
-			// });
+			if (this.#peer) {
+				this.#peer.removeAllListeners();
+				this.#peer.destroy();
+				this.#peer = null;
+			}
+			this.#peer = new Peer(this.#connection.id, peerServerOptions);
+			this.#peer.on('open', err => {
+				console.log(Date.now(), 'peer opened', this.#peer.id);
+				//startSharingVideoFeed();
+			});
+			this.#peer.on('error', err => {
+				console.log(`Peer error: ${err.message}`);
+				this.#peer.retryTO = clearTimeout(this.#peer.retryTO); // there should only be one retry scheduled
+				// this.#peer.retryTO = setTimeout(startSharingVideoFeed, 1500); // we assume this will succeed at some point?? 😰😅
+			});
 		};
 
 		return this.#connection;

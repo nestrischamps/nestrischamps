@@ -46,6 +46,7 @@ export class CaptureDriver extends EventTarget {
 	}
 
 	addPlayer(player) {
+		player._driver = this; // use a method?
 		this.players.push(player);
 	}
 

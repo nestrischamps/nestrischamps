@@ -452,6 +452,8 @@ class MatchRoom extends Room {
 	}
 
 	async handleAdminMessage(message) {
+		console.log(message);
+
 		const [command, ...args] = message;
 		let forward_to_views = true;
 		let update_admin = true;
@@ -494,6 +496,22 @@ class MatchRoom extends Room {
 						producer.send(['setViewPeerId', this.last_view.id]);
 						producer.send(['makePlayer', p_num, this.getViewMeta()]); // should reset camera!
 					}
+
+					break;
+				}
+
+				case 'requestRemoteCalibration': {
+					update_admin = false;
+					forward_to_views = false;
+
+					const [p_num, admin_peer_id] = args;
+
+					this.assertValidPlayer(p_num);
+
+					const player_id = this.state.players[p_num].id;
+					const user = this.getProducer(player_id);
+
+					user.getProducer()?.send(['requestRemoteCalibration', admin_peer_id]);
 
 					break;
 				}
