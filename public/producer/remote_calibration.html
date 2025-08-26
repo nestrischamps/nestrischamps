@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<title>NestrisChamps Producer</title>
+		<script type="module">
+			import '/producer/components/calibration.js';
+
+			import { lazyBulmaSheets } from '/producer/components/NtcComponent.js';
+			lazyBulmaSheets().then(sheets => {
+				document.adoptedStyleSheets = sheets;
+				document.querySelector('body').classList.remove('loading');
+			});
+		</script>
+		<style type="text/css">
+			html,
+			body {
+				height: 100%;
+				margin: 0;
+				padding: 0;
+				overflow: hidden;
+			}
+			body.loading {
+				background: black; /* black FOUC better than white */
+			}
+			.full-viewport {
+				height: 100vh;
+				overflow: hidden;
+			}
+			.scroll-area {
+				overflow-x: hidden;
+				overflow-y: auto;
+				flex: 1 1 auto;
+			}
+		</style>
+	</head>
+	<body class="loading">
+		<div class="full-viewport is-flex is-flex-direction-column">
+			<div class="p-5 is-size-5 is-flex is-justify-content-space-between">
+				<div class="left">
+					Remote calibration for user: <strong id="name"></strong>
+				</div>
+				<div class="right">
+					<button id="close_only" class="button is-warning">
+						Close WITHOUT Saving
+					</button>
+					<button id="save_and_close" class="button is-success">
+						Apply and Close
+					</button>
+				</div>
+			</div>
+			<ntc-calibration
+				class="scroll-area"
+				id="calibration"
+				enable-show-parts="false"
+				enable-use-half-height="false"
+				enable-capture-rate="false"
+			></ntc-calibration>
+		</div>
+	</body>
+</html>

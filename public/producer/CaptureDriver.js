@@ -138,9 +138,9 @@ export class CaptureDriver extends EventTarget {
 		const now = Date.now();
 
 		if (this.#working) {
-			console.warn(
-				`skip frame. Elapsed: ${now - (this.#then || 0)}. Current player work: ${this.#curPlayerNum}`
-			);
+			// console.warn(
+			// 	`skip frame. Elapsed: ${now - (this.#then || 0)}. Current player work: ${this.#curPlayerNum}`
+			// );
 			return;
 		}
 

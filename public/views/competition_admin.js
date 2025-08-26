@@ -1,11 +1,10 @@
 import Connection from '/js/connection.js';
 import { peerServerOptions } from '/views/constants.js';
 
-import '/producer/components/calibration.js';
-
+import { getSerializableConfigCopy } from '/producer/ConfigUtils.js';
+import { sleep } from '/producer/timer.js';
 import { CaptureDriver } from '/producer/CaptureDriver.js';
 import { CpuTetrisOCR } from '/producer/cpuTetrisOCR.js';
-import { WGpuTetrisOCR } from '/producer/wgpuTetrisOCR.js';
 
 const dom = {
 	roomid: document.querySelector('#roomid'),
@@ -185,12 +184,8 @@ class Player {
 			remoteAPI.focusPlayer(this.idx);
 		};
 
-		this.dom.remote_calibration_btn.onclick = () => {
-			// doing things like a pig for now...
-			const peerid = `${connection.id}-${this.idx}`;
-			const peer = (this.peer = new Peer(peerid, peerServerOptions));
-
-			const overlay = document.createElement('ntc-calibration');
+		this.dom.remote_calibration_btn.onclick = async () => {
+			let overlay = document.createElement('iframe');
 
 			// Style it to cover 100% of the viewport
 			Object.assign(overlay.style, {
@@ -199,45 +194,129 @@ class Player {
 				left: '0',
 				width: '100vw',
 				height: '100vh',
-				backgroundColor: 'rgba(0, 0, 0, 0.5)', // example semi-transparent background
+				backgroundColor: 'rgba(0, 0, 0, 0.8)', // example semi-transparent background
 				zIndex: '9999', // make sure it's on top
 				overflowY: 'auto', // adds scroll only when needed
 				overflowX: 'hidden', // optional: prevent horizontal scroll
+				margin: 0,
+				padding: 0,
+				border: 0,
 			});
 
+			overlay.src = '/remote_calibration';
 			document.body.appendChild(overlay);
 
-			let driver;
-			let ocr;
+			overlay.addEventListener('load', () => {
+				const clearPeer = () => {
+					if (!this.peer) return;
+					// this.peer.removeAllListeners();
+					this.peer.destroy();
+					this.peer = null;
+				};
 
-			peer.on('call', call => {
-				console.log(call.metadata);
+				const clearAll = () => {
+					// TODO destroy processingpipeline (driver + ocr + calibration_ui)
+					// overlay.removeAllListeners();
+					// closeOnly.removeAllListeners();
+					// saveAndClose.removeAllListeners();
+					overlay.remove();
+					overlay = null;
+					this.dataConnection = null;
+					if (driver) driver.destroy();
+					clearPeer();
+				};
 
-				// TODO: verify it's a known peer?
-				call.on('stream', remoteStream => {
-					const config = call.metadata.config;
-					config.save = function () {};
+				const doc = overlay.contentDocument || overlay.contentWindow.document;
+				const closeOnly = doc.getElementById('close_only');
+				const saveAndClose = doc.getElementById('save_and_close');
 
-					ocr = navigator.gpu?.requestAdapter
-						? new WGpuTetrisOCR(config)
-						: new CpuTetrisOCR(config);
+				// set up ui
+				doc.getElementById('name').innerText = this.dom.name.value;
 
-					overlay.setOCR(ocr);
+				const saveConfig = name => {
+					let config = getSerializableConfigCopy(
+						this.dataConnection.metadata.config
+					);
 
-					driver = new CaptureDriver(config, remoteStream);
+					// cleanup to send the absolute minimum
+					for (const [name, task] of Object.entries(config.tasks)) {
+						config.tasks[name] = { crop: task.crop };
+					}
+
+					if (name) {
+						// only send the config being changed
+						config = {
+							tasks: {
+								[name]: {
+									crop: config.tasks[name].crop,
+								},
+							},
+						};
+					}
+
+					this.dataConnection.send({ config });
+				};
+
+				closeOnly.addEventListener('click', clearAll);
+				saveAndClose.addEventListener('click', async () => {
+					saveConfig();
+					clearAll();
+				});
+
+				const calibration = doc.getElementById('calibration');
+
+				if (this.peer) {
+					clearPeer();
+				}
+
+				const peerid = `${connection.id}-${this.idx}`;
+				const peer = (this.peer = new Peer(peerid, peerServerOptions));
+
+				let driver;
+				let ocr;
+				let srcCanvas;
+				let srcCtx;
+
+				peer.on('connection', async dataConnection => {
+					this.dataConnection = dataConnection;
+
+					const { config, video } = dataConnection.metadata;
+					config.save = function (name) {
+						saveConfig(name);
+					};
+
+					ocr = new CpuTetrisOCR(config);
+
+					calibration.setOCR(ocr);
+
+					srcCanvas = document.createElement('canvas');
+					srcCanvas.width = video.width;
+					srcCanvas.height = video.height;
+
+					srcCtx = srcCanvas.getContext('2d');
+
+					// receive new frames (VERY low frame rate)
+					dataConnection.on('data', async data => {
+						if (!data.jpeg) return;
+
+						const blob = new Blob([data.jpeg], { type: 'image/jpeg' });
+						const bitmap = await createImageBitmap(blob);
+						srcCtx.drawImage(bitmap, 0, 0);
+					});
+
+					const stream = srcCanvas.captureStream(10);
+
+					driver = new CaptureDriver(config, stream);
 					driver.addPlayer({
 						processVideoFrame(frame) {
 							ocr.processVideoFrame(frame);
 						},
 					});
 				});
-				call.answer();
-				// call.send(); No send on mediaConnections
-			});
 
-			peer.on('open', id => {
-				console.log({ peerid, id });
-				remoteAPI.requestRemoteCalibration(this.idx, peerid);
+				peer.on('open', id => {
+					remoteAPI.requestRemoteCalibration(this.idx, peerid);
+				});
 			});
 		};
 	}

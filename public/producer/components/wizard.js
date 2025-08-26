@@ -194,7 +194,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 	constructor() {
 		super();
 
-		window.BULMA_STYLESHEETS.then(() => {
+		this._bulmaSheets.then(() => {
 			this.shadow.adoptedStyleSheets.push(cssOverride);
 		});
 

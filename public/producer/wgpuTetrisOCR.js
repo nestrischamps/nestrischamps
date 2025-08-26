@@ -14,7 +14,9 @@ async function loadShaderSource(url) {
 }
 
 async function getGPU() {
-	const adapter = await navigator.gpu.requestAdapter();
+	const adapter = await navigator.gpu.requestAdapter({
+		powerPreference: 'high-performance',
+	});
 	const device = await adapter.requestDevice();
 	const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
 

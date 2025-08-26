@@ -3,18 +3,8 @@
 	<head>
 		<title>NestrisChamps Producer</title>
 		<script type="module">
-			window.BULMA_STYLESHEETS = Promise.all(
-				['/vendor/bulma.1.0.4.min.css', '/vendor/bulma.ntc.css'].map(url =>
-					fetch(url)
-						.then(res => res.text())
-						.then(css => {
-							const sheet = new CSSStyleSheet();
-							sheet.replaceSync(css);
-							return sheet;
-						})
-				)
-			);
-			window.BULMA_STYLESHEETS.then(sheets => {
+			import { lazyBulmaSheets } from '/producer/components/NtcComponent.js';
+			lazyBulmaSheets().then(sheets => {
 				document.adoptedStyleSheets = sheets;
 				document.querySelector('body').classList.remove('loading');
 			});

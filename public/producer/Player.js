@@ -62,10 +62,17 @@ export class Player extends EventTarget {
 				// stopSharingVideoFeed();
 			},
 
-			requestRemoteCalibration: admin_peer_id => {
+			requestRemoteCalibration: async admin_peer_id => {
 				console.log('requestRemoteCalibration', admin_peer_id);
+
+				if (this.conn) {
+					clearInterval(this.conn.sendJpegIntervalId);
+					this.conn.close();
+				}
+
 				const video = this._driver.getVideo();
-				this.#peer.call(admin_peer_id, video.srcObject, {
+
+				this.conn = this.#peer.connect(admin_peer_id, {
 					metadata: {
 						video: {
 							width: video.videoWidth,
@@ -74,14 +81,59 @@ export class Player extends EventTarget {
 						config: getSerializableConfigCopy(this.config),
 					},
 				});
-				// makes a call to admin caller and pass config
-				// need access to driver
+
+				const sendJpeg = async () => {
+					const jpeg = await this.#getVideoFrameAsJpegBlob();
+					this.conn.send({ jpeg });
+				};
+
+				this.conn.on('open', () => {
+					clearInterval(this.conn.sendJpegIntervalId);
+					this.conn.sendJpegIntervalId = setInterval(sendJpeg, 10000);
+					sendJpeg();
+				});
+
+				this.conn.on('data', ({ config }) => {
+					for (const [name, task] of Object.entries(config.tasks)) {
+						Object.assign(this.config.tasks[name].crop, task.crop);
+					}
+
+					// TODO: carry score7 and reset entire config
+
+					this.config.save();
+				});
+
+				this.conn.on('close', () => {
+					clearInterval(this.conn.sendJpegIntervalId);
+				});
 			},
 
 			setVdoNinjaURL: () => {},
 		};
 
 		this.connect();
+	}
+
+	// manua async
+	#getVideoFrameAsJpegBlob() {
+		const video = this._driver.getVideo();
+
+		const canvas = document.createElement('canvas');
+		canvas.width = video.videoWidth;
+		canvas.height = video.videoHeight;
+		const ctx = canvas.getContext('2d');
+
+		// Draw the current video frame into the canvas
+		ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+		// Convert to JPEG Blob at 85% quality
+		return new Promise(resolve => {
+			canvas.toBlob(
+				blob => resolve(blob),
+				'image/jpeg',
+				0.75 // quality 0..1
+			);
+		});
 	}
 
 	processVideoFrame(frame) {

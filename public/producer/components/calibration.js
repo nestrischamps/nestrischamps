@@ -93,9 +93,7 @@ const MARKUP = html`
 
 		<div id="extraction" class="columns">
 			<div id="capture-container" class="column is-5">
-				<div id="capture">
-					<video id="device_video" playsinline controls="false"></video>
-				</div>
+				<div id="capture"></div>
 			</div>
 			<div id="adjustments" class="column is-7" data-crop-scope></div>
 		</div>
@@ -236,7 +234,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		if (!this.ocr?.config?.tasks?.[name]) return;
 
 		this.ocr.config.tasks[name].crop[key] = value;
-		this.ocr.config.save();
+		this.ocr.config.save(name);
 
 		this.#restartHidePartsTimeout();
 	};

@@ -1,4 +1,4 @@
-async function getBulmaSheets() {
+function getBulmaSheets() {
 	return Promise.all(
 		['/vendor/bulma.1.0.4.min.css', '/vendor/bulma.ntc.css'].map(url =>
 			fetch(url)
@@ -14,7 +14,7 @@ async function getBulmaSheets() {
 
 let bulmaSheetsPromise;
 
-function lazyBulmaSheets() {
+export function lazyBulmaSheets() {
 	if (!bulmaSheetsPromise) {
 		bulmaSheetsPromise = getBulmaSheets(); // no await!
 	}
@@ -28,7 +28,7 @@ export class NtcComponent extends HTMLElement {
 
 		this.shadow = this.attachShadow({ mode: 'open' });
 
-		this._bulmaSheets = window.BULMA_STYLESHEETS || lazyBulmaSheets();
+		this._bulmaSheets = lazyBulmaSheets();
 
 		// NTC components will inherit bulma styles
 		this._bulmaSheets.then(sheets => {

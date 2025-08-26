@@ -78,7 +78,7 @@ export class NTC_MultiView extends NtcComponent {
 	constructor() {
 		super();
 
-		window.BULMA_STYLESHEETS.then(() => {
+		this._bulmaSheets.then(() => {
 			this.shadow.adoptedStyleSheets.push(cssOverride);
 		});
 

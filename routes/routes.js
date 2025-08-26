@@ -71,6 +71,12 @@ router.get(
 );
 /**/
 
+router.get(/^\/remote_calibration/, (req, res) => {
+	res.sendFile(
+		path.join(path.resolve(), `public/producer/remote_calibration.html`)
+	);
+});
+
 router.get(
 	/^\/room\/(producer2?|emu)/,
 	middlewares.assertSession,

@@ -89,7 +89,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 	constructor() {
 		super();
 
-		window.BULMA_STYLESHEETS.then(() => {
+		this._bulmaSheets.then(() => {
 			this.shadow.adoptedStyleSheets.push(cssOverride);
 		});
 

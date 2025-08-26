@@ -32,7 +32,7 @@ export class NTC_PerfResults extends NtcComponent {
 
 		this.shadow.innerHTML = MARKUP;
 
-		window.BULMA_STYLESHEETS.then(() => {
+		this._bulmaSheets.then(() => {
 			this.shadow.adoptedStyleSheets.push(cssOverride);
 		});
 
