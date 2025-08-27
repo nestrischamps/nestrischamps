@@ -66,7 +66,7 @@ export class Player extends EventTarget {
 				console.log('requestRemoteCalibration', admin_peer_id);
 
 				if (this.conn) {
-					clearInterval(this.conn.sendJpegIntervalId);
+					clearInterval(this.conn.sendWebpIntervalId);
 					this.conn.close();
 				}
 
@@ -82,15 +82,15 @@ export class Player extends EventTarget {
 					},
 				});
 
-				const sendJpeg = async () => {
-					const jpeg = await this.#getVideoFrameAsJpegBlob();
-					this.conn.send({ jpeg });
+				const sendWebp = async () => {
+					const webp = await this.#getVideoFrameAsWebpBlob();
+					this.conn.send({ webp });
 				};
 
 				this.conn.on('open', () => {
-					clearInterval(this.conn.sendJpegIntervalId);
-					this.conn.sendJpegIntervalId = setInterval(sendJpeg, 10000);
-					sendJpeg();
+					clearInterval(this.conn.sendWebpIntervalId);
+					this.conn.sendWebpIntervalId = setInterval(sendWebp, 10000);
+					sendWebp();
 				});
 
 				this.conn.on('data', ({ config }) => {
@@ -104,7 +104,7 @@ export class Player extends EventTarget {
 				});
 
 				this.conn.on('close', () => {
-					clearInterval(this.conn.sendJpegIntervalId);
+					clearInterval(this.conn.sendWebpIntervalId);
 				});
 			},
 
@@ -115,7 +115,7 @@ export class Player extends EventTarget {
 	}
 
 	// manua async
-	#getVideoFrameAsJpegBlob() {
+	#getVideoFrameAsWebpBlob() {
 		const video = this._driver.getVideo();
 
 		const canvas = document.createElement('canvas');
@@ -130,8 +130,8 @@ export class Player extends EventTarget {
 		return new Promise(resolve => {
 			canvas.toBlob(
 				blob => resolve(blob),
-				'image/jpeg',
-				0.75 // quality 0..1
+				'image/webp',
+				0.5 // quality 0..1
 			);
 		});
 	}

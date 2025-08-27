@@ -1,4 +1,6 @@
 import Connection from '/js/connection.js';
+import QueryString from '/js/QueryString.js';
+
 import { peerServerOptions } from '/views/constants.js';
 
 import { getSerializableConfigCopy } from '/producer/ConfigUtils.js';
@@ -54,6 +56,9 @@ class Player {
 		this.dom = dom;
 
 		this.setIndex(idx);
+
+		if (QueryString.get('rcal') !== '1')
+			this.dom.remote_calibration_btn.remove();
 
 		this.victories = 0;
 		this.bestof = -1;
@@ -297,9 +302,9 @@ class Player {
 
 					// receive new frames (VERY low frame rate)
 					dataConnection.on('data', async data => {
-						if (!data.jpeg) return;
+						if (!data.webp) return;
 
-						const blob = new Blob([data.jpeg], { type: 'image/jpeg' });
+						const blob = new Blob([data.webp], { type: 'image/webp' });
 						const bitmap = await createImageBitmap(blob);
 						srcCtx.drawImage(bitmap, 0, 0);
 					});
