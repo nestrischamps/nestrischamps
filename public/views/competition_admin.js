@@ -243,7 +243,7 @@ class Player {
 						this.dataConnection.metadata.config
 					);
 
-					// cleanup to send the absolute minimum
+					// cleanup to send just the crop
 					for (const [name, task] of Object.entries(config.tasks)) {
 						config.tasks[name] = { crop: task.crop };
 					}
