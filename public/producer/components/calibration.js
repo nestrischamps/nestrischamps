@@ -500,22 +500,28 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		capture.replaceChildren(ocr.capture_canvas, ocr.output_canvas);
 
 		adjustments.replaceChildren(
-			...Object.entries(ocr.config.tasks).map(([name, task]) => {
-				const control = document.createElement('ntc-cropcontrol');
+			...Object.keys(TASK_RESIZE) // ensures consistent order
+				.map(name => {
+					const task = ocr.config.tasks[name];
 
-				control.id = name;
+					if (!task) return null;
 
-				if (/^color/.test(name)) {
-					control.setAttribute('bind', 'colors-xw');
-				} else if (name.length === 1) {
-					control.setAttribute('bind', 'stats-xw');
-				}
+					const control = document.createElement('ntc-cropcontrol');
 
-				control.setCoordinates(task.crop);
-				control.setCaptureCanvas(task.canvas);
+					control.id = name;
 
-				return control;
-			})
+					if (/^color/.test(name)) {
+						control.setAttribute('bind', 'colors-xw');
+					} else if (name.length === 1) {
+						control.setAttribute('bind', 'stats-xw');
+					}
+
+					control.setCoordinates(task.crop);
+					control.setCaptureCanvas(task.canvas);
+
+					return control;
+				})
+				.filter(v => v)
 		);
 
 		capture_rate.value = this.ocr.config.frame_rate || 60;
