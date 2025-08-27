@@ -98,6 +98,11 @@ export class Player extends EventTarget {
 						Object.assign(this.config.tasks[name].crop, task.crop);
 					}
 
+					// TODO: how to update the controls?
+					['brightness', 'contrast'].forEach(prop => {
+						if (prop in config) this.config[prop] = config[prop];
+					});
+
 					// TODO: carry score7 and reset entire config
 
 					this.config.save();
