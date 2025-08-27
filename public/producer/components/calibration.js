@@ -234,7 +234,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		if (!this.ocr?.config?.tasks?.[name]) return;
 
 		this.ocr.config.tasks[name].crop[key] = value;
-		this.ocr.config.save(name);
+		this.ocr.config.save([name]);
 
 		this.#restartHidePartsTimeout();
 	};
@@ -246,15 +246,15 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			detail: { group, key, value },
 		} = event;
 
-		[...group]
+		const names = [...group]
 			.map(element => element.id)
-			.forEach(name => {
-				if (!this.ocr?.config?.tasks?.[name]) return;
+			.filter(name => this.ocr?.config?.tasks?.[name]);
 
-				this.ocr.config.tasks[name].crop[key] = value;
-			});
+		names.forEach(name => {
+			this.ocr.config.tasks[name].crop[key] = value;
+		});
 
-		this.ocr.config.save();
+		this.ocr.config.save(names);
 	};
 
 	connectedCallback() {

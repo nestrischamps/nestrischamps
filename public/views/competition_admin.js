@@ -238,7 +238,7 @@ class Player {
 				// set up ui
 				doc.getElementById('name').innerText = this.dom.name.value;
 
-				const saveConfig = name => {
+				const saveConfig = names => {
 					let config = getSerializableConfigCopy(
 						this.dataConnection.metadata.config
 					);
@@ -248,14 +248,13 @@ class Player {
 						config.tasks[name] = { crop: task.crop };
 					}
 
-					if (name) {
+					if (names) {
 						// only send the config being changed
 						config = {
-							tasks: {
-								[name]: {
-									crop: config.tasks[name].crop,
-								},
-							},
+							tasks: names.reduce((acc, name) => {
+								acc[name] = { crop: config.tasks[name].crop };
+								return acc;
+							}, {}),
 						};
 					}
 
