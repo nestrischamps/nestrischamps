@@ -123,17 +123,28 @@ export class Player extends EventTarget {
 	#getVideoFrameAsWebpBlob() {
 		const video = this._driver.getVideo();
 
-		const canvas = document.createElement('canvas');
-		canvas.width = video.videoWidth;
-		canvas.height = video.videoHeight;
-		const ctx = canvas.getContext('2d');
+		if (!this.remote_calibration_canvas) {
+			// lazy initialization of the remote calibration canvas
+			this.remote_calibration_canvas = document.createElement('canvas');
+			this.remote_calibration_canvas.width = video.videoWidth;
+			this.remote_calibration_canvas.height = video.videoHeight;
+			this.remote_calibration_canvas_ctx =
+				this.remote_calibration_canvas.getContext('2d', { alpha: false });
+			this.remote_calibration_canvas_ctx.imageSmoothingEnabled = false;
+		}
 
 		// Draw the current video frame into the canvas
-		ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+		this.remote_calibration_canvas_ctx.drawImage(
+			video,
+			0,
+			0,
+			this.remote_calibration_canvas.width,
+			this.remote_calibration_canvas.height
+		);
 
 		// Convert to JPEG Blob at 85% quality
 		return new Promise(resolve => {
-			canvas.toBlob(
+			this.remote_calibration_canvas.toBlob(
 				blob => resolve(blob),
 				'image/webp',
 				0.5 // quality 0..1
