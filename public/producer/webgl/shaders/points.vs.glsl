@@ -7,7 +7,7 @@ uniform ivec2 uFinalSize;  // e.g. ivec2(FINAL_W, FINAL_H)
 
 // Per-vertex data
 layout(location=0) in vec2 aDstXY;   // destination pixel (x,y) in final
-layout(location=1) in vec4 aSrcPx;   // source rect [x,y,w,h] in atlas pixels (top-left)
+layout(location=1) in vec2 aSrcPx;   // source top-left in atlas pixels
 
 // Toggle if your atlas upload was already flipped (usually 0)
 uniform int uSampleFlipY;

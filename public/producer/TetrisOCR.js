@@ -127,6 +127,7 @@ export class TetrisOCR extends EventTarget {
 
 			task.canvas = canvas;
 			task.packing_pos = this.configData.packing.positions[name];
+			task.cramming_pos = this.configData.cramming.positions[name]; // may be undefined!
 		}
 	}
 

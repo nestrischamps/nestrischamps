@@ -179,4 +179,67 @@ export class GpuTetrisOCR extends TetrisOCR {
 	constructor(...args) {
 		super(...args);
 	}
+
+	#getCanvasFilters() {
+		const filters = [];
+
+		if (this.config.brightness > 1) {
+			filters.push(`brightness(${this.config.brightness})`);
+		}
+
+		if (this.config.contrast !== 1) {
+			filters.push(`contrast(${this.config.contrast})`);
+		}
+
+		return filters.length ? filters.join(' ') : 'none';
+	}
+
+	extractAndHighlightRegions(frame) {
+		const { videoFrame, video } = frame;
+
+		if (!this.capture_ctx) {
+			this.capture_canvas.width = video.videoWidth;
+			this.capture_canvas.height =
+				video.videoHeight >> (this.config.use_half_height ? 1 : 0);
+
+			this.capture_ctx = this.capture_canvas.getContext('2d', { alpha: false });
+			this.capture_ctx.imageSmoothingEnabled = false;
+		}
+
+		// --- 2D Canvas Drawing (Original Video + Highlights) ---
+		this.capture_ctx.filter = this.#getCanvasFilters();
+		this.capture_ctx.drawImage(
+			videoFrame || video,
+			0,
+			0,
+			this.capture_canvas.width,
+			this.capture_canvas.height
+		);
+		this.capture_ctx.filter = 'none';
+
+		this.capture_ctx.fillStyle = '#FFA50080'; // Transparent orange
+
+		for (const name in this.config.tasks) {
+			const task = this.config.tasks[name];
+
+			task.canvas_ctx.drawImage(
+				this.capture_canvas,
+				task.crop.x,
+				task.crop.y,
+				task.crop.w,
+				task.crop.h,
+				0,
+				0,
+				task.canvas.width,
+				task.canvas.height
+			);
+
+			this.capture_ctx.fillRect(
+				task.crop.x,
+				task.crop.y,
+				task.crop.w,
+				task.crop.h
+			);
+		}
+	}
 }
