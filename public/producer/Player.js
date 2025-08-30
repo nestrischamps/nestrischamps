@@ -9,6 +9,7 @@ import { getSerializableConfigCopy } from './ConfigUtils.js';
 import GameTracker from './GameTracker.js';
 import { CpuTetrisOCR } from './cpuTetrisOCR.js';
 import { WGpuTetrisOCR } from './webgpu/wgpuTetrisOCR.js';
+import { WGlTetrisOCR } from './webgl/wglTetrisOCR.js';
 
 const send_binary = QueryString.get('binary') !== '0';
 const force_cpu = QueryString.get('cpu') === '1';
@@ -33,10 +34,10 @@ export class Player extends EventTarget {
 		this.gameTracker = new GameTracker(config);
 		this.gameTracker.addEventListener('frame', this.#handleFrame);
 
-		this.ocr =
-			navigator.gpu?.requestAdapter && !force_cpu
-				? new WGpuTetrisOCR(this.config)
-				: new CpuTetrisOCR(this.config);
+		this.ocr = new WGlTetrisOCR(this.config);
+		// navigator.gpu?.requestAdapter && !force_cpu
+		// 	? new WGpuTetrisOCR(this.config)
+		// 	: new CpuTetrisOCR(this.config);
 
 		this.ocr.addEventListener('frame', ({ detail: frame }) => {
 			this.gameTracker.processFrame(frame);
