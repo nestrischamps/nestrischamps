@@ -110,13 +110,16 @@ export class CaptureDriver extends EventTarget {
 		} else if (this.#driverMode === 'callback') {
 			console.log('Using requestVideoFrameCallback in driver');
 			const tick = async () => {
+				// schedule next frame capture before work
+				// if it fires early, a frame skip warning will be shown
+				this.#captureFrameCallbackId =
+					this.#video.requestVideoFrameCallback(tick);
+
 				try {
 					await this.#work();
 				} catch (err) {
 					console.warn(err);
 				}
-				this.#captureFrameCallbackId =
-					this.#video.requestVideoFrameCallback(tick);
 			};
 			this.#captureFrameCallbackId =
 				this.#video.requestVideoFrameCallback(tick);
