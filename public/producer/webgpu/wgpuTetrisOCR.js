@@ -443,7 +443,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 					view: this.temp_output_txt_view,
 					loadOp: 'clear',
 					storeOp: 'store',
-					clearValue: [0.0, 0.0, 0.0, 1.0],
+					clearValue: [0.2, 0.2, 0.2, 1.0],
 				},
 			],
 		});
@@ -535,6 +535,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 			this.capture_canvas.width,
 			this.capture_canvas.height
 		);
+		this.capture_ctx.filter = 'none';
 
 		this.capture_ctx.fillStyle = '#FFA50080'; // Transparent orange
 
