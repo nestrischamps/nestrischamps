@@ -1,75 +1,7 @@
-import { TetrisOCR } from '../TetrisOCR.js';
+import { GpuTetrisOCR } from '../gpuTetrisOCR.js';
 import { PATTERN_MAX_INDEXES, GYM_PAUSE_LUMA_THRESHOLD } from '../constants.js';
 import { findMinIndex, u32ToRgba } from '/ocr/utils.js';
 import { OcrCompute } from './ocrCompute.js';
-
-const TRANSFORM_TYPES = {
-	NONE: 0,
-	LUMA: 1,
-	RED_LUMA: 2,
-};
-
-const previewBlockPositions = [
-	// I
-	[0, 4],
-	[8, 4],
-	[16, 4],
-	[28, 4], // not top-left corner, but since I block are white, should work
-
-	// Top Row - 3 blocks
-	[4, 0],
-	[12, 0],
-	[20, 0],
-
-	// Bottom Row - 3 blocks
-	[4, 8],
-	[12, 8],
-	[20, 8],
-
-	// O
-	[8, 0],
-	[16, 0],
-	[8, 8],
-	[16, 8],
-];
-
-const curPieceBlockPositions = [
-	// I
-	[0, 4],
-	[6, 4],
-	[12, 4],
-	[20, 4], // not top-left corner, but since I block are white, should work
-
-	// Top Row 1 - 3 blocks
-	[2, 0],
-	[8, 0],
-	[14, 0],
-
-	// Bottom Row 1 - 3 blocks
-	[2, 6],
-	[8, 6],
-	[14, 6],
-
-	// Top Row 2 - 3 blocks
-	[2, 1],
-	[8, 1],
-	[14, 1],
-
-	// Bottom Row 2 - 3 blocks
-	[2, 7],
-	[8, 7],
-	[14, 7],
-
-	// O
-	[5, 1],
-	[11, 1],
-	[5, 7],
-	[11, 7],
-];
-
-async function loadShaderSource(url) {
-	return await fetch(url).then(res => res.text());
-}
 
 async function getGPU() {
 	const adapter = await navigator.gpu.requestAdapter({
@@ -79,9 +11,9 @@ async function getGPU() {
 	const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
 
 	const [vertex, fragment, compute] = await Promise.all([
-		loadShaderSource('/producer/webgpu/shaders/vertex.wgsl'),
-		loadShaderSource('/producer/webgpu/shaders/fragment.wgsl'),
-		loadShaderSource('/producer/webgpu/shaders/compute.wgsl'),
+		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/vertex.wgsl'),
+		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/fragment.wgsl'),
+		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/compute.wgsl'),
 	]);
 
 	return {
@@ -113,10 +45,9 @@ function lazyGetGPU() {
 	return getGpuPromise;
 }
 
-export class WGpuTetrisOCR extends TetrisOCR {
+export class WGpuTetrisOCR extends GpuTetrisOCR {
 	#gpu = null;
 	#ready = false;
-	#shaders;
 
 	#renderBindGroupLayoutGlobals;
 	#renderBindGroupLayoutRegion;
@@ -340,7 +271,7 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		// TODO: move these offsets to constants and reuse in both cpu and gpu OCR classes
 
 		const shinePositions = [
-			...previewBlockPositions.map(xy => ({
+			...GpuTetrisOCR.previewBlockPositions.map(xy => ({
 				x: xy[0] + previewPos.x,
 				y: xy[1] + previewPos.y,
 			})),
@@ -349,19 +280,17 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		if (this.config.tasks.cur_piece) {
 			const curPiecePos = this.config.tasks.cur_piece.packing_pos;
 			shinePositions.push(
-				...curPieceBlockPositions.map(xy => ({
+				...GpuTetrisOCR.curPieceBlockPositions.map(xy => ({
 					x: xy[0] + curPiecePos.x,
 					y: xy[1] + curPiecePos.y,
 				}))
 			);
 		}
 
-		const threshold255 = 100;
-
 		this.ocrCompute.prepMatchNonDigitsGPUAssets({
 			texWidth: this.output_canvas.width,
 			texHeight: this.output_canvas.height,
-			threshold255,
+			threshold255: GpuTetrisOCR.lumaThreshold255,
 			boardBlockPositions,
 			refColorPositions,
 			shinePositions,
@@ -459,10 +388,10 @@ export class WGpuTetrisOCR extends TetrisOCR {
 
 			// Get the transform type from task configuration
 			const transformType = task.luma
-				? TRANSFORM_TYPES.LUMA
+				? GpuTetrisOCR.TRANSFORM_TYPES.LUMA
 				: task.red_luma
-					? TRANSFORM_TYPES.RED_LUMA
-					: TRANSFORM_TYPES.NONE;
+					? GpuTetrisOCR.TRANSFORM_TYPES.RED_LUMA
+					: GpuTetrisOCR.TRANSFORM_TYPES.NONE;
 
 			// Create the data for the uniform buffer
 			const regionData = new Float32Array([
@@ -606,125 +535,20 @@ export class WGpuTetrisOCR extends TetrisOCR {
 		}
 
 		if (this.config.tasks.cur_piece) {
-			res.cur_piece = this.#getCurPieceFromShines(shines.subarray(14));
+			res.cur_piece = GpuTetrisOCR.getCurPieceFromShines(shines.subarray(14));
 		}
 
 		const gymPauseLuma255 = gymPauseF32 * 255;
 
 		return {
 			...res,
-			preview: this.#getPreviewFromShines(shines.subarray(0, 14)),
+			preview: GpuTetrisOCR.getPreviewFromShines(shines.subarray(0, 14)),
 			field: boardColors, // includes shine in alpha channel
 			gym_pause: [
 				Math.round(gymPauseLuma255),
 				gymPauseLuma255 > GYM_PAUSE_LUMA_THRESHOLD,
 			],
 		};
-	}
-
-	#getPreviewFromShines(shines) {
-		// 14 shines represent possible block placements in the preview area
-		// this replicates the logic from cpuTetrisOCR
-		// Trying side i blocks
-		const I = shines.subarray(0, 4);
-		if (I[0] && I[3]) {
-			return 'I';
-		}
-
-		// now trying the 3x2 matrix for T, L, J, S, Z
-		const top_row = shines.subarray(4, 7);
-		const bottom_row = shines.subarray(7, 10);
-
-		if (top_row[0] && top_row[1] && top_row[2]) {
-			// J, T, L
-			if (bottom_row[0]) {
-				return 'L';
-			}
-			if (bottom_row[1]) {
-				return 'T';
-			}
-			if (bottom_row[2]) {
-				return 'J';
-			}
-
-			return null;
-		}
-
-		if (top_row[1] && top_row[2]) {
-			if (bottom_row[0] && bottom_row[1]) {
-				return 'S';
-			}
-		}
-
-		if (top_row[0] && top_row[1]) {
-			if (bottom_row[1] && bottom_row[2]) {
-				return 'Z';
-			}
-		}
-
-		// lastly check for O
-		const O = shines.subarray(10, 14);
-		if (O[0] && O[1] && O[2] && O[3]) {
-			return 'O';
-		}
-
-		return null;
-	}
-
-	#getCurPieceFromShines(shines) {
-		// 20 shines represent possible block placements in the cur_piece area
-		// this replicates the logic from cpuTetrisOCR
-		// Trying side i blocks
-		const I = shines.subarray(0, 4);
-		if (I[0] && I[3]) {
-			return 'I';
-		}
-
-		// now trying the 3x2 matrix for L, J
-		const top_row_1 = shines.subarray(4, 7);
-		const bottom_row_1 = shines.subarray(7, 10);
-
-		if (top_row_1[0] && top_row_1[1] && top_row_1[2]) {
-			// J, L
-			if (bottom_row_1[0]) {
-				return 'L';
-			}
-			if (bottom_row_1[2]) {
-				return 'J';
-			}
-		}
-
-		// now trying the 3x2 matrix for T, S, Z
-		const top_row_2 = shines.subarray(10, 13);
-		const bottom_row_2 = shines.subarray(13, 16);
-
-		if (top_row_2[0] && top_row_2[1] && top_row_2[2]) {
-			if (bottom_row_2[1]) {
-				return 'T';
-			}
-
-			return null;
-		}
-
-		if (top_row_2[1] && top_row_2[2]) {
-			if (bottom_row_2[0] && bottom_row_2[1]) {
-				return 'S';
-			}
-		}
-
-		if (top_row_2[0] && top_row_2[1]) {
-			if (bottom_row_2[1] && bottom_row_2[2]) {
-				return 'Z';
-			}
-		}
-
-		// lastly check for O
-		const O = shines.subarray(16, 20);
-		if (O[0] && O[1] && O[2] && O[3]) {
-			return 'O';
-		}
-
-		return null;
 	}
 
 	async processVideoFrame(frame) {
