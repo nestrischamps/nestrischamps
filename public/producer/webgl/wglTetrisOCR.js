@@ -1,5 +1,7 @@
 import { GpuTetrisOCR } from '../gpuTetrisOCR.js';
 import { PATTERN_MAX_INDEXES } from '../constants.js';
+import { findMinIndex, u32ToRgba } from '/ocr/utils.js';
+import { sleep } from '../timer.js';
 
 const MAX_SHINE_SPOTS = 20 + 14;
 
@@ -111,6 +113,8 @@ function makedigitLumaRefsTex(gl, refsF32) {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_BASE_LEVEL, 0);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAX_LEVEL, 0);
 
 	// Float texture (sampling only; we don't render to it); R32F needs no extension
 	gl.texImage2D(
@@ -141,6 +145,7 @@ function makeDigitJobsTex(gl, jobs) {
 		data[i * 4 + 3] = 0;
 	}
 	const tex = gl.createTexture();
+	gl.activeTexture(gl.TEXTURE0);
 	gl.bindTexture(gl.TEXTURE_2D, tex);
 	gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
@@ -149,15 +154,28 @@ function makeDigitJobsTex(gl, jobs) {
 	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
 
 	// Integer texture (sampling only; we don't render to it)
-	gl.texImage2D(
+	// gl.texImage2D(
+	// 	gl.TEXTURE_2D,
+	// 	0,
+	// 	gl.RGBA32UI, // internal format
+	// 	N, // width=N
+	// 	1, // height=1
+	// 	0,
+	// 	gl.RGBA_INTEGER, // format for integer textures
+	// 	gl.UNSIGNED_INT, // type
+	// 	data
+	// );
+
+	gl.texStorage2D(gl.TEXTURE_2D, 1, gl.RGBA32UI, N, 1);
+	gl.texSubImage2D(
 		gl.TEXTURE_2D,
 		0,
-		gl.RGBA32UI, // internal format
-		N, // width=N
-		1, // height=1
 		0,
-		gl.RGBA_INTEGER, // format for integer textures
-		gl.UNSIGNED_INT, // type
+		0,
+		N,
+		1,
+		gl.RGBA_INTEGER,
+		gl.UNSIGNED_INT,
 		data
 	);
 
@@ -200,7 +218,6 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		super(config);
 
 		this.instrument(
-			'processVideoFrame',
 			'runPass1ToAtlas',
 			'runPass2AtlasToCanvas',
 			'runPass3OcrToFinalTexture'
@@ -352,6 +369,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 		gl.ocr.digitJobs = allDigitJobs;
 		gl.ocr.digitJobsTex = makeDigitJobsTex(glc, allDigitJobs);
+
 		gl.ocr.referenceDigitsTex = makedigitLumaRefsTex(glc, this.digit_lumas_f32);
 
 		glc.uniform1i(gl.ocr.u.uNumReferenceDigits, 17); // is this needed?
@@ -364,6 +382,9 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.activeTexture(glc.TEXTURE2);
 		glc.bindTexture(glc.TEXTURE_2D, gl.ocr.digitJobsTex);
 		glc.uniform1i(gl.ocr.u.uDigitJobsTex, 2);
+
+		// restore texture zero
+		glc.activeTexture(glc.TEXTURE0);
 	}
 
 	#prepGpuComputeNonDigitAssets() {
@@ -496,6 +517,10 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			MAX_SHINE_SPOTS + // always reserve max shine spots
 			1; // gym pause;
 
+		console.log({
+			uNumTotalJobs: gl.ocr.numTotalJobs,
+		});
+
 		glc.uniform1i(gl.ocr.u.uNumTotalJobs, gl.ocr.numTotalJobs);
 
 		gl.ocr.resultTex = makeTexture(glc, gl.ocr.numTotalJobs, 1);
@@ -528,7 +553,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 		glc.enable(glc.BLEND); // blending enabled for smooth resize
 
-		glc.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+		glc.activeTexture(glc.TEXTURE0);
 		glc.bindTexture(glc.TEXTURE_2D, gl.videoTex);
 		glc.texImage2D(
 			glc.TEXTURE_2D,
@@ -539,7 +564,6 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			videoFrame || video
 		);
 		glc.bindTexture(glc.TEXTURE_2D, null);
-		glc.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
 
 		glc.bindFramebuffer(glc.FRAMEBUFFER, gl.atlasFBO);
 		glc.viewport(0, 0, this.output_canvas.width, this.output_canvas.height);
@@ -550,11 +574,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 		// globals
 		glc.uniform1i(gl.u.uTex, 0);
-		glc.uniform2i(
-			gl.u.uTexSize,
-			this.capture_canvas.width,
-			this.capture_canvas.height
-		);
+		glc.uniform2i(gl.u.uTexSize, video.videoWidth, video.videoHeight);
 		glc.uniform2i(
 			gl.u.uOutSize,
 			this.output_canvas.width,
@@ -630,9 +650,12 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
+
+		// important: reset brightness and contrast to 1, or they wouldbe double applied from the atlas texture
 		glc.uniform1f(gl.u.uFlipY, 0);
 		glc.uniform1f(gl.u.uBrightness, 1.0);
 		glc.uniform1f(gl.u.uContrast, 1.0);
+
 		glc.uniform4i(
 			gl.u.uSrcPx,
 			0,
@@ -660,7 +683,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.bindSampler(0, null);
 	}
 
-	runPass3OcrToFinalTexture() {
+	async runPass3OcrToFinalTexture() {
 		const gl = this.output_gl;
 		const glc = gl.ctx;
 
@@ -686,6 +709,12 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		) {
 			this.ocrResultsU8 = new Uint8Array(gl.ocr.numTotalJobs * 4);
 		}
+
+		glc.flush();
+
+		await sleep(0);
+
+		performance.mark(`start_read`);
 		glc.readPixels(
 			0,
 			0,
@@ -695,8 +724,72 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			glc.UNSIGNED_BYTE,
 			this.ocrResultsU8
 		);
+		performance.mark(`end_read`);
+		performance.measure('read', `start_read`, `end_read`);
 
 		glc.bindFramebuffer(glc.FRAMEBUFFER, null);
+	}
+
+	processResults() {
+		const u32 = new Uint32Array(this.ocrResultsU8.buffer);
+
+		let offU = 0;
+		const allDigitsJobs = u32.subarray(
+			offU,
+			offU + this.output_gl.ocr.digitJobs.length
+		);
+		offU += this.output_gl.ocr.digitJobs.length;
+		const boardColors = u32.subarray(offU, offU + 200);
+		offU += 200;
+		const refColors = u32.subarray(offU, offU + 3);
+		offU += 3;
+		const shines = u32.subarray(offU, offU + MAX_SHINE_SPOTS);
+		offU += MAX_SHINE_SPOTS;
+		const gymPauseU32 = u32[offU];
+
+		const temp = {
+			allDigitsJobs: new Uint32Array(allDigitsJobs),
+			boardColors: new Uint32Array(boardColors),
+			refColors: new Uint32Array(refColors),
+			shines: new Uint32Array(shines),
+			gymPauseU32,
+		};
+
+		const res = {
+			field: boardColors,
+			preview: GpuTetrisOCR.getPreviewFromShines(shines.subarray(0, 14)),
+		};
+
+		if (this.config.tasks.cur_piece) {
+			res.cur_piece = GpuTetrisOCR.getCurPieceFromShines(shines.subarray(14));
+		}
+
+		if (this.config.tasks.color1) {
+			res.color1 = u32ToRgba(refColors[0]);
+			res.color2 = u32ToRgba(refColors[1]);
+			res.color3 = u32ToRgba(refColors[2]);
+		}
+
+		let curSseIdx = 0;
+
+		// hgandle digit fields
+		this.digitFields.forEach(({ name, task }) => {
+			const matches = task.patternJobs.map(curDigitJobs => {
+				const lumaSses = allDigitsJobs.subarray(
+					curSseIdx,
+					curSseIdx + curDigitJobs.length
+				);
+				const indexMatch = findMinIndex(lumaSses);
+
+				curSseIdx += curDigitJobs.length;
+
+				return indexMatch ? indexMatch - 1 : null;
+			});
+
+			res[name] = matches.some(v => v === null) ? null : matches;
+		});
+
+		return res;
 	}
 
 	async processVideoFrame(frame) {
@@ -705,10 +798,20 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		this.extractAndHighlightRegions(frame);
 		this.runPass1ToAtlas(frame);
 		this.runPass2AtlasToCanvas(frame);
-		// this.runPass3OcrToFinalTexture(frame);
+
+		await this.runPass3OcrToFinalTexture(frame);
+
+		const results = this.processResults();
+
+		// performance.mark(`end-processVideoFrame-${this.perfSuffix}`);
+		// performance.measure(
+		// 	`processVideoFrame-${this.perfSuffix}`,
+		// 	`start-processVideoFrame-${this.perfSuffix}`,
+		// 	`end-processVideoFrame-${this.perfSuffix}`
+		// );
 
 		const event = new CustomEvent('frame', {
-			detail: {},
+			detail: results,
 		});
 		this.dispatchEvent(event);
 	}

@@ -1,5 +1,6 @@
 #version 300 es
 precision highp float;
+precision highp usampler2D;
 
 // constants
 const int   DIGIT_SIZE = 14;
@@ -121,6 +122,8 @@ vec4 doDigitOCR(int localIdx) {
   uvec4 t   = texelFetch(uDigitJobsTex, ivec2(localIdx, 0), 0);
   ivec2 tl  = ivec2(t.xy);    // atlas top-left of digit patch
   int refIx = int(t.z);
+
+  // return vec4(float(tl.x) / 255.0, float(tl.y)/255.0, float(refIx) / 255.0, 0.5);
 
   const int W = DIGIT_SIZE;
   const int H = DIGIT_SIZE;

@@ -138,7 +138,7 @@ export class CaptureDriver extends EventTarget {
 	}
 
 	async #work(videoFrame) {
-		const now = Date.now();
+		const now = performance.now();
 
 		if (this.#working) {
 			console.warn(
@@ -185,8 +185,6 @@ export class CaptureDriver extends EventTarget {
 				`start-${measure_name}`,
 				`end-${measure_name}`
 			);
-
-			await sleep(0); // Is this needed?
 		}
 
 		performance.mark(`end-driver-${this.driverSuffix}`);
@@ -198,7 +196,7 @@ export class CaptureDriver extends EventTarget {
 
 		this.#curPlayerNum = null;
 
-		// console.log('work', Date.now() - now);
+		// console.log('work', performance.now() - now);
 
 		this.dispatchEvent(new CustomEvent('frame'));
 
