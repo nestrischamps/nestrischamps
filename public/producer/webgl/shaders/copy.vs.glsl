@@ -5,6 +5,8 @@ precision highp float;
 uniform ivec2 uTexSize;     // e.g. ivec2(videoWidth, videoHeight)
 uniform ivec2 uOutSize;     // e.g. ivec2(canvas.width, canvas.height)
 
+uniform bool uFlipY;
+
 // Rectangles in pixels, top-left origin: [x, y, w, h]
 uniform ivec4 uSrcPx;
 uniform ivec4 uDstPx;
@@ -26,7 +28,8 @@ void main() {
   // Place the quad in output pixels (top-left), then to NDC, then flip framebuffer Y
   vec2 dstPos = vec2(uDstPx.xy) + uv01 * vec2(uDstPx.zw);       // cast ivec2 -> vec2
   vec2 ndc    = (dstPos / vec2(uOutSize)) * 2.0 - 1.0;          // cast ivec2 -> vec2
-  gl_Position = vec4(ndc.x, -ndc.y, 0.0, 1.0);
+  if (uFlipY) ndc.y = -ndc.y;
+  gl_Position = vec4(ndc, 0.0, 1.0);
 
   // Build source UVs from pixel rect with top-left origin, convert to bottom-left UV
   vec2 u0v0_px = vec2(uSrcPx.xy);                                // ivec2 -> vec2

@@ -138,35 +138,6 @@ export const CONFIGS = {
 				field: { x: 0, y: 96 },
 			},
 		},
-		cramming: {
-			size: { w: getDigitsWidth(7), h: 73 },
-			positions: {
-				// digits data
-				score: { x: 0, y: 0 },
-				lines: { x: 0, y: 14 },
-				level: { x: 48, y: 14 },
-
-				// Split T into 3 chunks to pack them on the lines with the other
-				Td1: { x: 96, y: 28 },
-				Td2: { x: 96, y: 42 },
-				Td3: { x: 96, y: 56 },
-
-				// other piece stats are as-is
-				J: { x: 0, y: 28 },
-				Z: { x: 48, y: 28 },
-				O: { x: 0, y: 42 },
-				S: { x: 48, y: 42 },
-				L: { x: 0, y: 56 },
-				I: { x: 48, y: 56 },
-
-				// pixel data
-				block_pixels_1: { x: 0, y: 70 },
-				block_pixels_2: { x: 0, y: 71 },
-				shine_pixels: { x: 0, y: 72 },
-				ref_color_pixels: { x: 35, y: 72 },
-				gym_pause_pixel: { x: 38, y: 72 },
-			},
-		},
 	},
 	das_trainer: {
 		game_type: GAME_TYPE.DAS_TRAINER,
@@ -197,22 +168,6 @@ export const CONFIGS = {
 				field: { x: 0, y: 48 },
 			},
 		},
-		cramming: {
-			size: { w: getDigitsWidth(7), h: 45 },
-			positions: {
-				// digits data
-				score: { x: 0, y: 0 },
-				lines: { x: 0, y: 14 },
-				level: { x: 48, y: 14 },
-				instant_das: { x: 0, y: 28 },
-				cur_piece_das: { x: 32, y: 28 },
-
-				// pixel data
-				block_pixels_1: { x: 0, y: 42 },
-				block_pixels_2: { x: 0, y: 43 },
-				shine_pixels: { x: 0, y: 44 },
-			},
-		},
 	},
 	minimal: {
 		game_type: GAME_TYPE.MINIMAL,
@@ -227,21 +182,6 @@ export const CONFIGS = {
 				level: { x: 48, y: 16 },
 				preview: { x: 79, y: 16 },
 				field: { x: 0, y: 32 },
-			},
-		},
-		cramming: {
-			size: { w: getDigitsWidth(7), h: 31 },
-			positions: {
-				// digits data
-				score: { x: 0, y: 0 },
-				lines: { x: 0, y: 14 },
-				level: { x: 48, y: 14 },
-
-				// pixel data
-				block_pixels_1: { x: 0, y: 28 },
-				block_pixels_2: { x: 0, y: 29 },
-				shine_pixels: { x: 0, y: 30 },
-				gym_pause_pixel: { x: 35, y: 30 },
 			},
 		},
 	},

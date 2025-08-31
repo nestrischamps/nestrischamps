@@ -1,5 +1,5 @@
 import { GpuTetrisOCR } from '../gpuTetrisOCR.js';
-import { PATTERN_MAX_INDEXES, CONFIGS, getDigitsWidth } from '../constants.js';
+import { PATTERN_MAX_INDEXES } from '../constants.js';
 
 const MAX_SHINE_SPOTS = 20 + 14;
 
@@ -247,18 +247,19 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		// Program and locations
 		gl.copyProg = createGlProgram(glc, copy_vertex, copy_fragment);
 
+		glc.useProgram(gl.copyProg);
+
 		gl.u = {
 			uTex: glc.getUniformLocation(gl.copyProg, 'uTex'),
 			uTexSize: glc.getUniformLocation(gl.copyProg, 'uTexSize'),
 			uOutSize: glc.getUniformLocation(gl.copyProg, 'uOutSize'),
+			uFlipY: glc.getUniformLocation(gl.copyProg, 'uFlipY'),
 			uSrcPx: glc.getUniformLocation(gl.copyProg, 'uSrcPx'),
 			uDstPx: glc.getUniformLocation(gl.copyProg, 'uDstPx'),
 			uMode: glc.getUniformLocation(gl.copyProg, 'uMode'), // luma/red-luma processing
 			uBrightness: glc.getUniformLocation(gl.copyProg, 'uBrightness'),
 			uContrast: glc.getUniformLocation(gl.copyProg, 'uContrast'),
 		};
-
-		glc.useProgram(gl.copyProg);
 
 		gl.vao = glc.createVertexArray();
 
@@ -527,6 +528,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 		glc.enable(glc.BLEND); // blending enabled for smooth resize
 
+		glc.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 		glc.bindTexture(glc.TEXTURE_2D, gl.videoTex);
 		glc.texImage2D(
 			glc.TEXTURE_2D,
@@ -537,6 +539,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			videoFrame || video
 		);
 		glc.bindTexture(glc.TEXTURE_2D, null);
+		glc.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
 
 		glc.bindFramebuffer(glc.FRAMEBUFFER, gl.atlasFBO);
 		glc.viewport(0, 0, this.output_canvas.width, this.output_canvas.height);
@@ -559,6 +562,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		);
 
 		// variables
+		glc.uniform1f(gl.u.uFlipY, 1);
 		glc.uniform1f(gl.u.uBrightness, this.config.brightness);
 		glc.uniform1f(gl.u.uContrast, this.config.contrast);
 
@@ -603,8 +607,11 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 	}
 
 	runPass2AtlasToCanvas() {
+		// blit
 		const gl = this.output_gl;
 		const glc = gl.ctx;
+
+		glc.useProgram(gl.copyProg);
 
 		glc.disable(glc.BLEND);
 		glc.bindFramebuffer(glc.FRAMEBUFFER, null);
@@ -612,7 +619,6 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.clearColor(0.2, 0.2, 0.2, 1);
 		glc.clear(glc.COLOR_BUFFER_BIT);
 
-		glc.useProgram(gl.copyProg);
 		glc.uniform1i(gl.u.uTex, 0);
 		glc.uniform2i(
 			gl.u.uTexSize,
@@ -624,6 +630,9 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
+		glc.uniform1f(gl.u.uFlipY, 0);
+		glc.uniform1f(gl.u.uBrightness, 1.0);
+		glc.uniform1f(gl.u.uContrast, 1.0);
 		glc.uniform4i(
 			gl.u.uSrcPx,
 			0,
@@ -639,11 +648,14 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			this.output_canvas.height
 		);
 		glc.uniform1i(gl.u.uMode, 0);
+
 		glc.activeTexture(glc.TEXTURE0);
 		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
 		glc.bindSampler(0, gl.nearestSampler);
+
 		glc.bindVertexArray(gl.vao);
 		glc.drawArrays(glc.TRIANGLES, 0, 6);
+
 		glc.bindVertexArray(null);
 		glc.bindSampler(0, null);
 	}
