@@ -71,14 +71,6 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		});
 	}
 
-	async loadDigitTemplates() {
-		const digit_lumas = await TetrisOCR.loadDigitTemplates();
-
-		this.digit_lumas_f32 = new Float32Array(
-			digit_lumas.flatMap(typedArr => Array.from(typedArr)).map(v => v / 255)
-		);
-	}
-
 	async #getGPU() {
 		this.#gpu = await lazyGetGPU(); // shares the gpu and shaders across all instances
 	}

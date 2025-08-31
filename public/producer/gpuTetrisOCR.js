@@ -178,6 +178,16 @@ export class GpuTetrisOCR extends TetrisOCR {
 
 	constructor(...args) {
 		super(...args);
+
+		this.instrument('extractAndHighlightRegions');
+	}
+
+	async loadDigitTemplates() {
+		const digit_lumas = await TetrisOCR.loadDigitTemplates();
+
+		this.digit_lumas_f32 = new Float32Array(
+			digit_lumas.flatMap(typedArr => Array.from(typedArr)).map(v => v / 255)
+		);
 	}
 
 	#getCanvasFilters() {

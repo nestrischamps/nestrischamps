@@ -1,82 +1,22 @@
-import { GpuTetrisOCR } from '../gpuTetrisOCR';
-import { CONFIGS, getDigitsWidth } from '../constants';
-import { name } from 'ejs';
+import { GpuTetrisOCR } from '../gpuTetrisOCR.js';
+import { PATTERN_MAX_INDEXES, CONFIGS, getDigitsWidth } from '../constants.js';
 
-const CRAMMED = {
-	classic: {
-		size: { w: getDigitsWidth(7), h: 72 },
-		positions: {
-			// digits data
-			score: { x: 0, y: 0 },
-			lines: { x: 0, y: 14 },
-			level: { x: 48, y: 14 },
-
-			// Split T into 3 chunks to pack them on the lines with the other
-			Td1: { x: 96, y: 28 },
-			Td2: { x: 96, y: 42 },
-			Td3: { x: 96, y: 56 },
-
-			// other piece stats are as-is
-			J: { x: 0, y: 28 },
-			Z: { x: 48, y: 28 },
-			O: { x: 0, y: 42 },
-			S: { x: 48, y: 42 },
-			L: { x: 0, y: 56 },
-			I: { x: 48, y: 56 },
-
-			// pixel data
-			block_pixels_1: { x: 0, y: 70, count: 100 },
-			block_pixels_2: { x: 0, y: 71, count: 100 },
-			shine_pixels: { x: 0, y: 72 },
-			ref_color_pixels: { x: 35, y: 72 },
-		},
-	},
-	das_trainer: {
-		size: { w: getDigitsWidth(7), h: 45 },
-		positions: {
-			// digits data
-			score: { x: 0, y: 0 },
-			lines: { x: 0, y: 14 },
-			level: { x: 48, y: 14 },
-			instant_das: { x: 0, y: 28 },
-			cur_piece_das: { x: 32, y: 28 },
-
-			// pixel data
-			block_pixels_1: { x: 0, y: 42, count: 100 },
-			block_pixels_2: { x: 0, y: 43, count: 100 },
-			shine_pixels: { x: 0, y: 44 },
-		},
-	},
-	minimal: {
-		size: { w: getDigitsWidth(7), h: 31 },
-		positions: {
-			// digits data
-			score: { x: 0, y: 0 },
-			lines: { x: 0, y: 14 },
-			level: { x: 48, y: 14 },
-
-			// pixel data
-			block_pixels_1: { x: 0, y: 28, count: 100 },
-			block_pixels_2: { x: 0, y: 29, count: 100 },
-			shine_pixels: { x: 0, y: 30 },
-		},
-	},
-};
+const MAX_SHINE_SPOTS = 20 + 14;
 
 async function getShaderSources() {
-	const [copy_vertex, copy_fragment, points_vertex, points_fragment] =
+	const [copy_vertex, copy_fragment, ocr_vertex, ocr_fragment] =
 		await Promise.all([
 			GpuTetrisOCR.loadShaderSource('/producer/webgl/shaders/copy.vs.glsl'),
 			GpuTetrisOCR.loadShaderSource('/producer/webgl/shaders/copy.fs.glsl'),
-			GpuTetrisOCR.loadShaderSource('/producer/webgl/shaders/points.vs.glsl'),
-			GpuTetrisOCR.loadShaderSource('/producer/webgl/shaders/points.fs.glsl'),
+			GpuTetrisOCR.loadShaderSource('/producer/webgl/shaders/ocr.vs.glsl'),
+			GpuTetrisOCR.loadShaderSource('/producer/webgl/shaders/ocr.fs.glsl'),
 		]);
 
 	const shaders = {
 		copy_vertex,
 		copy_fragment,
-		points_vertex,
-		points_fragment,
+		ocr_vertex,
+		ocr_fragment,
 	};
 
 	return shaders;
@@ -108,7 +48,7 @@ function sh(gl, type, src) {
 	return s;
 }
 
-function prog(gl, vs, fs) {
+function createGlProgram(gl, vs, fs) {
 	const p = gl.createProgram();
 
 	gl.attachShader(p, sh(gl, gl.VERTEX_SHADER, vs));
@@ -162,6 +102,96 @@ function makeFrameBufferO(gl, tex) {
 	return fb;
 }
 
+function makedigitLumaRefsTex(gl, refsF32) {
+	const tex = gl.createTexture();
+
+	gl.bindTexture(gl.TEXTURE_2D, tex);
+	gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+	// Float texture (sampling only; we don't render to it); R32F needs no extension
+	gl.texImage2D(
+		gl.TEXTURE_2D,
+		0,
+		gl.R32F,
+		refsF32.length,
+		1,
+		0,
+		gl.RED,
+		gl.FLOAT,
+		refsF32
+	);
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
+
+	return tex;
+}
+
+function makeDigitJobsTex(gl, jobs) {
+	const N = jobs.length;
+	const data = new Uint32Array(N * 4);
+	for (let i = 0; i < N; i++) {
+		const j = jobs[i];
+		data[i * 4 + 0] = j.x >>> 0;
+		data[i * 4 + 1] = j.y >>> 0;
+		data[i * 4 + 2] = j.refIndex >>> 0;
+		data[i * 4 + 3] = 0;
+	}
+	const tex = gl.createTexture();
+	gl.bindTexture(gl.TEXTURE_2D, tex);
+	gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+
+	// Integer texture (sampling only; we don't render to it)
+	gl.texImage2D(
+		gl.TEXTURE_2D,
+		0,
+		gl.RGBA32UI, // internal format
+		N, // width=N
+		1, // height=1
+		0,
+		gl.RGBA_INTEGER, // format for integer textures
+		gl.UNSIGNED_INT, // type
+		data
+	);
+
+	gl.bindTexture(gl.TEXTURE_2D, null);
+
+	return tex;
+}
+
+// Update without reallocating (same length)
+function updateDigitJobsTex(gl, tex, jobs) {
+	const N = jobs.length;
+	const data = new Uint32Array(N * 4);
+	for (let i = 0; i < N; i++) {
+		const j = jobs[i];
+		data[i * 4 + 0] = j.x >>> 0;
+		data[i * 4 + 1] = j.y >>> 0;
+		data[i * 4 + 2] = j.refIndex >>> 0;
+		data[i * 4 + 3] = 0;
+	}
+	gl.bindTexture(gl.TEXTURE_2D, tex);
+	gl.texSubImage2D(
+		gl.TEXTURE_2D,
+		0,
+		0,
+		0,
+		N,
+		1,
+		gl.RGBA_INTEGER,
+		gl.UNSIGNED_INT,
+		data
+	);
+	gl.bindTexture(gl.TEXTURE_2D, null);
+}
+
 export class WGlTetrisOCR extends GpuTetrisOCR {
 	#shaderSources;
 	#ready = false;
@@ -170,15 +200,15 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		super(config);
 
 		this.instrument(
-			'extractAndHighlightRegions',
 			'processVideoFrame',
-			'renderExtractedRegions'
+			'runPass1ToAtlas',
+			'runPass2AtlasToCanvas',
+			'runPass3OcrToFinalTexture'
 		);
 
-		Promise.all([lazyGetShaderSources(), TetrisOCR.loadDigitTemplates()]).then(
-			([shader_sources, digit_lumas]) => {
+		Promise.all([lazyGetShaderSources(), this.loadDigitTemplates()]).then(
+			([shader_sources]) => {
 				this.#shaderSources = shader_sources;
-				this.#digitLumas = digit_lumas;
 
 				this.#initGpuAssets();
 
@@ -204,176 +234,286 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			}),
 		});
 
+		const glc = gl.ctx;
+
 		gl.atlasTex = makeTexture(
-			gl.ctx,
+			glc,
 			this.output_canvas.width,
-			this.output_canvas,
-			height,
-			gl.ctx.LINEAR
+			this.output_canvas.height,
+			glc.LINEAR
 		);
-		gl.atlasFBO = makeFrameBufferO(gl.ctx, gl.atlasTex);
+		gl.atlasFBO = makeFrameBufferO(glc, gl.atlasTex);
 
 		// Program and locations
-		gl.copyProg = prog(gl.ctx, copy_vertex, copy_fragment);
+		gl.copyProg = createGlProgram(glc, copy_vertex, copy_fragment);
 
-		gl.vars = {
-			uTex: gl.ctx.getUniformLocation(gl.copyProg, 'uTex'),
-			uTexSize: gl.ctx.getUniformLocation(gl.copyProg, 'uTexSize'),
-			uOutSize: gl.ctx.getUniformLocation(gl.copyProg, 'uOutSize'),
-			uSrcPx: gl.ctx.getUniformLocation(gl.copyProg, 'uSrcPx'),
-			uDstPx: gl.ctx.getUniformLocation(gl.copyProg, 'uDstPx'),
-			uMode: gl.ctx.getUniformLocation(gl.copyProg, 'uMode'), // luma/red-luma processing
-			uBrightness: gl.ctx.getUniformLocation(gl.copyProg, 'uBrightness'),
-			uContrast: gl.ctx.getUniformLocation(gl.copyProg, 'uContrast'),
+		gl.u = {
+			uTex: glc.getUniformLocation(gl.copyProg, 'uTex'),
+			uTexSize: glc.getUniformLocation(gl.copyProg, 'uTexSize'),
+			uOutSize: glc.getUniformLocation(gl.copyProg, 'uOutSize'),
+			uSrcPx: glc.getUniformLocation(gl.copyProg, 'uSrcPx'),
+			uDstPx: glc.getUniformLocation(gl.copyProg, 'uDstPx'),
+			uMode: glc.getUniformLocation(gl.copyProg, 'uMode'), // luma/red-luma processing
+			uBrightness: glc.getUniformLocation(gl.copyProg, 'uBrightness'),
+			uContrast: glc.getUniformLocation(gl.copyProg, 'uContrast'),
 		};
 
-		gl.vao = gl.ctx.createVertexArray();
+		glc.useProgram(gl.copyProg);
 
-		gl.videoTex = gl.ctx.createTexture();
-		gl.ctx.bindTexture(gl.ctx.TEXTURE_2D, gl.videoTex);
-		gl.ctx.texParameteri(
-			gl.ctx.TEXTURE_2D,
-			gl.ctx.TEXTURE_MIN_FILTER,
-			gl.ctx.LINEAR
+		gl.vao = glc.createVertexArray();
+
+		gl.videoTex = glc.createTexture();
+		glc.bindTexture(glc.TEXTURE_2D, gl.videoTex);
+		glc.texParameteri(glc.TEXTURE_2D, glc.TEXTURE_MIN_FILTER, glc.LINEAR);
+		glc.texParameteri(glc.TEXTURE_2D, glc.TEXTURE_MAG_FILTER, glc.LINEAR);
+		glc.texParameteri(glc.TEXTURE_2D, glc.TEXTURE_WRAP_S, glc.CLAMP_TO_EDGE);
+		glc.texParameteri(glc.TEXTURE_2D, glc.TEXTURE_WRAP_T, glc.CLAMP_TO_EDGE);
+		glc.bindTexture(glc.TEXTURE_2D, null);
+
+		gl.nearestSampler = glc.createSampler();
+		glc.samplerParameteri(
+			gl.nearestSampler,
+			glc.TEXTURE_MIN_FILTER,
+			glc.NEAREST
 		);
-		gl.ctx.texParameteri(
-			gl.ctx.TEXTURE_2D,
-			gl.ctx.TEXTURE_MAG_FILTER,
-			gl.ctx.LINEAR
+		glc.samplerParameteri(
+			gl.nearestSampler,
+			glc.TEXTURE_MAG_FILTER,
+			glc.NEAREST
 		);
-		gl.ctx.texParameteri(
-			gl.ctx.TEXTURE_2D,
-			gl.ctx.TEXTURE_WRAP_S,
-			gl.ctx.CLAMP_TO_EDGE
+		glc.samplerParameteri(
+			gl.nearestSampler,
+			glc.TEXTURE_WRAP_S,
+			glc.CLAMP_TO_EDGE
 		);
-		gl.ctx.texParameteri(
-			gl.ctx.TEXTURE_2D,
-			gl.ctx.TEXTURE_WRAP_T,
-			gl.ctx.CLAMP_TO_EDGE
+		glc.samplerParameteri(
+			gl.nearestSampler,
+			glc.TEXTURE_WRAP_T,
+			glc.CLAMP_TO_EDGE
 		);
-		gl.ctx.bindTexture(gl.ctx.TEXTURE_2D, null);
 
 		for (const task of Object.values(this.config.tasks)) {
 			task.canvas_ctx = task.canvas.getContext('2d', { alpha: false });
 		}
 	}
 
-	#initGpuComputeAssets() {
+	#prepGpuComputeDigitAssets() {
 		const gl = this.output_gl;
+		const glc = gl.ctx;
 
-		gl.finalTex = makeTexture(gl.ctx, FINAL_W, FINAL_H, gl.ctx.NEAREST);
-		gl.finalFBO = makeFrameBufferO(gl.ctx, gl.finalTex);
+		const digitSizeWBorder = 16;
 
-		gl.nearestSampler = gl.createSampler();
-		gl.samplerParameteri(gl.nearestSampler, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-		gl.samplerParameteri(gl.nearestSampler, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-		gl.samplerParameteri(
-			gl.nearestSampler,
-			gl.TEXTURE_WRAP_S,
-			gl.CLAMP_TO_EDGE
-		);
-		gl.samplerParameteri(
-			gl.nearestSampler,
-			gl.TEXTURE_WRAP_T,
-			gl.CLAMP_TO_EDGE
-		);
-
-		gl.pointsProg = prog(
-			gl.ctx,
-			this.#shaderSources.points_vertex,
-			this.#shaderSources.points_fragment
-		);
-
-		gl.points = {
-			vao: gl.ctx.createVertexArray(),
-			vbo: gl.ctx.createBuffer(),
-			u: {
-				uAtlas: gl.ctx.getUniformLocation(gl.pointsProg, 'uAtlas'),
-				uAtlasSize: gl.ctx.getUniformLocation(gl.pointsProg, 'uAtlasSize'),
-				uFinalSize: gl.ctx.getUniformLocation(gl.pointsProg, 'uFinalSize'),
-				uNumOffsets: gl.ctx.getUniformLocation(gl.pointsProg, 'uNumOffsets'),
-				uOffsets: gl.ctx.getUniformLocation(gl.pointsProg, 'uOffsets[0]'),
-				uShineThresh: gl.ctx.getUniformLocation(
-					gl.pointsProg,
-					'uShineThreshold'
-				),
-				uMode: gl.ctx.getUniformLocation(gl.pointsProg, 'uMode'),
-			},
-		};
-
-		gl.ctx.bindVertexArray(gl.points.vao);
-		gl.ctx.bindBuffer(gl.ctx.ARRAY_BUFFER, gl.points.vbo);
-		// aDstXY at location 0
-		gl.ctx.enableVertexAttribArray(0);
-		gl.ctx.vertexAttribPointer(0, 2, gl.ctx.FLOAT, false, 16, 0);
-		// aSrcTL at location 1
-		gl.ctx.enableVertexAttribArray(1);
-		gl.ctx.vertexAttribPointer(1, 2, gl.ctx.FLOAT, false, 16, 8);
-		gl.ctx.bindVertexArray(null);
-
-		// the easy bit!
 		this.digitFields = this.configData.fields
 			.filter(name => this.config.tasks[name].pattern)
 			.map(name => ({ name, task: this.config.tasks[name] }));
 
-		// prepare the points to write+sample
-		gl.points.outputPoints = [];
+		// TODO: no need to store address of uniforms
+		// they are not used outside of this function
+		Object.assign(gl.ocr.u, {
+			uNumReferenceDigits: glc.getUniformLocation(
+				gl.ocr.prog,
+				'uNumReferenceDigits'
+			),
+			uReferenceDigitsTex: glc.getUniformLocation(
+				gl.ocr.prog,
+				'uReferenceDigitsTex'
+			),
+			uNumDigitJobs: glc.getUniformLocation(gl.ocr.prog, 'uNumDigitJobs'),
+			uDigitJobsTex: glc.getUniformLocation(gl.ocr.prog, 'uDigitJobsTex'),
+		});
 
-		const cramming = this.configData.cramming;
+		// prepare all digit jobs
+		const allDigitJobs = [];
 
-		const field = this.config.tasks.field;
-		const boardBlockPositions = Array(200)
-			.fill()
-			.map((_, idx) => {
-				const col = idx % 10;
-				const row = Math.floor(idx / 10);
-				const srcTL = {
-					x: field.packing_pos.x + col * 8,
-					y: field.packing_pos.y + row * 8,
-				};
-				const dst =
-					idx < 100
-						? {
-								...cramming.block_pixels_1,
-							}
-						: {
-								...cramming.block_pixels_2,
-							};
-				dst.x += idx % 100;
+		this.digitFields.forEach(({ task }) => {
+			const { x, y } = task.packing_pos;
 
-				return { srcTL, dst };
+			// TODO: handle packing of the T T_T
+
+			task.patternJobs = [];
+			task.pattern.split('').forEach((pid, pidx) => {
+				const maxIndex = PATTERN_MAX_INDEXES[pid] || 1;
+				const curDigitJobs = [];
+
+				for (let refIndex = 0; refIndex < maxIndex; refIndex++) {
+					const job = {
+						x: x + digitSizeWBorder * pidx,
+						y,
+						refIndex,
+					};
+					curDigitJobs.push(job);
+					allDigitJobs.push(job);
+				}
+
+				task.patternJobs.push(curDigitJobs);
 			});
+		});
 
+		gl.ocr.digitJobs = allDigitJobs;
+		gl.ocr.digitJobsTex = makeDigitJobsTex(glc, allDigitJobs);
+		gl.ocr.referenceDigitsTex = makedigitLumaRefsTex(glc, this.digit_lumas_f32);
+
+		glc.uniform1i(gl.ocr.u.uNumReferenceDigits, 17); // is this needed?
+		glc.uniform1i(gl.ocr.u.uNumDigitJobs, allDigitJobs.length);
+
+		glc.activeTexture(glc.TEXTURE1);
+		glc.bindTexture(glc.TEXTURE_2D, gl.ocr.referenceDigitsTex);
+		glc.uniform1i(gl.ocr.u.uReferenceDigitsTex, 1);
+
+		glc.activeTexture(glc.TEXTURE2);
+		glc.bindTexture(glc.TEXTURE_2D, gl.ocr.digitJobsTex);
+		glc.uniform1i(gl.ocr.u.uDigitJobsTex, 2);
+	}
+
+	#prepGpuComputeNonDigitAssets() {
+		const gl = this.output_gl;
+		const glc = gl.ctx;
+
+		// TODO: no need to store address of uniforms
+		// they are not used outside of this function
+		Object.assign(gl.ocr.u, {
+			uBoardTLPosition: glc.getUniformLocation(gl.ocr.prog, 'uBoardTLPosition'), // ivec2
+			uRefColorPositions: glc.getUniformLocation(
+				gl.ocr.prog,
+				'uRefColorPositions'
+			), // ivec2[3]
+			uShineThreshold: glc.getUniformLocation(gl.ocr.prog, 'uShineThreshold'),
+			uNumShinePositions: glc.getUniformLocation(
+				gl.ocr.prog,
+				'uNumShinePositions'
+			),
+			uShinePositions: glc.getUniformLocation(gl.ocr.prog, 'uShinePositions'),
+		});
+
+		// prepare the ocr to write+sample
 		const previewPos = this.config.tasks.preview.packing_pos;
 
+		const refColorPositions = this.config.tasks.color1
+			? [
+					this.config.tasks.color1.packing_pos,
+					this.config.tasks.color2.packing_pos,
+					this.config.tasks.color3.packing_pos,
+				]
+			: [
+					{ x: 0, y: 0 },
+					{ x: 0, y: 0 },
+					{ x: 0, y: 0 },
+				];
+
 		const shinePositions = [
-			...GpuTetrisOCR.previewBlockPositions.map((xy, idx) => ({
-				srcTL: {
-					x: xy[0] + previewPos.x,
-					y: xy[1] + previewPos.y,
-				},
-				dst: {
-					x: cramming.shine_pixels.x + idx,
-					y: cramming.shine_pixels.y,
-				},
+			...GpuTetrisOCR.previewBlockPositions.map(xy => ({
+				x: xy[0] + previewPos.x,
+				y: xy[1] + previewPos.y,
 			})),
 		];
 
 		if (this.config.tasks.cur_piece) {
 			const curPiecePos = this.config.tasks.cur_piece.packing_pos;
 			shinePositions.push(
-				...GpuTetrisOCR.curPieceBlockPositions.map((xy, idx) => ({
-					srcTL: {
-						x: xy[0] + curPiecePos.x,
-						y: xy[1] + curPiecePos.y,
-					},
-					dst: {
-						x: cramming.shine_pixels.x + shinePositions.length + idx,
-						y: cramming.shine_pixels.y,
-					},
+				...GpuTetrisOCR.curPieceBlockPositions.map(xy => ({
+					x: xy[0] + curPiecePos.x,
+					y: xy[1] + curPiecePos.y,
 				}))
 			);
 		}
+
+		// prep and assign uniform values now
+		const fieldPos = this.config.tasks.field.packing_pos;
+
+		const refColorPositionsI32 = new Int32Array(refColorPositions.length * 2);
+		for (let i = 0; i < refColorPositions.length; i++) {
+			refColorPositionsI32[i * 2 + 0] = refColorPositions[i].x;
+			refColorPositionsI32[i * 2 + 1] = refColorPositions[i].y;
+		}
+
+		const shinePositionsI32 = new Int32Array(MAX_SHINE_SPOTS * 2);
+		for (let i = 0; i < shinePositions.length; i++) {
+			shinePositionsI32[i * 2 + 0] = shinePositions[i].x;
+			shinePositionsI32[i * 2 + 1] = shinePositions[i].y;
+		}
+
+		// store for safekeeping
+		gl.ocr.refColorPositions = refColorPositions;
+		gl.ocr.shinePositions = shinePositionsI32;
+
+		// assign uniform values into program
+		glc.uniform2i(gl.ocr.u.uBoardTLPosition, fieldPos.x, fieldPos.y);
+		glc.uniform2iv(gl.ocr.u.uRefColorPositions, refColorPositionsI32);
+		glc.uniform1i(gl.ocr.u.uShineThreshold, GpuTetrisOCR.lumaThreshold255);
+		glc.uniform1i(gl.ocr.u.uNumShinePositions, shinePositions.length);
+		glc.uniform2iv(gl.ocr.u.uShinePositions, shinePositionsI32);
+	}
+
+	#initGpuComputeAssets() {
+		const gl = this.output_gl;
+		const glc = gl.ctx;
+
+		// TODO: clear ALL texture ref ad binding, so we start fresh
+		// Only needed for the score 6/7 live switching
+		// Can we always reserve a slot for score7, such that there's no need to change anything when it flips?
+
+		const prog = createGlProgram(
+			gl.ctx,
+			this.#shaderSources.ocr_vertex,
+			this.#shaderSources.ocr_fragment
+		);
+
+		gl.ocr = {
+			prog,
+
+			// oputput
+			vao: glc.createVertexArray(),
+			vbo: glc.createBuffer(),
+
+			// uniform variables
+			u: {
+				uNumTotalJobs: glc.getUniformLocation(prog, 'uNumTotalJobs'),
+				uAtlasSize: glc.getUniformLocation(prog, 'uAtlasSize'),
+				uAtlasTex: glc.getUniformLocation(prog, 'uAtlasTex'),
+			},
+		};
+
+		glc.useProgram(gl.ocr.prog);
+
+		glc.uniform2i(
+			gl.ocr.u.uAtlasSize,
+			this.output_canvas.width,
+			this.output_canvas.height
+		);
+
+		glc.activeTexture(glc.TEXTURE0);
+		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
+		glc.uniform1i(gl.ocr.u.uAtlasTex, 0);
+
+		this.#prepGpuComputeDigitAssets();
+		this.#prepGpuComputeNonDigitAssets();
+
+		gl.ocr.numTotalJobs =
+			gl.ocr.digitJobs.length +
+			200 + // bloard blocks
+			3 +
+			MAX_SHINE_SPOTS + // always reserve max shine spots
+			1; // gym pause;
+
+		glc.uniform1i(gl.ocr.u.uNumTotalJobs, gl.ocr.numTotalJobs);
+
+		gl.ocr.resultTex = makeTexture(glc, gl.ocr.numTotalJobs, 1);
+		gl.ocr.resultFBO = makeFrameBufferO(glc, gl.ocr.resultTex);
+
+		const cap = Math.max(gl.ocr.numTotalJobs, 512);
+
+		const idx = new Float32Array(cap);
+		for (let i = 0; i < cap; i++) idx[i] = i;
+
+		glc.bindBuffer(glc.ARRAY_BUFFER, gl.ocr.vbo);
+		glc.bufferData(glc.ARRAY_BUFFER, idx, glc.STATIC_DRAW);
+		gl.ocr.vboCap = cap;
+
+		glc.bindVertexArray(gl.ocr.vao);
+		glc.bindBuffer(glc.ARRAY_BUFFER, gl.ocr.vbo);
+		glc.enableVertexAttribArray(0);
+		glc.vertexAttribPointer(0, 1, glc.FLOAT, false, 4, 0); // aIndex @ loc 0
+		glc.bindVertexArray(null);
 	}
 
 	#initGpuAssets(frame) {
@@ -382,9 +522,10 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 	}
 
 	runPass1ToAtlas({ videoFrame, video }) {
-		const glc = this.output_gl.ctx;
+		const gl = this.output_gl;
+		const glc = gl.ctx;
 
-		glc.enable(gl.BLEND); // blending enabled for smooth resize
+		glc.enable(glc.BLEND); // blending enabled for smooth resize
 
 		glc.bindTexture(glc.TEXTURE_2D, gl.videoTex);
 		glc.texImage2D(
@@ -405,21 +546,21 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.useProgram(gl.copyProg);
 
 		// globals
-		glc.uniform1i(gl.vars.uTex, 0);
+		glc.uniform1i(gl.u.uTex, 0);
 		glc.uniform2i(
-			gl.vars.uTexSize,
+			gl.u.uTexSize,
 			this.capture_canvas.width,
 			this.capture_canvas.height
 		);
 		glc.uniform2i(
-			gl.vars.uOutSize,
+			gl.u.uOutSize,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 
 		// variables
-		glc.uniform1f(gl.vars.uBrightness, this.config.brightness);
-		glc.uniform1f(gl.vars.uContrast, this.config.contrast);
+		glc.uniform1f(gl.u.uBrightness, this.config.brightness);
+		glc.uniform1f(gl.u.uContrast, this.config.contrast);
 
 		glc.activeTexture(glc.TEXTURE0);
 		glc.bindTexture(glc.TEXTURE_2D, gl.videoTex);
@@ -430,14 +571,14 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 			// Map source pixels to normalized rect
 			glc.uniform4i(
-				gl.vars.uSrcPx,
+				gl.u.uSrcPx,
 				task.crop.x,
 				task.crop.y,
 				task.crop.w,
 				task.crop.h
 			);
 			glc.uniform4i(
-				gl.vars.uDstPx,
+				gl.u.uDstPx,
 				task.packing_pos.x,
 				task.packing_pos.y,
 				task.canvas.width,
@@ -451,7 +592,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 					? GpuTetrisOCR.TRANSFORM_TYPES.RED_LUMA
 					: GpuTetrisOCR.TRANSFORM_TYPES.NONE;
 
-			glc.uniform1i(gl.vars.uMode, transformType);
+			glc.uniform1i(gl.u.uMode, transformType);
 
 			// Draw this region into its destination via viewport scaling
 			glc.drawArrays(glc.TRIANGLES, 0, 6);
@@ -461,42 +602,43 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.bindFramebuffer(glc.FRAMEBUFFER, null);
 	}
 
-	pass2AtlasToCanvas() {
+	runPass2AtlasToCanvas() {
+		const gl = this.output_gl;
 		const glc = gl.ctx;
 
-		glc.disable(gl.BLEND);
+		glc.disable(glc.BLEND);
 		glc.bindFramebuffer(glc.FRAMEBUFFER, null);
 		glc.viewport(0, 0, this.output_canvas.width, this.output_canvas.height);
 		glc.clearColor(0.2, 0.2, 0.2, 1);
 		glc.clear(glc.COLOR_BUFFER_BIT);
 
 		glc.useProgram(gl.copyProg);
-		glc.uniform1i(gl.vars.uTex, 0);
+		glc.uniform1i(gl.u.uTex, 0);
 		glc.uniform2i(
-			gl.vars.uTexSize,
+			gl.u.uTexSize,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 		glc.uniform2i(
-			gl.vars.uOutSize,
+			gl.u.uOutSize,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 		glc.uniform4i(
-			gl.vars.uSrcPx,
+			gl.u.uSrcPx,
 			0,
 			0,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 		glc.uniform4i(
-			gl.vars.uDstPx,
+			gl.u.uDstPx,
 			0,
 			0,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
-		glc.uniform1i(gl.vars.uMode, 0);
+		glc.uniform1i(gl.u.uMode, 0);
 		glc.activeTexture(glc.TEXTURE0);
 		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
 		glc.bindSampler(0, gl.nearestSampler);
@@ -506,149 +648,42 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.bindSampler(0, null);
 	}
 
-	pass3toFinalTexture() {
+	runPass3OcrToFinalTexture() {
+		const gl = this.output_gl;
 		const glc = gl.ctx;
 
-		glc.disable(gl.BLEND);
-		glc.bindFramebuffer(glc.FRAMEBUFFER, gl.finalFBO);
-		glc.viewport(0, 0, FINAL_W, FINAL_H);
+		// ----- bind FBO and clear -----
+		glc.bindFramebuffer(glc.FRAMEBUFFER, gl.ocr.resultFBO);
+		glc.viewport(0, 0, gl.ocr.numTotalJobs, 1);
+		glc.disable(glc.BLEND);
 		glc.clearColor(0, 0, 0, 0);
 		glc.clear(glc.COLOR_BUFFER_BIT);
 
-		// 2a) Copy areas “as-is” from atlas => final
-		glc.useProgram(gl.prog);
-		glc.uniform1i(gl.vars.uTex, 0);
-		glc.uniform2i(
-			gl.vars.uTexSize,
-			this.output_canvas.width,
-			this.output_canvas.height
-		);
-		glc.uniform2i(
-			gl.vars.uOutSize,
-			this.configData.cramming.size.w,
-			this.configData.cramming.size.h
-		);
-		glc.activeTexture(glc.TEXTURE0);
-		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
-		glc.bindVertexArray(gl.vao);
+		// ----- program + uniforms + textures -----
+		glc.useProgram(gl.ocr.prog);
 
-		this.digitFields.forEach(([name, task]) => {
-			if (task.cramming_pos) {
-				glc.uniform4i(
-					gl.vars.uSrcPx,
-					task.packing_pos.x,
-					task.packing_pos.y,
-					task.canvas.width,
-					task.canvas.height
-				);
-				glc.uniform4i(
-					gl.vars.uDstPx,
-					task.cramming_pos.x,
-					task.cramming_pos.y,
-					task.canvas.width,
-					task.canvas.height
-				);
-			} else if (name === 'T') {
-				const digitSize = 14;
-				const digitStride = 16;
-				const cramPositions = this.configData.cramming.positions;
-				// dirty, we KNOW that T needs special treatment to handle its 3 digits separatly T_T
-
-				// D1
-				glc.uniform4i(
-					gl.vars.uSrcPx,
-					task.packing_pos.x,
-					task.packing_pos.y,
-					digitSize,
-					digitSize
-				);
-				glc.uniform4i(
-					gl.vars.uDstPx,
-					cramPositions.Td1.x,
-					cramPositions.Td1.y,
-					digitSize,
-					digitSize
-				);
-
-				// D2
-				glc.uniform4i(
-					gl.vars.uSrcPx,
-					task.packing_pos.x + digitStride,
-					task.packing_pos.y,
-					digitSize,
-					digitSize
-				);
-				glc.uniform4i(
-					gl.vars.uDstPx,
-					cramPositions.Td2.x,
-					cramPositions.Td2.y,
-					digitSize,
-					digitSize
-				);
-
-				// D3
-				glc.uniform4i(
-					gl.vars.uSrcPx,
-					task.packing_pos.x + digitStride * 2,
-					task.packing_pos.y,
-					digitSize,
-					digitSize
-				);
-				glc.uniform4i(
-					gl.vars.uDstPx,
-					cramPositions.Td3.x,
-					cramPositions.Td3.y,
-					digitSize,
-					digitSize
-				);
-			}
-
-			glc.uniform1i(gl.vars.uMode, 0);
-			glc.drawArrays(glc.TRIANGLES, 0, 6);
-		});
-
-		// 2b) Computed pixels with points program
-		glc.useProgram(gl.pointsProg);
-		glc.uniform1i(gl.points.u.uAtlas, 0);
-		glc.uniform2i(
-			gl.points.u.uAtlasSize,
-			this.output_canvas.width,
-			this.output_canvas.height
-		);
-		glc.uniform2i(
-			gl.points.u.uFinalSize,
-			this.configData.cramming.size.w,
-			this.configData.cramming.size.h
-		);
-		glc.activeTexture(glc.TEXTURE0);
-		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
-		glc.bindVertexArray(gl.points.vao);
-
-		// Offsets you like (tune once, reuse)
-		const OFFS = new Float32Array([
-			0.5, 0.5, 0.25, 0.5, 0.75, 0.5, 0.5, 0.25, 0.5, 0.75, 0.25, 0.25, 0.75,
-			0.25, 0.25, 0.75, 0.75, 0.75,
-		]);
-		glc.uniform1i(gl.points.u.uNumOffsets, OFFS.length / 2);
-		glc.uniform2fv(gl.points.u.uOffsets, OFFS);
-
-		// 34 shines: luma-only, put thresholded shine into alpha
-		glc.uniform1f(
-			gl.points.u.uShineThresh,
-			GpuTetrisOCR.lumaThreshold255 / 255
-		);
-		glc.uniform1i(gl.points.u.uMode, 1);
-		glc.drawArrays(glc.POINTS, OFF_SHINE, NUM_SHINE);
-
-		// 3 refs: average color, alpha = 1
-		glc.uniform1i(gl.points.u.uMode, 0);
-		glc.drawArrays(glc.POINTS, OFF_REF, NUM_REF);
-
-		// 200 blocks: average color, alpha = shine
-		glc.uniform1i(gl.points.u.uMode, 2);
-		glc.drawArrays(glc.POINTS, OFF_BLK, NUM_BLK);
-
+		// ----- draw N points -----
+		glc.bindVertexArray(gl.ocr.vao);
+		glc.drawArrays(glc.POINTS, 0, gl.ocr.numTotalJobs);
 		glc.bindVertexArray(null);
+
+		// ----- readback -----
+		if (
+			!this.ocrResultsU8 ||
+			this.ocrResultsU8.length !== gl.ocr.numTotalJobs * 4
+		) {
+			this.ocrResultsU8 = new Uint8Array(gl.ocr.numTotalJobs * 4);
+		}
+		glc.readPixels(
+			0,
+			0,
+			gl.ocr.numTotalJobs,
+			1,
+			glc.RGBA,
+			glc.UNSIGNED_BYTE,
+			this.ocrResultsU8
+		);
+
 		glc.bindFramebuffer(glc.FRAMEBUFFER, null);
 	}
 
@@ -657,8 +692,8 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 		this.extractAndHighlightRegions(frame);
 		this.runPass1ToAtlas(frame);
-		this.pass2AtlasToCanvas(frame);
-		this.pass3toFinalTexture(frame);
+		this.runPass2AtlasToCanvas(frame);
+		// this.runPass3OcrToFinalTexture(frame);
 
 		const event = new CustomEvent('frame', {
 			detail: {},
