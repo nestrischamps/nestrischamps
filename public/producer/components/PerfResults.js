@@ -24,6 +24,7 @@ cssOverride.replaceSync(`
 
 export class NTC_PerfResults extends NtcComponent {
 	#domrefs;
+	#stats;
 	#last_perf = {};
 	#dompairs = new Map();
 
@@ -35,6 +36,8 @@ export class NTC_PerfResults extends NtcComponent {
 		this._bulmaSheets.then(() => {
 			this.shadow.adoptedStyleSheets.push(cssOverride);
 		});
+
+		this.#stats = {};
 
 		this.#domrefs = {
 			perf_data: this.shadow.getElementById('perf_data'),
@@ -90,7 +93,6 @@ export class NTC_PerfResults extends NtcComponent {
 	};
 
 	showPerfData() {
-		// 1. compute all available perf measurements
 		const perf = {};
 
 		performance.getEntriesByType('measure').forEach(m => {
@@ -101,10 +103,35 @@ export class NTC_PerfResults extends NtcComponent {
 			if (m.name.startsWith('DOM-')) return;
 			if (m.name.startsWith('ANALYZE_')) return;
 
-			perf[m.name] = m.duration.toFixed(3);
+			if (!this.#stats[m.name]) {
+				this.#stats[m.name] = {
+					cur: 0,
+					total: 0,
+					count: 0,
+					avg: 0,
+					min: Infinity,
+					max: -Infinity,
+				};
+			}
+
+			const stat = this.#stats[m.name];
+
+			stat.count++;
+			stat.cur = m.duration;
+			stat.total += m.duration;
+			stat.avg = stat.total / stat.count;
+			stat.min = Math.min(stat.min, m.duration);
+			stat.max = Math.max(stat.max, m.duration);
+
+			perf[m.name] = [
+				m.duration.toFixed(1),
+				`min: ${stat.min.toFixed(1)}`,
+				`avg: ${stat.avg.toFixed(1)}`,
+				`max: ${stat.max.toFixed(1)}`,
+			].join(' - ');
 		});
 
-		// s. store data
+		// 2. store data
 		this.#last_perf = perf;
 
 		// 3. update display

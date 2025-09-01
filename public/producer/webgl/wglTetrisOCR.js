@@ -35,7 +35,7 @@ function lazyGetShaderSources() {
 }
 
 // gl helpers
-// Small helper
+
 function sh(gl, type, src) {
 	const s = gl.createShader(type);
 
@@ -184,44 +184,12 @@ function makeDigitJobsTex(gl, jobs) {
 	return tex;
 }
 
-// Update without reallocating (same length)
-function updateDigitJobsTex(gl, tex, jobs) {
-	const N = jobs.length;
-	const data = new Uint32Array(N * 4);
-	for (let i = 0; i < N; i++) {
-		const j = jobs[i];
-		data[i * 4 + 0] = j.x >>> 0;
-		data[i * 4 + 1] = j.y >>> 0;
-		data[i * 4 + 2] = j.refIndex >>> 0;
-		data[i * 4 + 3] = 0;
-	}
-	gl.bindTexture(gl.TEXTURE_2D, tex);
-	gl.texSubImage2D(
-		gl.TEXTURE_2D,
-		0,
-		0,
-		0,
-		N,
-		1,
-		gl.RGBA_INTEGER,
-		gl.UNSIGNED_INT,
-		data
-	);
-	gl.bindTexture(gl.TEXTURE_2D, null);
-}
-
 export class WGlTetrisOCR extends GpuTetrisOCR {
 	#shaderSources;
 	#ready = false;
 
 	constructor(config) {
 		super(config);
-
-		this.instrument(
-			'runPass1ToAtlas',
-			'runPass2AtlasToCanvas',
-			'runPass3OcrToFinalTexture'
-		);
 
 		Promise.all([lazyGetShaderSources(), this.loadDigitTemplates()]).then(
 			([shader_sources]) => {
@@ -239,7 +207,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 	}
 
 	updateScore67Config() {
-		// this.#prepGpuComputeDigitAssets();
+		this.#prepGpuComputeDigitAssets();
 	}
 
 	#initGpuRenderAssets() {
@@ -261,24 +229,28 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		);
 		gl.atlasFBO = makeFrameBufferO(glc, gl.atlasTex);
 
-		// Program and locations
-		gl.copyProg = createGlProgram(glc, copy_vertex, copy_fragment);
+		const prog = createGlProgram(glc, copy_vertex, copy_fragment);
 
-		glc.useProgram(gl.copyProg);
+		gl.copy = {
+			prog,
 
-		gl.u = {
-			uTex: glc.getUniformLocation(gl.copyProg, 'uTex'),
-			uTexSize: glc.getUniformLocation(gl.copyProg, 'uTexSize'),
-			uOutSize: glc.getUniformLocation(gl.copyProg, 'uOutSize'),
-			uFlipY: glc.getUniformLocation(gl.copyProg, 'uFlipY'),
-			uSrcPx: glc.getUniformLocation(gl.copyProg, 'uSrcPx'),
-			uDstPx: glc.getUniformLocation(gl.copyProg, 'uDstPx'),
-			uMode: glc.getUniformLocation(gl.copyProg, 'uMode'), // luma/red-luma processing
-			uBrightness: glc.getUniformLocation(gl.copyProg, 'uBrightness'),
-			uContrast: glc.getUniformLocation(gl.copyProg, 'uContrast'),
+			vao: glc.createVertexArray(),
+
+			u: {
+				uTex: glc.getUniformLocation(prog, 'uTex'),
+				uTexSize: glc.getUniformLocation(prog, 'uTexSize'),
+				uOutSize: glc.getUniformLocation(prog, 'uOutSize'),
+				uFlipY: glc.getUniformLocation(prog, 'uFlipY'),
+				uSrcPx: glc.getUniformLocation(prog, 'uSrcPx'),
+				uDstPx: glc.getUniformLocation(prog, 'uDstPx'),
+				uMode: glc.getUniformLocation(prog, 'uMode'), // luma/red-luma processing
+				uBrightness: glc.getUniformLocation(prog, 'uBrightness'),
+				uContrast: glc.getUniformLocation(prog, 'uContrast'),
+			},
 		};
 
-		gl.vao = glc.createVertexArray();
+		// Program and locations
+		glc.useProgram(gl.copy.prog);
 
 		gl.videoTex = glc.createTexture();
 		glc.bindTexture(glc.TEXTURE_2D, gl.videoTex);
@@ -368,8 +340,13 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		});
 
 		gl.ocr.digitJobs = allDigitJobs;
-		gl.ocr.digitJobsTex = makeDigitJobsTex(glc, allDigitJobs);
 
+		if (gl.ocr.digitJobsTex) {
+			glc.deleteTexture(gl.ocr.digitJobsTex);
+			glc.deleteTexture(gl.ocr.referenceDigitsTex);
+		}
+
+		gl.ocr.digitJobsTex = makeDigitJobsTex(glc, allDigitJobs);
 		gl.ocr.referenceDigitsTex = makedigitLumaRefsTex(glc, this.digit_lumas_f32);
 
 		glc.uniform1i(gl.ocr.u.uNumReferenceDigits, 17); // is this needed?
@@ -570,39 +547,39 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.clearColor(0.2, 0.2, 0.2, 1.0);
 		glc.clear(glc.COLOR_BUFFER_BIT);
 
-		glc.useProgram(gl.copyProg);
+		glc.useProgram(gl.copy.prog);
 
 		// globals
-		glc.uniform1i(gl.u.uTex, 0);
-		glc.uniform2i(gl.u.uTexSize, video.videoWidth, video.videoHeight);
+		glc.uniform1i(gl.copy.u.uTex, 0);
+		glc.uniform2i(gl.copy.u.uTexSize, video.videoWidth, video.videoHeight);
 		glc.uniform2i(
-			gl.u.uOutSize,
+			gl.copy.u.uOutSize,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 
 		// variables
-		glc.uniform1f(gl.u.uFlipY, 1);
-		glc.uniform1f(gl.u.uBrightness, this.config.brightness);
-		glc.uniform1f(gl.u.uContrast, this.config.contrast);
+		glc.uniform1f(gl.copy.u.uFlipY, 1);
+		glc.uniform1f(gl.copy.u.uBrightness, this.config.brightness);
+		glc.uniform1f(gl.copy.u.uContrast, this.config.contrast);
 
 		glc.activeTexture(glc.TEXTURE0);
 		glc.bindTexture(glc.TEXTURE_2D, gl.videoTex);
-		glc.bindVertexArray(gl.vao);
+		glc.bindVertexArray(gl.copy.vao);
 
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
 
 			// Map source pixels to normalized rect
 			glc.uniform4i(
-				gl.u.uSrcPx,
+				gl.copy.u.uSrcPx,
 				task.crop.x,
 				task.crop.y,
 				task.crop.w,
 				task.crop.h
 			);
 			glc.uniform4i(
-				gl.u.uDstPx,
+				gl.copy.u.uDstPx,
 				task.packing_pos.x,
 				task.packing_pos.y,
 				task.canvas.width,
@@ -616,7 +593,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 					? GpuTetrisOCR.TRANSFORM_TYPES.RED_LUMA
 					: GpuTetrisOCR.TRANSFORM_TYPES.NONE;
 
-			glc.uniform1i(gl.u.uMode, transformType);
+			glc.uniform1i(gl.copy.u.uMode, transformType);
 
 			// Draw this region into its destination via viewport scaling
 			glc.drawArrays(glc.TRIANGLES, 0, 6);
@@ -631,7 +608,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		const gl = this.output_gl;
 		const glc = gl.ctx;
 
-		glc.useProgram(gl.copyProg);
+		glc.useProgram(gl.copy.prog);
 
 		glc.disable(glc.BLEND);
 		glc.bindFramebuffer(glc.FRAMEBUFFER, null);
@@ -639,38 +616,38 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.clearColor(0.2, 0.2, 0.2, 1);
 		glc.clear(glc.COLOR_BUFFER_BIT);
 
-		glc.uniform1i(gl.u.uTex, 0);
+		glc.uniform1i(gl.copy.u.uTex, 0);
 		glc.uniform2i(
-			gl.u.uTexSize,
+			gl.copy.u.uTexSize,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 		glc.uniform2i(
-			gl.u.uOutSize,
+			gl.copy.u.uOutSize,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 
 		// important: reset brightness and contrast to 1, or they wouldbe double applied from the atlas texture
-		glc.uniform1f(gl.u.uFlipY, 0);
-		glc.uniform1f(gl.u.uBrightness, 1.0);
-		glc.uniform1f(gl.u.uContrast, 1.0);
+		glc.uniform1f(gl.copy.u.uFlipY, 0);
+		glc.uniform1f(gl.copy.u.uBrightness, 1.0);
+		glc.uniform1f(gl.copy.u.uContrast, 1.0);
 
 		glc.uniform4i(
-			gl.u.uSrcPx,
+			gl.copy.u.uSrcPx,
 			0,
 			0,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
 		glc.uniform4i(
-			gl.u.uDstPx,
+			gl.copy.u.uDstPx,
 			0,
 			0,
 			this.output_canvas.width,
 			this.output_canvas.height
 		);
-		glc.uniform1i(gl.u.uMode, 0);
+		glc.uniform1i(gl.copy.u.uMode, 0);
 
 		glc.activeTexture(glc.TEXTURE0);
 		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
@@ -683,9 +660,11 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.bindSampler(0, null);
 	}
 
-	async runPass3OcrToFinalTexture() {
+	runPass3OcrToFinalTexture() {
 		const gl = this.output_gl;
 		const glc = gl.ctx;
+
+		glc.useProgram(gl.ocr.prog);
 
 		// ----- bind FBO and clear -----
 		glc.bindFramebuffer(glc.FRAMEBUFFER, gl.ocr.resultFBO);
@@ -693,9 +672,6 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.disable(glc.BLEND);
 		glc.clearColor(0, 0, 0, 0);
 		glc.clear(glc.COLOR_BUFFER_BIT);
-
-		// ----- program + uniforms + textures -----
-		glc.useProgram(gl.ocr.prog);
 
 		// ----- draw N points -----
 		glc.bindVertexArray(gl.ocr.vao);
@@ -712,9 +688,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 		glc.flush();
 
-		await sleep(0);
-
-		performance.mark(`start_read`);
+		performance.mark(`start-read-${this.perfSuffix}`);
 		glc.readPixels(
 			0,
 			0,
@@ -724,8 +698,12 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			glc.UNSIGNED_BYTE,
 			this.ocrResultsU8
 		);
-		performance.mark(`end_read`);
-		performance.measure('read', `start_read`, `end_read`);
+		performance.mark(`end-read-${this.perfSuffix}`);
+		performance.measure(
+			`read-${this.perfSuffix}`,
+			`start-read-${this.perfSuffix}`,
+			`end-read-${this.perfSuffix}`
+		);
 
 		glc.bindFramebuffer(glc.FRAMEBUFFER, null);
 	}
@@ -795,20 +773,22 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 	async processVideoFrame(frame) {
 		if (!this.#ready) return;
 
-		this.extractAndHighlightRegions(frame);
+		performance.mark(`start-processVideoFrame-${this.perfSuffix}`);
+
+		// this.extractAndHighlightRegions(frame);
 		this.runPass1ToAtlas(frame);
-		this.runPass2AtlasToCanvas(frame);
+		// this.runPass2AtlasToCanvas(frame);
 
 		await this.runPass3OcrToFinalTexture(frame);
 
 		const results = this.processResults();
 
-		// performance.mark(`end-processVideoFrame-${this.perfSuffix}`);
-		// performance.measure(
-		// 	`processVideoFrame-${this.perfSuffix}`,
-		// 	`start-processVideoFrame-${this.perfSuffix}`,
-		// 	`end-processVideoFrame-${this.perfSuffix}`
-		// );
+		performance.mark(`end-processVideoFrame-${this.perfSuffix}`);
+		performance.measure(
+			`processVideoFrame-${this.perfSuffix}`,
+			`start-processVideoFrame-${this.perfSuffix}`,
+			`end-processVideoFrame-${this.perfSuffix}`
+		);
 
 		const event = new CustomEvent('frame', {
 			detail: results,

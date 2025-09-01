@@ -154,7 +154,7 @@ export class Player extends EventTarget {
 	}
 
 	processVideoFrame(frame) {
-		this.ocr.processVideoFrame(frame);
+		return this.ocr.processVideoFrame(frame);
 	}
 
 	#handleFrame = ({ detail: data }) => {

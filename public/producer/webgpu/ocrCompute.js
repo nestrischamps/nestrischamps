@@ -152,6 +152,14 @@ export class OcrCompute {
 	prepMatchDigitsGPUAssets(params) {
 		const { texWidth, texHeight, digitSize, refDigits, numRefs, jobs } = params;
 
+		if (this.matchDigitsAssets) {
+			const { ubo, jobsBuf, refsBuf, outBuf } = this.matchDigitsAssets;
+			ubo.destroy();
+			jobsBuf.destroy();
+			refsBuf.destroy();
+			outBuf.destroy();
+		}
+
 		// Uniforms
 		const refStride = digitSize * digitSize; // 196
 		const numJobs = jobs.length;

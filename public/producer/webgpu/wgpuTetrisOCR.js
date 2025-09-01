@@ -57,14 +57,6 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 	constructor(config) {
 		super(config);
 
-		this.instrument(
-			'extractAndHighlightRegions',
-			'processVideoFrame',
-			'renderExtractedRegions',
-			'doDigitOCR',
-			'doNonDigitOCR'
-		);
-
 		Promise.all([this.#getGPU(), this.loadDigitTemplates()]).then(() => {
 			this.#initGpuAssets();
 			this.#ready = true;
@@ -186,7 +178,42 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		}
 	}
 
+	#fillRegionBuffers() {
+		const { device } = this.#gpu;
+
+		for (const task of Object.values(this.config.tasks)) {
+			// Get the transform type from task configuration
+			const transformType = task.luma
+				? GpuTetrisOCR.TRANSFORM_TYPES.LUMA
+				: task.red_luma
+					? GpuTetrisOCR.TRANSFORM_TYPES.RED_LUMA
+					: GpuTetrisOCR.TRANSFORM_TYPES.NONE;
+
+			// Create the data for the uniform buffer
+			const regionData = new Float32Array([
+				task.crop.x, // TODO: need to update buffer when crop changes!
+				task.crop.y,
+				task.crop.w,
+				task.crop.h,
+				task.packing_pos.x,
+				task.packing_pos.y,
+				task.canvas.width,
+				task.canvas.height,
+				transformType,
+				0.0,
+				0.0,
+				0.0, // Padding for vec4<f32> alignment
+			]);
+
+			// Write the new data to the buffer.
+			device.queue.writeBuffer(task.regionBuffer, 0, regionData);
+		}
+	}
+
 	#prepGpuComputeDigitAssets() {
+		// run this one to update all the buffers (only needed for score but whatever)
+		this.#fillRegionBuffers();
+
 		const digitSize = 14;
 		const digitSizeWBorder = 16;
 		const jobs = [];
@@ -378,32 +405,6 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		this.configData.fields.forEach(name => {
 			const task = this.config.tasks[name];
 
-			// Get the transform type from task configuration
-			const transformType = task.luma
-				? GpuTetrisOCR.TRANSFORM_TYPES.LUMA
-				: task.red_luma
-					? GpuTetrisOCR.TRANSFORM_TYPES.RED_LUMA
-					: GpuTetrisOCR.TRANSFORM_TYPES.NONE;
-
-			// Create the data for the uniform buffer
-			const regionData = new Float32Array([
-				task.crop.x, // TODO: need to update buffer when crop changes!
-				task.crop.y,
-				task.crop.w,
-				task.crop.h,
-				task.packing_pos.x,
-				task.packing_pos.y,
-				task.canvas.width,
-				task.canvas.height,
-				transformType,
-				0.0,
-				0.0,
-				0.0, // Padding for vec4<f32> alignment
-			]);
-
-			// Write the new data to the buffer.
-			device.queue.writeBuffer(task.regionBuffer, 0, regionData);
-
 			// Set the per-task bind group and draw.
 			mainPass.setBindGroup(1, task.regionBindGroup);
 			mainPass.draw(6, 1, 0);
@@ -411,17 +412,18 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 
 		mainPass.end();
 
-		commandEncoder.copyTextureToTexture(
-			{ texture: this.temp_output_txt },
-			{ texture: this.output_ctx.getCurrentTexture() },
-			[this.output_canvas.width, this.output_canvas.height]
-		);
+		// commandEncoder.copyTextureToTexture(
+		// 	{ texture: this.temp_output_txt },
+		// 	{ texture: this.output_ctx.getCurrentTexture() },
+		// 	[this.output_canvas.width, this.output_canvas.height]
+		// );
 
 		device.queue.submit([commandEncoder.finish()]);
 	}
 
 	// this function OCRs ALL digits in one job, and then aggregate the results into a meaning structure
 	async doDigitOCR() {
+		performance.mark(`start-doDigitOCR-${this.perfSuffix}`);
 		// run on gpu
 		const sse = await this.ocrCompute.matchDigits({
 			inputTexture: this.temp_output_txt,
@@ -444,17 +446,31 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 			res[name] = matches.some(v => v === null) ? null : matches;
 		});
 
+		performance.mark(`end-doDigitOCR-${this.perfSuffix}`);
+		performance.measure(
+			`doDigitOCR-${this.perfSuffix}`,
+			`start-doDigitOCR-${this.perfSuffix}`,
+			`end-doDigitOCR-${this.perfSuffix}`
+		);
+
 		return res;
 	}
 
 	async doNonDigitOCR() {
+		performance.mark(`start-doNonDigitOCR-${this.perfSuffix}`);
+
 		// run on gpu
 		const { boardColors, refColors, shines, gymPauseF32 } =
 			await this.ocrCompute.analyzeBoard({
 				inputTexture: this.temp_output_txt,
 			});
 
-		const res = {};
+		const gymPauseLuma255 = gymPauseF32 * 255;
+
+		const res = {
+			field: boardColors, // includes shine in alpha channel
+			preview: GpuTetrisOCR.getPreviewFromShines(shines.subarray(0, 14)),
+		};
 
 		if (this.config.tasks.color1) {
 			res.color1 = u32ToRgba(refColors[0]);
@@ -464,31 +480,41 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 
 		if (this.config.tasks.cur_piece) {
 			res.cur_piece = GpuTetrisOCR.getCurPieceFromShines(shines.subarray(14));
-		}
-
-		const gymPauseLuma255 = gymPauseF32 * 255;
-
-		return {
-			...res,
-			preview: GpuTetrisOCR.getPreviewFromShines(shines.subarray(0, 14)),
-			field: boardColors, // includes shine in alpha channel
-			gym_pause: [
+			res.gym_pause = [0, false];
+		} else {
+			res.gym_pause = [
 				Math.round(gymPauseLuma255),
 				gymPauseLuma255 > GYM_PAUSE_LUMA_THRESHOLD,
-			],
-		};
+			];
+		}
+
+		performance.mark(`end-doNonDigitOCR-${this.perfSuffix}`);
+		performance.measure(
+			`doNonDigitOCR-${this.perfSuffix}`,
+			`start-doNonDigitOCR-${this.perfSuffix}`,
+			`end-doNonDigitOCR-${this.perfSuffix}`
+		);
+
+		return res;
 	}
 
 	async processVideoFrame(frame) {
 		if (!this.#ready) return;
 
-		this.extractAndHighlightRegions(frame);
-		this.renderExtractedRegions(frame);
+		performance.mark(`start-processVideoFrame-${this.perfSuffix}`);
 
-		await this.#gpu.device.queue.onSubmittedWorkDone(); // is this needed?
+		// this.extractAndHighlightRegions(frame);
+		this.renderExtractedRegions(frame);
 
 		const digitRes = await this.doDigitOCR();
 		const nonDigitRes = await this.doNonDigitOCR();
+
+		performance.mark(`end-processVideoFrame-${this.perfSuffix}`);
+		performance.measure(
+			`processVideoFrame-${this.perfSuffix}`,
+			`start-processVideoFrame-${this.perfSuffix}`,
+			`end-processVideoFrame-${this.perfSuffix}`
+		);
 
 		const event = new CustomEvent('frame', {
 			detail: { ...digitRes, ...nonDigitRes },

@@ -142,16 +142,12 @@ export class CaptureDriver extends EventTarget {
 
 		if (this.#working) {
 			console.warn(
-				`skip frame. Elapsed: ${now - (this.#then || 0)}. Current player work: ${this.#curPlayerNum}`
+				`skip frame. Elapsed: ${(now - (this.#then || 0)).toFixed(1)}. Current player work: ${this.#curPlayerNum}`
 			);
 			return;
 		}
 
 		this.#working = true;
-
-		// if (this.#then) {
-		// 	console.log('elapsed: ', now - this.#then);
-		// }
 		this.#then = now;
 
 		performance.clearMarks();
@@ -195,8 +191,6 @@ export class CaptureDriver extends EventTarget {
 		);
 
 		this.#curPlayerNum = null;
-
-		// console.log('work', performance.now() - now);
 
 		this.dispatchEvent(new CustomEvent('frame'));
 

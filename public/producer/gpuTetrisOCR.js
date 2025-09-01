@@ -178,8 +178,6 @@ export class GpuTetrisOCR extends TetrisOCR {
 
 	constructor(...args) {
 		super(...args);
-
-		this.instrument('extractAndHighlightRegions');
 	}
 
 	async loadDigitTemplates() {
