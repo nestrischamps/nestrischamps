@@ -512,8 +512,10 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		}
 		this.renderExtractedRegions(frame);
 
-		const digitRes = await this.doDigitOCR();
-		const nonDigitRes = await this.doNonDigitOCR();
+		const [digitRes, nonDigitRes] = await Promise.all([
+			this.doDigitOCR(),
+			this.doNonDigitOCR(),
+		]);
 
 		performance.mark(`end-processVideoFrame-${this.perfSuffix}`);
 		performance.measure(
