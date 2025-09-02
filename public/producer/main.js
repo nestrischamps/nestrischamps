@@ -56,7 +56,7 @@ async function initOCRCapture(config, tabToOpen) {
 	driver.addPlayer(player);
 
 	const capture = loadCaptureUI();
-	capture.setOCR(player.ocr);
+	capture.setOCR(await player.ocrPromise);
 	capture.setGameTracker(player.gameTracker);
 	capture.showTab(tabToOpen);
 }

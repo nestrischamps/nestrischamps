@@ -23,22 +23,22 @@ export class CpuTetrisOCR extends TetrisOCR {
 		this.digit_img = new ImageData(14, 14);
 		this.shine_img = new ImageData(2, 3);
 
-		this.instrument(
-			'scanScore',
-			'scanLevel',
-			'scanLines',
-			'scanColor1',
-			'scanColor2',
-			'scanColor3',
-			'scanPreview',
-			'scanField',
-			'scanPieceStats',
+		// this.instrument(
+		// 	'scanScore',
+		// 	'scanLevel',
+		// 	'scanLines',
+		// 	'scanColor1',
+		// 	'scanColor2',
+		// 	'scanColor3',
+		// 	'scanPreview',
+		// 	'scanField',
+		// 	'scanPieceStats',
 
-			'scanInstantDas',
-			'scanCurPieceDas',
-			'scanCurPiece',
-			'scanGymPause'
-		);
+		// 	'scanInstantDas',
+		// 	'scanCurPieceDas',
+		// 	'scanCurPiece',
+		// 	'scanGymPause'
+		// );
 
 		Promise.all([TetrisOCR.loadDigitTemplates()]).then(([digit_lumas]) => {
 			this.digit_lumas = digit_lumas;
@@ -70,12 +70,13 @@ export class CpuTetrisOCR extends TetrisOCR {
 	async processVideoFrame(frame) {
 		if (!this.#ready) return;
 
+		performance.mark(`start-processVideoFrame-${this.perfSuffix}`);
+
 		const { videoFrame, video } = frame;
 		const { width, height } = this.capture_canvas;
 
 		// dirty lazy init actions?
-		if (!this.capture_canvas._ntc_initialized) {
-			this.capture_canvas._ntc_initialized = true;
+		if (!this.capture_ctx) {
 			this.capture_canvas.width = video.videoWidth;
 			this.capture_canvas.height =
 				video.videoHeight >> (this.config.use_half_height ? 1 : 0);
@@ -112,7 +113,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 				task.canvas.height
 			);
 
-			if (!this.config.show_parts) return;
+			if (!this.config.show_capture_ui) return;
 
 			// 2. to the individual canvas
 			task.canvas_ctx.drawImage(
@@ -130,7 +131,7 @@ export class CpuTetrisOCR extends TetrisOCR {
 
 		performance.mark(`get_areas-${this.perfSuffix}`);
 
-		if (this.config.show_parts) {
+		if (this.config.show_capture_ui) {
 			// draw the orange regions on the capture canvas
 			this.capture_ctx.fillStyle = '#FFA50080';
 			this.configData.fields.forEach(name => {
@@ -234,6 +235,13 @@ export class CpuTetrisOCR extends TetrisOCR {
 			`total-${this.perfSuffix}`,
 			`start-${this.perfSuffix}`,
 			`end-${this.perfSuffix}`
+		);
+
+		performance.mark(`end-processVideoFrame-${this.perfSuffix}`);
+		performance.measure(
+			`processVideoFrame-${this.perfSuffix}`,
+			`start-processVideoFrame-${this.perfSuffix}`,
+			`end-processVideoFrame-${this.perfSuffix}`
 		);
 
 		const event = new CustomEvent('frame', {

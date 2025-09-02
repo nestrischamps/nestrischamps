@@ -540,7 +540,6 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 			glc.UNSIGNED_BYTE,
 			videoFrame || video
 		);
-		glc.bindTexture(glc.TEXTURE_2D, null);
 
 		glc.bindFramebuffer(glc.FRAMEBUFFER, gl.atlasFBO);
 		glc.viewport(0, 0, this.output_canvas.width, this.output_canvas.height);
@@ -653,7 +652,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
 		glc.bindSampler(0, gl.nearestSampler);
 
-		glc.bindVertexArray(gl.vao);
+		glc.bindVertexArray(gl.copy.vao);
 		glc.drawArrays(glc.TRIANGLES, 0, 6);
 
 		glc.bindVertexArray(null);
@@ -665,6 +664,10 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 		const glc = gl.ctx;
 
 		glc.useProgram(gl.ocr.prog);
+
+		glc.activeTexture(glc.TEXTURE0);
+		glc.bindTexture(glc.TEXTURE_2D, gl.atlasTex);
+		glc.bindSampler(0, gl.nearestSampler);
 
 		// ----- bind FBO and clear -----
 		glc.bindFramebuffer(glc.FRAMEBUFFER, gl.ocr.resultFBO);
@@ -773,11 +776,16 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 	async processVideoFrame(frame) {
 		if (!this.#ready) return;
 
+		super.processVideoFrame(frame);
+
 		performance.mark(`start-processVideoFrame-${this.perfSuffix}`);
 
-		// this.extractAndHighlightRegions(frame);
 		this.runPass1ToAtlas(frame);
-		// this.runPass2AtlasToCanvas(frame);
+
+		if (this.config.show_capture_ui) {
+			this.extractAndHighlightRegions(frame);
+			this.runPass2AtlasToCanvas(frame);
+		}
 
 		await this.runPass3OcrToFinalTexture(frame);
 

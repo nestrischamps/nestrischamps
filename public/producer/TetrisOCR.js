@@ -130,8 +130,10 @@ export class TetrisOCR extends EventTarget {
 		}
 	}
 
-	async processVideoFrame() {
-		throw new Error('processVideoFrame(): child class to implement');
+	processVideoFrame(frame) {
+		if (this.video !== frame.video) {
+			this.video = frame.video;
+		}
 	}
 
 	instrument(...methods) {

@@ -6,18 +6,21 @@ import { REFERENCE_LOCATIONS, TASK_RESIZE } from '../constants.js';
 
 const MARKUP = html`
 	<div id="calibration" class="">
+		<div id="instructions" class="mt-5 content notification is-warning">
+			<h1 class="title is-6">Warning - Processing Load</h1>
+			<p>
+				When you are on the calibration tab, NTC does extra work to show you the
+				parts being captured.<br />
+				When you are done, move to another tab to save processing resources.
+			</p>
+		</div>
+
 		<fieldset class="inputs">
 			<legend>Controls</legend>
 
-			<div class="field">
-				<label class="checkbox">
-					Show Parts
-					<input type="checkbox" id="show_parts" checked autocomplete="off" />
-				</label>
-			</div>
-
 			<div
 				class="field"
+				style="display: none;"
 				title="Use only half the height of the input video stream (1 line in 2), to help remove interlacing artefacts"
 			>
 				<label class="checkbox">
@@ -144,6 +147,7 @@ const ATTRIBUTES = {
 
 export class NTC_Producer_Calibration extends NtcComponent {
 	#domrefs;
+	#observer;
 	#hidePartsTID;
 
 	static get observedAttributes() {
@@ -159,11 +163,12 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 		this.shadow.innerHTML = MARKUP;
 
+		this.#observer = new IntersectionObserver(this.#observerCallBack);
+
 		this.#domrefs = {
 			capture: this.shadow.getElementById('capture'),
 			adjustments: this.shadow.getElementById('adjustments'),
 
-			show_parts: this.shadow.getElementById('show_parts'),
 			use_half_height: this.shadow.getElementById('use_half_height'),
 			score7: this.shadow.getElementById('score7'),
 			handle_retron_levels_6_7: this.shadow.getElementById(
@@ -195,10 +200,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		this.#domrefs.contrast_reset.addEventListener(
 			'click',
 			this.#onContrastReset
-		);
-		this.#domrefs.show_parts.addEventListener(
-			'change',
-			this.#onShowPartsChange
 		);
 		this.#domrefs.use_half_height.addEventListener(
 			'change',
@@ -235,8 +236,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 		this.ocr.config.tasks[name].crop[key] = value;
 		this.ocr.config.save([name]);
-
-		this.#restartHidePartsTimeout();
 	};
 
 	#handleCropCoordinateGroupChange = event => {
@@ -271,10 +270,22 @@ export class NTC_Producer_Calibration extends NtcComponent {
 			this.#domrefs.capture_rate.closest('.field').classList.add('is-hidden');
 		}
 
-		const { show_parts } = this.#domrefs;
-		show_parts.checked = true;
-		this.#restartHidePartsTimeout();
+		this.#observer.observe(this);
 	}
+
+	disconnectedCallback() {
+		this.#observer.disconnect();
+	}
+
+	#observerCallBack = (entries, observer) => {
+		entries.forEach(entry => {
+			if (entry.isIntersecting) {
+				this.ocr.config.show_capture_ui = true;
+			} else {
+				this.ocr.config.show_capture_ui = false;
+			}
+		});
+	};
 
 	attributeChangedCallback(name, oldValue, newValue) {
 		if (oldValue === newValue) {
@@ -337,44 +348,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		}
 
 		contrast_slider.focus();
-	};
-
-	#restartHidePartsTimeout() {
-		return;
-		this.#hidePartsTID = clearTimeout(this.#hidePartsTID);
-		this.#hidePartsTID = setTimeout(() => {
-			const { show_parts } = this.#domrefs;
-
-			show_parts.checked = false;
-			this.#onShowPartsChange();
-		}, 45000);
-	}
-
-	#onShowPartsChange = () => {
-		const { show_parts, capture, adjustments } = this.#domrefs;
-
-		const config = this.ocr.config;
-		config.show_parts = !!show_parts.checked;
-
-		if (config.show_parts) {
-			this.#restartHidePartsTimeout();
-
-			adjustments.classList.remove('is-hidden');
-			this.shadow.getElementById('capture-container').classList.remove('is-12');
-			this.shadow.getElementById('capture-container').classList.add('is-5');
-			[...capture.querySelectorAll('canvas')].forEach(canvas =>
-				canvas.classList.remove('is-hidden')
-			);
-		} else {
-			this.#hidePartsTID = clearTimeout(this.#hidePartsTID);
-
-			adjustments.classList.add('is-hidden');
-			this.shadow.getElementById('capture-container').classList.remove('is-5');
-			this.shadow.getElementById('capture-container').classList.add('is-12');
-			[...capture.querySelectorAll('canvas')].forEach(canvas =>
-				canvas.classList.add('is-hidden')
-			);
-		}
 	};
 
 	#onUseHalfHeightChange = () => {
@@ -478,6 +451,10 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		}
 	};
 
+	setDriver(driver) {
+		this.driver = driver;
+	}
+
 	setOCR(ocr) {
 		if (this.ocr) {
 			this.ocr.removeEventListener('frame', this.#handleFrame);
@@ -488,7 +465,6 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		const {
 			capture,
 			adjustments,
-			show_parts,
 			score7,
 			use_half_height,
 			handle_retron_levels_6_7,
@@ -536,15 +512,12 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		this.#onBrightnessChange();
 		this.#onContrastChange();
 
-		if (ocr.config.show_parts == null) {
-			show_parts.checked = true;
-			this.#onShowPartsChange();
-		}
-
 		this.ocr.addEventListener('frame', this.#handleFrame);
 	}
 
 	#handleFrame = event => {
+		if (!this.ocr.config.show_capture_ui) return;
+
 		const { detail: frame } = event;
 
 		Object.entries(frame).forEach(([name, value]) => {

@@ -86,7 +86,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 			usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
 		});
 
-		this.temp_output_txt = device.createTexture({
+		this.atlas_txt = device.createTexture({
 			size: [this.output_canvas.width, this.output_canvas.height],
 			format: canvasFormat,
 			usage:
@@ -95,7 +95,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 				GPUTextureUsage.COPY_SRC |
 				GPUTextureUsage.COPY_DST,
 		});
-		this.temp_output_txt_view = this.temp_output_txt.createView();
+		this.atlas_txt_view = this.atlas_txt.createView();
 
 		// Layout for Globals (Group 0) - used in both vertex and fragment shaders
 		// It has a uniform buffer at binding 0, a sampler at binding 1, and a texture at binding 2.
@@ -388,7 +388,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		const mainPass = commandEncoder.beginRenderPass({
 			colorAttachments: [
 				{
-					view: this.temp_output_txt_view,
+					view: this.atlas_txt_view,
 					loadOp: 'clear',
 					storeOp: 'store',
 					clearValue: [0.2, 0.2, 0.2, 1.0],
@@ -412,11 +412,13 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 
 		mainPass.end();
 
-		// commandEncoder.copyTextureToTexture(
-		// 	{ texture: this.temp_output_txt },
-		// 	{ texture: this.output_ctx.getCurrentTexture() },
-		// 	[this.output_canvas.width, this.output_canvas.height]
-		// );
+		if (this.config.show_capture_ui) {
+			commandEncoder.copyTextureToTexture(
+				{ texture: this.atlas_txt },
+				{ texture: this.output_ctx.getCurrentTexture() },
+				[this.output_canvas.width, this.output_canvas.height]
+			);
+		}
 
 		device.queue.submit([commandEncoder.finish()]);
 	}
@@ -426,7 +428,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		performance.mark(`start-doDigitOCR-${this.perfSuffix}`);
 		// run on gpu
 		const sse = await this.ocrCompute.matchDigits({
-			inputTexture: this.temp_output_txt,
+			inputTexture: this.atlas_txt,
 		});
 
 		// process result (find minima matches)
@@ -462,7 +464,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		// run on gpu
 		const { boardColors, refColors, shines, gymPauseF32 } =
 			await this.ocrCompute.analyzeBoard({
-				inputTexture: this.temp_output_txt,
+				inputTexture: this.atlas_txt,
 			});
 
 		const gymPauseLuma255 = gymPauseF32 * 255;
@@ -501,9 +503,13 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 	async processVideoFrame(frame) {
 		if (!this.#ready) return;
 
+		super.processVideoFrame(frame);
+
 		performance.mark(`start-processVideoFrame-${this.perfSuffix}`);
 
-		// this.extractAndHighlightRegions(frame);
+		if (this.config.show_capture_ui) {
+			this.extractAndHighlightRegions(frame);
+		}
 		this.renderExtractedRegions(frame);
 
 		const digitRes = await this.doDigitOCR();

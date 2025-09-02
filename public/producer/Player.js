@@ -12,11 +12,74 @@ import { WGpuTetrisOCR } from './webgpu/wgpuTetrisOCR.js';
 import { WGlTetrisOCR } from './webgl/wglTetrisOCR.js';
 
 const send_binary = QueryString.get('binary') !== '0';
-const force_cpu = QueryString.get('cpu') === '1';
+const force_ocr_mode = (value => {
+	return /^(wgpu|wgl|cpu)$/.test(value) ? value : null;
+})(QueryString.get('ocr'));
 
-console.log({ force_cpu });
+function hasWebGL2({ allowSoftware = true } = {}) {
+	try {
+		const canvas =
+			typeof OffscreenCanvas !== 'undefined'
+				? new OffscreenCanvas(1, 1)
+				: document.createElement('canvas');
+
+		const attrs = {
+			alpha: true,
+			premultipliedAlpha: true,
+			powerPreference: 'high-performance',
+			failIfMajorPerformanceCaveat: !allowSoftware,
+		};
+		return !!canvas.getContext('webgl2', attrs);
+	} catch {
+		return false;
+	}
+}
+
+async function hasWebGPU() {
+	try {
+		const adapter = await navigator.gpu?.requestAdapter();
+		return !!adapter;
+	} catch {
+		return false;
+	}
+}
+
+async function getCapabilities() {
+	return {
+		has_wgpu: await hasWebGPU(),
+		has_wgl: hasWebGL2(),
+	};
+}
+
+const getCapabilitiesPromise = getCapabilities(); // no await, shared promise
+
+async function createOCR(config) {
+	// force_ocr_mode has precedence
+	switch (force_ocr_mode) {
+		case 'wgpu':
+			return new WGpuTetrisOCR(config);
+		case 'wgl':
+			return new WGlTetrisOCR(config);
+		case 'cpu':
+			return new CpuTetrisOCR(config);
+	}
+
+	// if no force_ocr_mode matched, use precendence rules below:
+	const capabilities = await getCapabilitiesPromise;
+
+	if (capabilities.has_wgpu) {
+		return new WGpuTetrisOCR(config);
+	}
+
+	if (capabilities.has_wgl) {
+		return new WGlTetrisOCR(config);
+	}
+
+	return new CpuTetrisOCR(config);
+}
 
 export class Player extends EventTarget {
+	#ready = false;
 	#startTime;
 	#lastFrame;
 	#connection = null;
@@ -33,15 +96,6 @@ export class Player extends EventTarget {
 
 		this.gameTracker = new GameTracker(config);
 		this.gameTracker.addEventListener('frame', this.#handleFrame);
-
-		this.ocr = new WGlTetrisOCR(this.config);
-		// navigator.gpu?.requestAdapter && !force_cpu
-		// 	? new WGpuTetrisOCR(this.config)
-		// 	: new CpuTetrisOCR(this.config);
-
-		this.ocr.addEventListener('frame', ({ detail: frame }) => {
-			this.gameTracker.processFrame(frame);
-		});
 
 		this.is_player = false;
 		this.notice = document.createElement('div');
@@ -117,10 +171,20 @@ export class Player extends EventTarget {
 			setVdoNinjaURL: () => {},
 		};
 
-		this.connect();
+		// async init
+		this.ocrPromise = createOCR(config);
+
+		this.ocrPromise.then(ocr => {
+			this.ocr = ocr;
+			this.ocr.addEventListener('frame', ({ detail: frame }) => {
+				this.gameTracker.processFrame(frame);
+			});
+			this.connect();
+			this.#ready = true;
+		});
 	}
 
-	// manua async
+	// manual async
 	#getVideoFrameAsWebpBlob() {
 		const video = this._driver.getVideo();
 
@@ -143,7 +207,7 @@ export class Player extends EventTarget {
 			this.remote_calibration_canvas.height
 		);
 
-		// Convert to JPEG Blob at 85% quality
+		// Convert to webp Blob at 50% quality
 		return new Promise(resolve => {
 			this.remote_calibration_canvas.toBlob(
 				blob => resolve(blob),
@@ -154,6 +218,8 @@ export class Player extends EventTarget {
 	}
 
 	processVideoFrame(frame) {
+		if (!this.#ready) return;
+
 		return this.ocr.processVideoFrame(frame);
 	}
 

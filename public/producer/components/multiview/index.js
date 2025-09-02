@@ -146,7 +146,10 @@ export class NTC_MultiView extends NtcComponent {
 		cal.setAttribute('enable-show-parts', 'false');
 		cal.setAttribute('enable-use-half-height', 'false');
 		cal.setAttribute('enable-capture-rate', 'false');
-		cal.setOCR(player.ocr);
+
+		player.ocrPromise.then(ocr => {
+			cal.setOCR(ocr);
+		});
 
 		tabs.querySelector('ul').appendChild(tab);
 		content.appendChild(cal);
