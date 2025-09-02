@@ -160,28 +160,8 @@ export class CaptureDriver extends EventTarget {
 			video: this.#video,
 		};
 
-		// TODO / TOTRY: Trigger all the job in parallel instead of sequentially below
-		// await Promise.allSettled(this.players.map(p => p.processVideoFrame(frame)));
-
-		for (const [idx, player] of this.players.entries()) {
-			this.#curPlayerNum = player.num || idx + 1;
-			const measure_name = `driver-${this.driverSuffix}-player-${this.#curPlayerNum}`;
-
-			performance.mark(`start-${measure_name}`);
-
-			try {
-				await player.processVideoFrame(frame);
-			} catch (err) {
-				console.warn(err);
-			}
-
-			performance.mark(`end-${measure_name}`);
-			performance.measure(
-				measure_name,
-				`start-${measure_name}`,
-				`end-${measure_name}`
-			);
-		}
+		// Run all players in parallel
+		await Promise.allSettled(this.players.map(p => p.processVideoFrame(frame)));
 
 		performance.mark(`end-driver-${this.driverSuffix}`);
 		performance.measure(

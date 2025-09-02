@@ -5,8 +5,8 @@ const MARKUP = html`<dl id="perf_data"></dl>`;
 const STAT_NUM_SAMPLES = 3600; // 1 minute worth at 60fps; 3mins worth at 30fps
 
 function sortByDriverAndPlayerReverse(k1, k2) {
-	const isDriver1 = !k1.includes('player');
-	const isDriver2 = !k2.includes('player');
+	const isDriver1 = !k1.includes('process');
+	const isDriver2 = !k2.includes('process');
 
 	if (isDriver1 && !isDriver2) return 1;
 	if (!isDriver1 && isDriver2) return -1;
@@ -83,7 +83,7 @@ export class NTC_PerfResults extends NtcComponent {
 		// TODO: force clean order of more of the known metrics 😢 (e.g. driver total, player total, etc.)
 		// For now, we push the driver metrics on top, since that's the most important total
 		[...this.#dompairs.keys()]
-			.filter(key => /(driver|player-\d+)-\d+/.test(key))
+			.filter(key => /(driver|processVideoFrame)-\d+/.test(key))
 			.sort(sortByDriverAndPlayerReverse) // reverse because we insert by prepend
 			.forEach(key => {
 				const { dt, dd } = this.#dompairs.get(key);
