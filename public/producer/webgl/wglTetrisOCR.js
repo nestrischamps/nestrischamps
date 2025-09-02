@@ -1,7 +1,6 @@
 import { GpuTetrisOCR } from '../gpuTetrisOCR.js';
 import { PATTERN_MAX_INDEXES } from '../constants.js';
 import { findMinIndex, u32ToRgba } from '/ocr/utils.js';
-import { sleep } from '../timer.js';
 
 const MAX_SHINE_SPOTS = 20 + 14;
 
@@ -208,6 +207,7 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 	updateScore67Config() {
 		this.#prepGpuComputeDigitAssets();
+		this.#initGpuComputeAssets2();
 	}
 
 	#initGpuRenderAssets() {
@@ -486,6 +486,12 @@ export class WGlTetrisOCR extends GpuTetrisOCR {
 
 		this.#prepGpuComputeDigitAssets();
 		this.#prepGpuComputeNonDigitAssets();
+		this.#initGpuComputeAssets2();
+	}
+
+	#initGpuComputeAssets2() {
+		const gl = this.output_gl;
+		const glc = gl.ctx;
 
 		gl.ocr.numTotalJobs =
 			gl.ocr.digitJobs.length +
