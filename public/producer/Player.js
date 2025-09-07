@@ -128,9 +128,6 @@ export class Player extends EventTarget {
 		});
 	}
 
-	onMakePlayer() {}
-	onDropPlayer() {}
-
 	// manual async
 	#getVideoFrameAsWebpBlob() {
 		const video = this._driver.getVideo();
