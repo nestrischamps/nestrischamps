@@ -142,7 +142,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 
 		const { allow_video_feed } = this.#domrefs;
 
-		allow_video_feed.checked = player.config.allow_video_feed;
+		allow_video_feed.checked = !!player.config.allow_video_feed;
 
 		player.addEventListener('make_player', ({ detail }) => {
 			this.is_player = true;
