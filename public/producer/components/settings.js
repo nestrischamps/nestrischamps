@@ -85,6 +85,7 @@ cssOverride.replaceSync(`
 
 export class NTC_Producer_Settings extends NtcComponent {
 	#domrefs;
+	#player;
 
 	constructor() {
 		super();
@@ -120,7 +121,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 		this.#domrefs.clear_config.addEventListener('click', clearConfigAndReset);
 		this.#domrefs.video_feed_selector.addEventListener(
 			'change',
-			this.#playDevice
+			this.startSharingVideoFeed
 		);
 		this.#domrefs.allow_video_feed.addEventListener(
 			'change',
@@ -133,6 +134,21 @@ export class NTC_Producer_Settings extends NtcComponent {
 		}
 
 		this.resetDevices();
+	}
+
+	setPlayer(player) {
+		this.#player = player;
+
+		player.addEventListener('make_player', ({ detail }) => {
+			this.is_player = true;
+			this.view_meta = detail.view_meta;
+			this.startSharingVideoFeed();
+		});
+
+		player.addEventListener('drop_player', ({ detail }) => {
+			this.is_player = false;
+			this.stopSharingVideoFeed();
+		});
 	}
 
 	async resetDevices() {
@@ -170,7 +186,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 		}
 	};
 
-	#playDevice = async () => {
+	startSharingVideoFeed = async () => {
 		const { video_feed, video_feed_selector } = this.#domrefs;
 
 		const video_constraints = {
@@ -208,7 +224,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 		const { allow_video_feed, video_feed, vdo_ninja } = this.#domrefs;
 
 		if (allow_video_feed.checked) {
-			this.#playDevice();
+			this.startSharingVideoFeed();
 
 			vdo_ninja.checked = false;
 			this.#onVdoNinjaChange();

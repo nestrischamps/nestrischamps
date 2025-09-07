@@ -41,13 +41,13 @@ export class Player extends EventTarget {
 			makePlayer: (player_index, _view_meta) => {
 				this.is_player = true;
 				this.view_meta = _view_meta;
-				// startSharingVideoFeed();
+				this.onMakePlayer(player_index, _view_meta);
 			},
 
 			dropPlayer() {
 				this.is_player = false;
 				this.view_meta = null;
-				// stopSharingVideoFeed();
+				this.onDropPlayer();
 			},
 
 			requestRemoteCalibration: async admin_peer_id => {
@@ -123,6 +123,9 @@ export class Player extends EventTarget {
 			this.#ready = true;
 		});
 	}
+
+	onMakePlayer() {}
+	onDropPlayer() {}
 
 	// manual async
 	#getVideoFrameAsWebpBlob() {

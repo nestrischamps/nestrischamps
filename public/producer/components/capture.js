@@ -112,12 +112,11 @@ export class NTC_Producer_Capture extends NtcComponent {
 	async setPlayer(player) {
 		this.#player = player;
 
-		// wire up player (APIs and event capture)
-		player.API.makePlayer = (player_index, view_meta) => {
-			this.#domrefs.room.loadRoomView(view_meta);
-		};
+		this.#domrefs.settings.setPlayer(player);
 
-		player.API.dropPlayer = () => {};
+		player.addEventListener('make_player', ({ detail }) => {
+			this.#domrefs.room.loadRoomView(detail.view_meta);
+		});
 
 		player.addEventListener('remote_config_update', ({ detail: config }) => {
 			this.#domrefs.calibration.handleRemoteConfigUpdate(config);
@@ -133,5 +132,5 @@ export class NTC_Producer_Capture extends NtcComponent {
 		this.#domrefs.room.setReadyHandler(this.#player.sendReady);
 	}
 }
-
+q;
 customElements.define('ntc-capture', NTC_Producer_Capture);
