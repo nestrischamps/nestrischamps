@@ -132,5 +132,5 @@ export class NTC_Producer_Capture extends NtcComponent {
 		this.#domrefs.room.setReadyHandler(this.#player.sendReady);
 	}
 }
-q;
+
 customElements.define('ntc-capture', NTC_Producer_Capture);

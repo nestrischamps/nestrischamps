@@ -38,16 +38,20 @@ export class Player extends EventTarget {
 				this.view_peer_id = _view_peer_id;
 			},
 
-			makePlayer: (player_index, _view_meta) => {
+			makePlayer: (player_index, view_meta) => {
 				this.is_player = true;
-				this.view_meta = _view_meta;
-				this.onMakePlayer(player_index, _view_meta);
+				this.view_meta = view_meta;
+				this.dispatchEvent(
+					new CustomEvent('make_player', {
+						detail: { player_index, view_meta },
+					})
+				);
 			},
 
 			dropPlayer() {
 				this.is_player = false;
 				this.view_meta = null;
-				this.onDropPlayer();
+				this.dispatchEvent(new CustomEvent('drop_player'));
 			},
 
 			requestRemoteCalibration: async admin_peer_id => {
@@ -283,7 +287,7 @@ export class Player extends EventTarget {
 			this.#peer = new Peer(this.#connection.id, peerServerOptions);
 			this.#peer.on('open', err => {
 				console.log(Date.now(), 'peer opened', this.#peer.id);
-				//startSharingVideoFeed();
+				this.dispatchEvent(new CustomEvent('peer_open'));
 			});
 			this.#peer.on('error', err => {
 				console.log(`Peer error: ${err.message}`);
@@ -295,9 +299,21 @@ export class Player extends EventTarget {
 		return this.#connection;
 	}
 
+	getPeer() {
+		return this.#peer;
+	}
+
+	getViewPeerId() {
+		return this.view_peer_id;
+	}
+
 	resetNotice = () => {};
 
 	sendReady = (ready = false) => {
 		this.#connection?.send(['setReady', !!ready]);
+	};
+
+	sendVdoNinjaUrl = url => {
+		this.#connection?.send(['setVdoNinjaURL', url]);
 	};
 }

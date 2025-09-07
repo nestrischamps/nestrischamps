@@ -86,6 +86,7 @@ cssOverride.replaceSync(`
 export class NTC_Producer_Settings extends NtcComponent {
 	#domrefs;
 	#player;
+	#ongoing_call;
 
 	constructor() {
 		super();
@@ -121,7 +122,7 @@ export class NTC_Producer_Settings extends NtcComponent {
 		this.#domrefs.clear_config.addEventListener('click', clearConfigAndReset);
 		this.#domrefs.video_feed_selector.addEventListener(
 			'change',
-			this.startSharingVideoFeed
+			this.#onVideoFeedSelectorChange
 		);
 		this.#domrefs.allow_video_feed.addEventListener(
 			'change',
@@ -136,8 +137,12 @@ export class NTC_Producer_Settings extends NtcComponent {
 		this.resetDevices();
 	}
 
-	setPlayer(player) {
+	async setPlayer(player) {
 		this.#player = player;
+
+		const { allow_video_feed } = this.#domrefs;
+
+		allow_video_feed.checked = player.config.allow_video_feed;
 
 		player.addEventListener('make_player', ({ detail }) => {
 			this.is_player = true;
@@ -149,10 +154,19 @@ export class NTC_Producer_Settings extends NtcComponent {
 			this.is_player = false;
 			this.stopSharingVideoFeed();
 		});
+
+		player.addEventListener('peer_open', () => {
+			this.startSharingVideoFeed();
+		});
+
+		await this.resetDevices();
+
+		this.startSharingVideoFeed();
 	}
 
 	async resetDevices() {
 		const { video_feed_selector } = this.#domrefs;
+
 		const devicesList = await getConnectedDevices('videoinput');
 
 		const mappedDevices = devicesList.map(camera => {
@@ -173,6 +187,10 @@ export class NTC_Producer_Settings extends NtcComponent {
 				camera_option.text = camera.label;
 				camera_option.value = camera.deviceId;
 
+				if (this.#player?.config?.video_feed_device_id === camera.deviceId) {
+					camera_option.selected = true;
+				}
+
 				return camera_option;
 			})
 		);
@@ -187,7 +205,21 @@ export class NTC_Producer_Settings extends NtcComponent {
 	};
 
 	startSharingVideoFeed = async () => {
-		const { video_feed, video_feed_selector } = this.#domrefs;
+		const { allow_video_feed, video_feed, video_feed_selector } = this.#domrefs;
+
+		this.stopSharingVideoFeed();
+
+		if (!allow_video_feed.checked) return;
+		if (!video_feed_selector.value) return;
+		if (
+			!this.#player ||
+			!this.is_player ||
+			!this.#player.getPeer() ||
+			!this.#player.getViewPeerId() ||
+			!this.view_meta ||
+			!this.view_meta._video
+		)
+			return;
 
 		const video_constraints = {
 			width: { ideal: 320 },
@@ -195,7 +227,6 @@ export class NTC_Producer_Settings extends NtcComponent {
 			frameRate: { ideal: 15 }, // players hardly move... no need high fps?
 		};
 
-		// TODO: get from connection somehow?
 		const m = (this.view_meta?._video || '').match(/^(\d+)x(\d+)$/);
 
 		if (m) {
@@ -218,10 +249,33 @@ export class NTC_Producer_Settings extends NtcComponent {
 
 		video_feed.srcObject = stream;
 		video_feed.play();
+
+		this.#ongoing_call = this.#player
+			.getPeer()
+			.call(this.#player.getViewPeerId(), stream);
+	};
+
+	restartSharingVideoFeed = () => {
+		if (!this.#ongoing_call) return;
+		this.startSharingVideoFeed();
+	};
+
+	stopSharingVideoFeed = () => {
+		this.#domrefs.video_feed.pause();
+		this.#domrefs.video_feed.srcObject = null;
+
+		try {
+			this.#ongoing_call.close();
+		} catch (err) {}
+
+		this.#ongoing_call = null;
 	};
 
 	#onAllowVideoFeedChange = () => {
 		const { allow_video_feed, video_feed, vdo_ninja } = this.#domrefs;
+
+		this.#player.config.allow_video_feed = !!allow_video_feed.checked;
+		this.#player.config.save();
 
 		if (allow_video_feed.checked) {
 			this.startSharingVideoFeed();
@@ -233,6 +287,14 @@ export class NTC_Producer_Settings extends NtcComponent {
 			video_feed.srcObject?.getTracks().forEach(track => track.stop());
 			video_feed.srcObject = null;
 		}
+	};
+
+	#onVideoFeedSelectorChange = () => {
+		this.#player.config.video_feed_device_id =
+			this.#domrefs.video_feed_selector.value;
+		this.#player.config.save();
+
+		this.startSharingVideoFeed();
 	};
 
 	#onVdoNinjaChange = () => {
@@ -265,7 +327,8 @@ export class NTC_Producer_Settings extends NtcComponent {
 			viewURL.searchParams.set('cover', 1);
 			viewURL.searchParams.set('transparent', 0);
 
-			// connection.send(['setVdoNinjaURL', viewURL]);
+			this.#player.sendVdoNinjaUrl(viewURL.toString());
+
 			const a = document.createElement('a');
 			a.href = a.textContent = viewURL.toString();
 
