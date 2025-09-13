@@ -14,11 +14,12 @@ struct Globals {
   inputSize: vec2<f32>,
   brightness: f32,
   contrast: f32,
+  _pad0      : vec2<f32>;  // padding to make 32B total, 16B chunked
 };
 
 @group(0) @binding(0) var<uniform> globals: Globals;
 @group(0) @binding(1) var inputSampler: sampler;
-@group(0) @binding(2) var inputTexture: texture_2d<f32>;
+@group(0) @binding(2) var inputTexture: texture_external;
 
 @group(1) @binding(0) var<uniform> region: Region;
 

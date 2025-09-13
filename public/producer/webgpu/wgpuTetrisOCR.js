@@ -3,6 +3,32 @@ import { PATTERN_MAX_INDEXES, GYM_PAUSE_LUMA_THRESHOLD } from '../constants.js';
 import { findMinIndex, u32ToRgba } from '/ocr/utils.js';
 import { OcrCompute } from './ocrCompute.js';
 
+async function checkTextureExternalSupport(device) {
+	// 1) Fast path, reliable on Chrome/Edge
+	if (device.features?.has?.('chromium-experimental-external-texture')) {
+		return true;
+	}
+
+	// 2) Probe under a validation error scope
+	device.pushErrorScope('validation');
+	try {
+		device.createBindGroupLayout({
+			entries: [
+				{
+					binding: 0,
+					visibility: GPUShaderStage.FRAGMENT,
+					externalTexture: {},
+				},
+			],
+		});
+		const err = await device.popErrorScope();
+		return err === null;
+	} catch {
+		await device.popErrorScope();
+		return false;
+	}
+}
+
 async function getGPU() {
 	const adapter = await navigator.gpu.requestAdapter({
 		powerPreference: 'high-performance',
@@ -10,15 +36,24 @@ async function getGPU() {
 	const device = await adapter.requestDevice();
 	const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
 
+	const suportsTextureExternal = await checkTextureExternalSupport(device);
+
 	const [vertex, fragment, compute] = await Promise.all([
 		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/vertex.wgsl'),
-		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/fragment.wgsl'),
+		GpuTetrisOCR.loadShaderSource(
+			`/producer/webgpu/shaders/${
+				suportsTextureExternal ? 'fragment_tex_ext.wgsl' : 'fragment.wgsl'
+			}`
+		),
 		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/compute.wgsl'),
 	]);
+
+	console.log({ suportsTextureExternal });
 
 	return {
 		adapter,
 		device,
+		suportsTextureExternal,
 		canvasFormat,
 
 		shaders: {
@@ -49,10 +84,14 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 	#gpu = null;
 	#ready = false;
 
+	#sampler;
 	#renderBindGroupLayoutGlobals;
 	#renderBindGroupLayoutRegion;
 	#globalsBuffer;
 	#globalsBindGroup;
+
+	#fallbackVideoTex = null;
+	#fallbackVideoTexView = null;
 
 	constructor(config) {
 		super(config);
@@ -98,6 +137,13 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		});
 		this.atlas_txt_view = this.atlas_txt.createView();
 
+		this.#sampler = device.createSampler({
+			magFilter: 'linear',
+			minFilter: 'linear',
+			addressModeU: 'clamp-to-edge',
+			addressModeV: 'clamp-to-edge',
+		});
+
 		// Layout for Globals (Group 0) - used in both vertex and fragment shaders
 		// It has a uniform buffer at binding 0, a sampler at binding 1, and a texture at binding 2.
 		// This layout matches the `@group(0)` definitions in fragment.wgsl.
@@ -108,16 +154,19 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 					visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
 					buffer: { type: 'uniform' },
 				},
-				{
-					binding: 1,
-					visibility: GPUShaderStage.FRAGMENT,
-					sampler: {},
-				},
-				{
-					binding: 2,
-					visibility: GPUShaderStage.FRAGMENT,
-					externalTexture: {},
-				},
+				{ binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
+
+				this.#gpu.suportsTextureExternal
+					? {
+							binding: 2,
+							visibility: GPUShaderStage.FRAGMENT,
+							externalTexture: {},
+						}
+					: {
+							binding: 2,
+							visibility: GPUShaderStage.FRAGMENT,
+							texture: { sampleType: 'float' },
+						},
 			],
 		});
 
@@ -329,13 +378,34 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		this.#initGpuComputeAssets(frame);
 	}
 
-	renderExtractedRegions({ videoFrame, video }) {
+	// TODO: move this to initGpuRenderAssets()
+	#ensureFallbackVideoTexture(video) {
 		const { device } = this.#gpu;
+		const w = video.videoWidth || 1;
+		const h = video.videoHeight || 1;
 
-		// assign to instance to ensure it is not garbage collected
-		this.inputTexture = this.#gpu.device.importExternalTexture({
-			source: videoFrame || video,
+		if (
+			this.#fallbackVideoTex &&
+			this.#fallbackVideoTex.width === w &&
+			this.#fallbackVideoTex.height === h
+		)
+			return;
+
+		// destroy old
+		this.#fallbackVideoTex?.destroy();
+
+		this.#fallbackVideoTex = device.createTexture({
+			size: { width: w, height: h },
+			format: 'rgba8unorm',
+			usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
 		});
+		this.#fallbackVideoTex.width = w; // stash for quick compare
+		this.#fallbackVideoTex.height = h;
+		this.#fallbackVideoTexView = this.#fallbackVideoTex.createView();
+	}
+
+	renderExtractedRegions({ videoFrame, video }) {
+		const { device, suportsTextureExternal } = this.#gpu;
 
 		// Update the globals buffer with current sizes
 		const globalsData = new Float32Array([
@@ -346,13 +416,25 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 			this.config.brightness, // color corrections
 			this.config.contrast,
 		]);
-		// console.log([
-		// 	this.config.brightness,
-		// 	typeof this.config.brightness,
-		// 	this.config.contrast,
-		// 	typeof this.config.contrast,
-		// ]); // outpus [1, 1] as expected
 		device.queue.writeBuffer(this.#globalsBuffer, 0, globalsData);
+
+		if (suportsTextureExternal) {
+			// Chrome path
+			this.inputTexture = device.importExternalTexture({
+				source: videoFrame || video,
+			});
+		} else {
+			// Firefox path: copy into rgba8unorm 2D texture
+			this.#ensureFallbackVideoTexture(video);
+			device.queue.copyExternalImageToTexture(
+				{ source: videoFrame || video },
+				{ texture: this.#fallbackVideoTex },
+				{
+					width: this.#fallbackVideoTex.width,
+					height: this.#fallbackVideoTex.height,
+				}
+			);
+		}
 
 		// Create the main bind group for the global uniforms and texture.
 		// This now correctly bundles globals, inputSampler, and inputTexture
@@ -368,16 +450,13 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 				},
 				{
 					binding: 1,
-					resource: device.createSampler({
-						magFilter: 'linear',
-						minFilter: 'linear',
-						addressModeU: 'clamp-to-edge',
-						addressModeV: 'clamp-to-edge',
-					}),
+					resource: this.#sampler,
 				},
 				{
 					binding: 2,
-					resource: this.inputTexture,
+					resource: suportsTextureExternal
+						? this.inputTexture
+						: this.#fallbackVideoTexView,
 				},
 			],
 		});
