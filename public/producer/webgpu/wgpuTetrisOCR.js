@@ -3,6 +3,9 @@ import { PATTERN_MAX_INDEXES, GYM_PAUSE_LUMA_THRESHOLD } from '../constants.js';
 import { findMinIndex, u32ToRgba } from '/ocr/utils.js';
 import { OcrCompute } from './ocrCompute.js';
 
+const GLOBALS_UBO_SIZE = 32; // size in bytes of the globals uniform buffer object
+const REGION_UBO_SIZE = 48; // size in bytes of each region uniform buffer object
+
 async function checkTextureExternalSupport(device) {
 	// 1) Fast path, reliable on Chrome/Edge
 	if (device.features?.has?.('chromium-experimental-external-texture')) {
@@ -36,24 +39,24 @@ async function getGPU() {
 	const device = await adapter.requestDevice();
 	const canvasFormat = navigator.gpu.getPreferredCanvasFormat();
 
-	const suportsTextureExternal = await checkTextureExternalSupport(device);
+	const supportsTextureExternal = await checkTextureExternalSupport(device);
 
 	const [vertex, fragment, compute] = await Promise.all([
 		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/vertex.wgsl'),
 		GpuTetrisOCR.loadShaderSource(
 			`/producer/webgpu/shaders/${
-				suportsTextureExternal ? 'fragment_tex_ext.wgsl' : 'fragment.wgsl'
+				supportsTextureExternal ? 'fragment_tex_ext.wgsl' : 'fragment.wgsl'
 			}`
 		),
 		GpuTetrisOCR.loadShaderSource('/producer/webgpu/shaders/compute.wgsl'),
 	]);
 
-	console.log({ suportsTextureExternal });
+	console.log({ supportsTextureExternal });
 
 	return {
 		adapter,
 		device,
-		suportsTextureExternal,
+		supportsTextureExternal,
 		canvasFormat,
 
 		shaders: {
@@ -92,6 +95,8 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 
 	#fallbackVideoTex = null;
 	#fallbackVideoTexView = null;
+	#uploadCanvas = null;
+	#uploadCtx = null;
 
 	constructor(config) {
 		super(config);
@@ -116,7 +121,8 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 	}
 
 	#initGpuRenderAssets() {
-		const { device, canvasFormat, shaders } = this.#gpu;
+		const { device, canvasFormat, supportsTextureExternal, shaders } =
+			this.#gpu;
 
 		this.output_ctx = this.output_canvas.getContext('webgpu');
 		this.output_ctx.configure({
@@ -138,6 +144,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		this.atlas_txt_view = this.atlas_txt.createView();
 
 		this.#sampler = device.createSampler({
+			label: 'inputSampler',
 			magFilter: 'linear',
 			minFilter: 'linear',
 			addressModeU: 'clamp-to-edge',
@@ -156,7 +163,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 				},
 				{ binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: {} },
 
-				this.#gpu.suportsTextureExternal
+				supportsTextureExternal
 					? {
 							binding: 2,
 							visibility: GPUShaderStage.FRAGMENT,
@@ -209,7 +216,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		// It holds the outputSize and inputSize, which are used by the shaders.
 		// The size is 2x vec2<f32> = 4x f32 = 16 bytes, but let's use 32 for padding
 		this.#globalsBuffer = device.createBuffer({
-			size: 32,
+			size: GLOBALS_UBO_SIZE,
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 		});
 
@@ -217,13 +224,22 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 			task.canvas_ctx = task.canvas.getContext('2d', { alpha: false });
 
 			task.regionBuffer = device.createBuffer({
-				size: 48, // 9xf32 + padding
+				size: REGION_UBO_SIZE, // 9xf32 + padding
 				usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 			});
 
 			task.regionBindGroup = device.createBindGroup({
 				layout: this.#renderBindGroupLayoutRegion,
-				entries: [{ binding: 0, resource: { buffer: task.regionBuffer } }],
+				entries: [
+					{
+						binding: 0,
+						resource: {
+							buffer: task.regionBuffer,
+							offset: 0,
+							size: REGION_UBO_SIZE,
+						},
+					},
+				],
 			});
 
 			this.#updateTaskRegionBuffer(task);
@@ -399,13 +415,26 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 			format: 'rgba8unorm',
 			usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
 		});
-		this.#fallbackVideoTex.width = w; // stash for quick compare
-		this.#fallbackVideoTex.height = h;
 		this.#fallbackVideoTexView = this.#fallbackVideoTex.createView();
 	}
 
+	#ensureUploadCanvas(video) {
+		const w = video.videoWidth || 1;
+		const h = video.videoHeight || 1;
+
+		if (!this.#uploadCanvas) {
+			// Use OffscreenCanvas if you want. A normal canvas works too.
+			this.#uploadCanvas = document.createElement('canvas');
+			this.#uploadCtx = this.#uploadCanvas.getContext('2d', { alpha: false });
+		}
+		if (this.#uploadCanvas.width !== w || this.#uploadCanvas.height !== h) {
+			this.#uploadCanvas.width = w;
+			this.#uploadCanvas.height = h;
+		}
+	}
+
 	renderExtractedRegions({ videoFrame, video }) {
-		const { device, suportsTextureExternal } = this.#gpu;
+		const { device, supportsTextureExternal } = this.#gpu;
 
 		// Update the globals buffer with current sizes
 		const globalsData = new Float32Array([
@@ -418,7 +447,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		]);
 		device.queue.writeBuffer(this.#globalsBuffer, 0, globalsData);
 
-		if (suportsTextureExternal) {
+		if (supportsTextureExternal) {
 			// Chrome path
 			this.inputTexture = device.importExternalTexture({
 				source: videoFrame || video,
@@ -426,8 +455,19 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 		} else {
 			// Firefox path: copy into rgba8unorm 2D texture
 			this.#ensureFallbackVideoTexture(video);
+			this.#ensureUploadCanvas(video);
+
+			// Paint current frame into the upload canvas
+			this.#uploadCtx.drawImage(
+				video,
+				0,
+				0,
+				this.#uploadCanvas.width,
+				this.#uploadCanvas.height
+			);
+
 			device.queue.copyExternalImageToTexture(
-				{ source: videoFrame || video },
+				{ source: this.#uploadCanvas },
 				{ texture: this.#fallbackVideoTex },
 				{
 					width: this.#fallbackVideoTex.width,
@@ -446,6 +486,8 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 					binding: 0,
 					resource: {
 						buffer: this.#globalsBuffer,
+						offset: 0,
+						size: GLOBALS_UBO_SIZE,
 					},
 				},
 				{
@@ -454,7 +496,7 @@ export class WGpuTetrisOCR extends GpuTetrisOCR {
 				},
 				{
 					binding: 2,
-					resource: suportsTextureExternal
+					resource: supportsTextureExternal
 						? this.inputTexture
 						: this.#fallbackVideoTexView,
 				},
