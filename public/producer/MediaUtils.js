@@ -117,7 +117,7 @@ export async function playVideoFromDevice(video, options = {}) {
 		const initConstraints = {
 			audio: false,
 			video: {
-				frameRate: { ideal: 60 },
+				frameRate: { ideal: mode === 'multiviewer' ? 30 : 60 },
 				height: { ideal: mode === 'multiviewer' ? 1080 : 720 },
 			},
 		};
@@ -152,7 +152,7 @@ export async function playVideoFromDevice(video, options = {}) {
 								{ height: 1080 }, // try for size - any fps
 							]
 						: [
-								{ height: 1080, frameRate: 60 },
+								// { height: 1080, frameRate: 60 }, // works on OSX, freezes on windows ??
 								{ height: 1080, frameRate: 30 },
 								{ height: 720, frameRate: 60 },
 								{ height: 720, frameRate: 30 },
