@@ -590,6 +590,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		config.cap_frame_rate = settings.frameRate;
 
 		if (config.device_id != 'window') {
+			config.cap_width = settings.width;
 			config.cap_height = settings.height;
 		}
 
@@ -668,6 +669,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		const settings = getStreamSettings(video.srcObject);
 
 		config.cap_frame_rate = settings.frameRate;
+		config.cap_width = settings.width;
 		config.cap_height = settings.height;
 
 		if (this.#mode === 'single') {

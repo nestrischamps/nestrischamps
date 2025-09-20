@@ -458,9 +458,11 @@ export class NTC_Producer_Calibration extends NtcComponent {
 				const updatedSettings = videoTrack.getSettings();
 				console.log('New frame rate:', updatedSettings.frameRate);
 
-				this.ocr.config.frame_rate = updatedSettings.frameRate || frame_rate;
+				this.ocr.config.cap_frame_rate =
+					updatedSettings.frameRate || frame_rate;
 				this.ocr.config.save();
 			} catch (error) {
+				// TODO: show error to user
 				console.error('Failed to update constraints:', error);
 			}
 		}

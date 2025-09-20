@@ -52,7 +52,7 @@ export async function getStream(config) {
 		throw new Exception(`getSream(): Unexpected device id`);
 	}
 
-	const ideal_frame_rate = config.frame_rate || 60;
+	const ideal_frame_rate = config.cap_frame_rate || 60;
 
 	let stream;
 
@@ -69,16 +69,16 @@ export async function getStream(config) {
 			stream = await navigator.mediaDevices.getDisplayMedia(constraints);
 			stream.ntcType = 'screencap';
 		} else {
+			// for consistency sake, the config is assumed to have the details of capture height and framerate
 			const constraints = {
 				audio: false,
 				video: {
 					deviceId: { exact: config.device_id },
+					width: {
+						ideal: config.cap_width,
+					},
 					height: {
-						ideal:
-							config.capheight ||
-							(config.mode === 'multiviewer'
-								? 1080
-								: DEFAULT_1P_CAPTURE_HEIGHT),
+						ideal: config.cap_height,
 					},
 					frameRate: { ideal: ideal_frame_rate }, // Should we always try to get the highest the card can support?
 				},
@@ -151,9 +151,9 @@ export async function playVideoFromDevice(video, options = {}) {
 					CAP_TYPE === 'pal'
 						? [
 								{ height: 1080, frameRate: 50 },
-								{ height: 1080, frameRate: 25 },
+								{ width: 1920, height: 1080, frameRate: 25 },
 								{ height: 720, frameRate: 50 },
-								{ height: 720, frameRate: 25 },
+								{ width: 1280, height: 720, frameRate: 25 },
 								{ height: 1080 }, // try for size - any fps
 							]
 						: [
@@ -172,6 +172,7 @@ export async function playVideoFromDevice(video, options = {}) {
 					CAP_TYPE === 'pal'
 						? [
 								{ height: 720, frameRate: 50 },
+								{ width: 1280, height: 720, frameRate: 25 },
 								{ height: 720, frameRate: 25 },
 								{ height: 480, frameRate: 50 },
 								{ height: 480, frameRate: 25 },
@@ -180,6 +181,7 @@ export async function playVideoFromDevice(video, options = {}) {
 							]
 						: [
 								{ height: 720, frameRate: 60 },
+								{ width: 1280, height: 720, frameRate: 30 },
 								{ height: 720, frameRate: 30 },
 								{ height: 480, frameRate: 60 },
 								{ height: 480, frameRate: 30 },
