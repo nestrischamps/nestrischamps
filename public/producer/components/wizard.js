@@ -1,8 +1,6 @@
 import BinaryFrame from '/js/BinaryFrame.js';
 import { html } from '../StringUtils.js';
 import {
-	DEFAULT_1P_CAPTURE_HEIGHT,
-	DEFAULT_1P_CAPTURE_FPS,
 	getConnectedDevices,
 	playVideoFromDevice,
 	playVideoFromScreenCap,
@@ -310,9 +308,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				video.ntcType = 'device';
 				playVideoFromDevice(video, {
 					device_id,
-					fps: this.#mode === 'multiviewer' ? 30 : DEFAULT_1P_CAPTURE_FPS, // could multiviewer han dle 60fps?
-					height:
-						this.#mode === 'multiviewer' ? 1080 : DEFAULT_1P_CAPTURE_HEIGHT,
+					mode: this.#mode,
 				});
 			}
 		}
