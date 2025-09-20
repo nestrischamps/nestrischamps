@@ -3,11 +3,6 @@ import QueryString from '/js/QueryString.js';
 export const CAP_TYPE = (value =>
 	/^(pal|ntsc)$/.test(value) ? value : 'ntsc')(QueryString.get('captype'));
 
-export const DEFAULT_1P_CAPTURE_HEIGHT = (value =>
-	/^[1-9]\d+$/.test(value) ? parseInt(value, 10) : 720)(
-	QueryString.get('capheight')
-);
-
 export async function getConnectedDevices(type) {
 	let stream;
 
