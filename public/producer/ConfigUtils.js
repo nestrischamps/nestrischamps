@@ -147,7 +147,8 @@ export function getSerializableConfigCopy(config) {
 		device_id,
 		game_type,
 		palette,
-		frame_rate,
+		cap_frame_rate,
+		cap_height,
 		allow_video_feed,
 		video_feed_device_id,
 		brightness,
@@ -155,7 +156,6 @@ export function getSerializableConfigCopy(config) {
 		score7,
 		use_worker_for_interval,
 		handle_retron_levels_6_7,
-		capheight,
 	} = config;
 
 	// need to drop non-serializable fields
@@ -163,7 +163,8 @@ export function getSerializableConfigCopy(config) {
 		device_id,
 		game_type,
 		palette,
-		frame_rate,
+		cap_frame_rate,
+		cap_height,
 		allow_video_feed,
 		video_feed_device_id,
 		brightness,
@@ -171,7 +172,6 @@ export function getSerializableConfigCopy(config) {
 		score7,
 		use_worker_for_interval,
 		handle_retron_levels_6_7,
-		capheight,
 		tasks: {},
 	};
 
@@ -213,7 +213,6 @@ export function getDefaultOcrConfig() {
 	return {
 		game_type: 1,
 		palette: '',
-		frame_rate: 60,
 		allow_video_feed: false,
 		video_feed_device_id: null,
 		brightness: 1,

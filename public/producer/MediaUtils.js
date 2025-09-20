@@ -33,6 +33,11 @@ export async function getConnectedDevices(type) {
 	return devices;
 }
 
+export function getStreamSettings(stream) {
+	const track = stream.getVideoTracks()[0];
+	return track.getSettings();
+}
+
 export function logStreamDetails(stream) {
 	const track = stream.getVideoTracks()[0];
 	const settings = track.getSettings();
