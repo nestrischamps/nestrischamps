@@ -83,11 +83,9 @@ router.get(
 	middlewares.checkToken,
 	(req, res) => {
 		console.log('/room/producer');
-		const tplPath = /producer1/.test(req.path)
-			? '/ocr/ocr.html'
-			: /producer/.test(req.path)
-				? '/producer/index.html'
-				: '/emu/index.html';
+		const tplPath = /producer/.test(req.path)
+			? '/producer/index.html'
+			: '/emu/index.html';
 
 		res.sendFile(path.join(path.resolve(), `public${tplPath}`));
 	}
@@ -111,11 +109,9 @@ router.get(
 			return;
 		}
 
-		const tplPath = /producer1/.test(req.path)
-			? '/ocr/ocr.html'
-			: /producer/.test(req.path)
-				? '/producer/index.html'
-				: '/emu/index.html';
+		const tplPath = /producer/.test(req.path)
+			? '/producer/index.html'
+			: '/emu/index.html';
 
 		console.log([req.path, tplPath]);
 
@@ -135,11 +131,9 @@ router.get(
 			return;
 		}
 
-		const tplPath = /producer1/.test(req.path)
-			? '/ocr/ocr.html'
-			: /producer/.test(req.path)
-				? '/producer/index.html'
-				: '/emu/index.html';
+		const tplPath = /producer/.test(req.path)
+			? '/producer/index.html'
+			: '/emu/index.html';
 
 		res.sendFile(path.join(path.resolve(), `public${tplPath}`));
 	}
