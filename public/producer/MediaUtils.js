@@ -127,7 +127,7 @@ export async function playVideoFromDevice(video, options = {}) {
 		}
 
 		console.log(
-			`Init Constraints: ${JSON.stringify(initConstraints, null, 2)}`
+			`Initial Constraints: ${JSON.stringify(initConstraints, null, 2)}`
 		);
 
 		const stream = await navigator.mediaDevices.getUserMedia(initConstraints);
