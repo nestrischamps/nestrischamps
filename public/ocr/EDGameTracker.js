@@ -214,12 +214,15 @@ export default class EDGameTracker {
 			...field // includes the tail
 		] = frameBuffer;
 
+		const unsignedAutoRepeatY = field[200];
+		const autoRepeatY = (unsignedAutoRepeatY << 24) >> 24;
+
 		field.length = 200; // drops the tail
 
 		const gameModeState = gameModeStatePlayState >> 4;
-		const playState = gameModeStatePlayState & 0xF;
+		const playState = gameModeStatePlayState & 0xf;
 		const gameStart = gameStartGameMode >> 4;
-		const gameMode = gameStartGameMode & 0xF;
+		const gameMode = gameStartGameMode & 0xf;
 
 		const frameCounter = (frameCounter1 << 8) | frameCounter0;
 		const lines = this._bcdToDecimal(lines0, lines1);
@@ -283,7 +286,13 @@ export default class EDGameTracker {
 			(!this.previousFrameFieldData ||
 				this.previousFrameFieldData.gameMode != 4)
 		) {
-			if (T + J + Z + O + S + L + I !== 1) {
+			const statsSum = T + J + Z + O + S + L + I;
+			const curPiece = PIECE_ORIENTATION_TO_PIECE[tetriminoOrientation];
+
+			console.log({ statsSum, playState, curPiece, autoRepeatY });
+			console.log(`Ready? (statsSum === 1)`, statsSum === 1);
+
+			if (statsSum !== 1) {
 				// new game detected BUT previous game data still in system, ignore frame
 				// we adjust some local state just a little to record things properly
 				if (this.previousFrameFieldData) {

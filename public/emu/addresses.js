@@ -19,6 +19,7 @@ const gym6_data_maps = {
 	autoRepeatX: [0x46, 1], // autorepeatX
 	stats: [0x3f0, 7 * 2], // statsByType
 	field: [0x400, 200], // playfield
+	autoRepeatY: [0x4e, 1], // playfield
 };
 
 export const address_maps = {
