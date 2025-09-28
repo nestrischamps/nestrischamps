@@ -68,7 +68,9 @@ const _importUsers = async (
 ) => {
 	const records_csv_content = await got(csvURL).text();
 
-	let start = performance.now();
+	const init = performance.now();
+
+	let start = init;
 
 	const hash = crypto
 		.createHash('sha1')
@@ -76,7 +78,7 @@ const _importUsers = async (
 		.digest('hex');
 
 	console.log(
-		`Response hash computed in ${(performance.now() - start).toFixed(4)}ms`
+		`Response hash computed in ${(performance.now() - start).toFixed(4)}ms: ${hash}`
 	);
 
 	if (lastHash === hash) {
@@ -123,6 +125,7 @@ const _importUsers = async (
 	const NUMERIC_FIELDS = ['seed', 'pb18', 'pb19', 'pb29', 'num_maxouts', 'age'];
 
 	// 1. we extract all records from the sheet and convert that in NTC-compatible player data
+	start = performance.now();
 	const players = records.slice(1).map((record, index) => {
 		// slide(1) to skip header row
 		const id = START_ID + index;
@@ -154,6 +157,9 @@ const _importUsers = async (
 
 		return { id, csv, errors: player_errors };
 	});
+	console.log(
+		`Parsed ${players.length} players in ${(performance.now() - start).toFixed(4)}ms`
+	);
 
 	await sleep(1);
 
@@ -329,7 +335,11 @@ const _importUsers = async (
 	}
 
 	console.log(
-		`DONE - Inserted ${players.length} players in ${(performance.now() - start).toFixed(4)}ms`
+		`${players.length} DB update in ${(performance.now() - start).toFixed(4)}ms`
+	);
+
+	console.log(
+		`DONE - Inserted ${players.length} players in ${(performance.now() - init).toFixed(4)}ms`
 	);
 
 	return { players };
