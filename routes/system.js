@@ -1,7 +1,5 @@
 import express from 'express';
-import nocache from 'nocache';
-
-import middlewares from '../modules/middlewares.js';
+import ScoreDAO from '../daos/ScoreDAO.js';
 import { importUsers } from '../modules/LocalUsers.js';
 
 const router = express.Router();

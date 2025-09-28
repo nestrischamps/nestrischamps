@@ -384,9 +384,13 @@ export const importUsers = async options => {
 };
 
 if (
+	process.env.IS_PUBLIC_SERVER !== '1' &&
 	process.env.IN_SCRIPT !== '1' &&
 	/^[1-9]\d*$/.test(process.env.LOCAL_USERS_REFRESH)
 ) {
 	console.log(`starting local users import refresh background process...`);
 	setInterval(importUsers, parseInt(process.env.LOCAL_USERS_REFRESH) * 1000);
+
+	// fetch on startup
+	importUsers({ clearOldUsers: true }); // start up loading data
 }
