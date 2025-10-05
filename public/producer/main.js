@@ -58,7 +58,7 @@ async function initFromConfig(tabToOpen, stream = null) {
 
 	if (config.device_id === 'everdrive') {
 		initEverDriveCapture(config, 'ocr_results');
-	} else if (config.mode === 'multiviewer') {
+	} else if (config.mode.startsWith('multiviewer')) {
 		initMultiViewerCapture(config);
 	} else {
 		initOCRCapture(config, tabToOpen, stream);

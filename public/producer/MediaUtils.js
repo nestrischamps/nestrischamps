@@ -117,8 +117,8 @@ export async function playVideoFromDevice(video, options = {}) {
 		const initConstraints = {
 			audio: false,
 			video: {
-				frameRate: { ideal: mode === 'multiviewer' ? 30 : 60 },
-				height: { ideal: mode === 'multiviewer' ? 1080 : 720 },
+				frameRate: { ideal: mode.startsWith('multiviewer') ? 30 : 60 },
+				height: { ideal: mode.startsWith('multiviewer') ? 1080 : 720 },
 			},
 		};
 
@@ -138,7 +138,7 @@ export async function playVideoFromDevice(video, options = {}) {
 		// now that we have the stream, we apply additional constraint to find the best operation match
 		let videoConstraints;
 
-		if (mode === 'multiviewer') {
+		if (mode.startsWith('multiviewer')) {
 			videoConstraints = {
 				height: { min: 720, ideal: 1080 },
 				frameRate: { ideal: 30 },
@@ -153,10 +153,14 @@ export async function playVideoFromDevice(video, options = {}) {
 							]
 						: [
 								// { height: 1080, frameRate: 60 }, // works on OSX, freezes on windows ??
+								{ width: 2880, height: 972, frameRate: 30 },
+								{ width: 1920, height: 960, frameRate: 30 },
 								{ height: 1080, frameRate: 30 },
+								{ height: 960, frameRate: 30 },
 								{ height: 720, frameRate: 60 },
 								{ height: 720, frameRate: 30 },
 								{ height: 1080 }, // try for size - any fps
+								{ height: 960 }, // try for size - any fps
 							],
 			};
 		} else {

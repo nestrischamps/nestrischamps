@@ -38,7 +38,19 @@ const MARKUP = html`
 				</button>
 			</div>
 			<div class="block">
-				<button id="multiviewer" class="button is-light">4x Multiviewer</button>
+				<button id="multiviewer2x2" class="button is-light">
+					2x2 Multiviewer
+				</button>
+			</div>
+			<div class="block">
+				<button id="multiviewer3x2" class="button is-light">
+					3x2 Multiviewer
+				</button>
+			</div>
+			<div class="block">
+				<button id="multiviewer4x2" class="button is-light">
+					4x2 Multiviewer
+				</button>
 			</div>
 		</fieldset>
 		<fieldset id="step2" class="is-hidden">
@@ -142,7 +154,7 @@ const MARKUP = html`
 				<h1 class="title is-4">Please read these next-steps instructions!</h1>
 				<ol start="1">
 					<li class="mode multiviewer">
-						This multiviewer wizard assumes all 4 captures are
+						This multiviewer wizard assumes all captures are
 						<strong>equivalent</strong>.
 					</li>
 					<li>
@@ -204,7 +216,9 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			step1: this.shadow.getElementById('step1'),
 			step2: this.shadow.getElementById('step2'),
 			single: this.shadow.getElementById('single'),
-			multiviewer: this.shadow.getElementById('multiviewer'),
+			multiviewer2x2: this.shadow.getElementById('multiviewer2x2'),
+			multiviewer3x2: this.shadow.getElementById('multiviewer3x2'),
+			multiviewer4x2: this.shadow.getElementById('multiviewer4x2'),
 			device_selector: this.shadow.getElementById('device'),
 			palette_selector: this.shadow.getElementById('palette'),
 			rom_selector: this.shadow.getElementById('rom'),
@@ -223,8 +237,18 @@ export class NTC_Producer_Wizard extends NtcComponent {
 			this.#showStep2();
 		});
 
-		this.#domrefs.multiviewer.addEventListener('click', () => {
-			this.#mode = 'multiviewer';
+		this.#domrefs.multiviewer2x2.addEventListener('click', () => {
+			this.#mode = 'multiviewer2x2';
+			this.#showStep2();
+		});
+
+		this.#domrefs.multiviewer3x2.addEventListener('click', () => {
+			this.#mode = 'multiviewer3x2';
+			this.#showStep2();
+		});
+
+		this.#domrefs.multiviewer4x2.addEventListener('click', () => {
+			this.#mode = 'multiviewer4x2';
 			this.#showStep2();
 		});
 
@@ -253,7 +277,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		step2.classList.remove('is-hidden');
 
 		step2.querySelector('legend').textContent = `Wizard - ${
-			this.#mode === 'single' ? 'Single Player' : '4xMultiviewer'
+			this.#mode === 'single' ? 'Single Player' : 'Multiviewer'
 		}`;
 
 		[...step2.querySelectorAll(`.mode.${this.#mode}`)].forEach(elmt =>
@@ -386,9 +410,13 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		const ratioX = event.offsetX / css_size(video_styles.width);
 		const ratioY = event.offsetY / css_size(video_styles.height);
 
-		if (this.#mode === 'multiviewer') {
-			// click is only valid in top-left corner
-			if (ratioX > 0.5 || ratioY > 0.5) return;
+		// click is only valid in top-left corner
+		if (this.#mode === 'multiviewer2x2') {
+			if (ratioX > 1 / 2 || ratioY > 0.5) return;
+		} else if (this.#mode === 'multiviewer3x2') {
+			if (ratioX > 1 / 3 || ratioY > 0.5) return;
+		} else if (this.#mode === 'multiviewer4x2') {
+			if (ratioX > 1 / 4 || ratioY > 0.5) return;
 		}
 
 		const floodStartPoint = [
@@ -604,7 +632,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				brightness: device_id === 'window' ? 1 : 1.75,
 				tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
 			});
-		} else if (this.#mode === 'multiviewer') {
+		} else if (this.#mode.startsWith('multiviewer')) {
 			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
 				const ui_xywh = [...tetris_ui_in_video_xywh];
 
@@ -636,15 +664,39 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		// typically called when input video is 1920x1080
 		const { videoWidth, videoHeight } = this.#domrefs.video;
 
-		return [
-			{ x: 0, y: 0 },
-			{ x: Math.floor(videoWidth / 2), y: 0 },
-			{ x: 0, y: Math.floor(videoHeight / 2) },
-			{
-				x: Math.floor(videoWidth / 2),
-				y: Math.floor(videoHeight / 2),
-			},
-		];
+		if (this.#mode === 'multiviewer2x2') {
+			return [
+				{ x: 0, y: 0 },
+				{ x: Math.floor(videoWidth / 2), y: 0 },
+				{ x: 0, y: Math.floor(videoHeight / 2) },
+				{
+					x: Math.floor(videoWidth / 2),
+					y: Math.floor(videoHeight / 2),
+				},
+			];
+		} else if (this.#mode === 'multiviewer3x2') {
+			return [
+				{ x: 0, y: 0 },
+				{ x: Math.floor((videoWidth * 1) / 3), y: 0 },
+				{ x: Math.floor((videoWidth * 2) / 3), y: 0 },
+				{ x: 0, y: Math.floor(videoHeight / 2) },
+				{ x: Math.floor((videoWidth * 1) / 3), y: Math.floor(videoHeight / 2) },
+				{ x: Math.floor((videoWidth * 2) / 3), y: Math.floor(videoHeight / 2) },
+			];
+		} else if (this.#mode === 'multiviewer4x2') {
+			return [
+				{ x: 0, y: 0 },
+				{ x: Math.floor((videoWidth * 1) / 4), y: 0 },
+				{ x: Math.floor((videoWidth * 2) / 4), y: 0 },
+				{ x: Math.floor((videoWidth * 3) / 4), y: 0 },
+				{ x: 0, y: Math.floor(videoHeight / 2) },
+				{ x: Math.floor((videoWidth * 1) / 4), y: Math.floor(videoHeight / 2) },
+				{ x: Math.floor((videoWidth * 2) / 4), y: Math.floor(videoHeight / 2) },
+				{ x: Math.floor((videoWidth * 3) / 4), y: Math.floor(videoHeight / 2) },
+			];
+		} else {
+			throw new Error(`Invalid multiviewer mode: ${this.#mode}`);
+		}
 	}
 
 	#getRetron1HdConfig(aspect, rom_id) {
@@ -685,7 +737,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 					retron_definitions[name] // retron-specific crop values
 				);
 			});
-		} else if (this.#mode === 'multiviewer') {
+		} else if (this.#mode.startsWith('multiviewer')) {
 			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
 				const playerConfig = Object.assign(getDefaultOcrConfig(), {
 					game_type,

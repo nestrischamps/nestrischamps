@@ -26,7 +26,7 @@ export function hasConfig() {
 		if (parsed?.device_id === 'everdrive') return true;
 
 		// TODO validate config
-		if (parsed.mode === 'multiviewer') return true;
+		if (parsed.mode.startsWith('multiviewer')) return true;
 
 		// For OCR capture, we check that the task list is valid
 		// TODO: validate properly
@@ -56,7 +56,7 @@ export async function loadConfig() {
 	if (config) {
 		const parsed = JSON.parse(config); // TODO try..catch
 
-		if (parsed.mode === 'multiviewer') {
+		if (parsed.mode.startsWith('multiviewer')) {
 			parsed.save = function () {
 				saveMultiviewerConfig(this);
 			};
