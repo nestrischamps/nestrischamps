@@ -117,8 +117,8 @@ export async function playVideoFromDevice(video, options = {}) {
 		const initConstraints = {
 			audio: false,
 			video: {
-				frameRate: { ideal: mode.startsWith('multiviewer') ? 30 : 60 },
-				height: { ideal: mode.startsWith('multiviewer') ? 1080 : 720 },
+				frameRate: { ideal: mode === 'multiviewer' ? 30 : 60 },
+				height: { ideal: mode === 'multiviewer' ? 1080 : 720 },
 			},
 		};
 
@@ -138,55 +138,41 @@ export async function playVideoFromDevice(video, options = {}) {
 		// now that we have the stream, we apply additional constraint to find the best operation match
 		let videoConstraints;
 
-		if (mode.startsWith('multiviewer')) {
+		const fullFps = CAP_TYPE === 'pal' ? 50 : 60;
+		const halfFps = CAP_TYPE === 'pal' ? 25 : 30;
+
+		if (mode === 'multiviewer') {
 			videoConstraints = {
 				height: { min: 720, ideal: 1080 },
-				frameRate: { ideal: 30 },
-				advanced:
-					CAP_TYPE === 'pal'
-						? [
-								// { height: 1080, frameRate: 50 }, // works on OSX, freezes on windows ??
-								{ width: 1920, height: 1080, frameRate: 25 },
-								{ height: 720, frameRate: 50 },
-								{ width: 1280, height: 720, frameRate: 25 },
-								{ height: 1080 }, // try for size - any fps
-							]
-						: [
-								// { height: 1080, frameRate: 60 }, // works on OSX, freezes on windows ??
-								{ width: 2880, height: 972, frameRate: 30 },
-								{ width: 1920, height: 960, frameRate: 30 },
-								{ height: 1080, frameRate: 30 },
-								{ height: 960, frameRate: 30 },
-								{ height: 720, frameRate: 60 },
-								{ height: 720, frameRate: 30 },
-								{ height: 1080 }, // try for size - any fps
-								{ height: 960 }, // try for size - any fps
-							],
+				frameRate: { ideal: halfFps },
+				advanced: [
+					// { height: 1080, frameRate: 60 }, // works on OSX, freezes on windows ??
+					{ width: 2880, height: 972, frameRate: halfFps }, // 720x486 x4 x2
+					{ width: 1920, height: 960, frameRate: halfFps }, // 640x480 x3 x2
+					{ width: 1920, height: 1080, frameRate: halfFps }, // assumes standards 4xMultiviewer device
+					{ height: 1080, frameRate: halfFps },
+					{ height: 960, frameRate: halfFps },
+					{ width: 1280, height: 720, frameRate: fullFps },
+					{ width: 1280, height: 720, frameRate: halfFps },
+					{ height: 720, frameRate: fullFps },
+					{ height: 720, frameRate: halfFps },
+					{ height: 1080 }, // try for size - any fps
+					{ height: 960 }, // try for size - any fps
+				],
 			};
 		} else {
 			videoConstraints = {
 				height: { min: 240, ideal: 720 },
-				frameRate: { ideal: 60 },
-				advanced:
-					CAP_TYPE === 'pal'
-						? [
-								{ height: 720, frameRate: 50 },
-								{ width: 1280, height: 720, frameRate: 25 },
-								{ height: 720, frameRate: 25 },
-								{ height: 480, frameRate: 50 },
-								{ height: 480, frameRate: 25 },
-								{ frameRate: 25 },
-								{ height: 480 },
-							]
-						: [
-								{ height: 720, frameRate: 60 },
-								{ width: 1280, height: 720, frameRate: 30 },
-								{ height: 720, frameRate: 30 },
-								{ height: 480, frameRate: 60 },
-								{ height: 480, frameRate: 30 },
-								{ frameRate: 30 },
-								{ height: 480 },
-							],
+				frameRate: { ideal: fullFps },
+				advanced: [
+					{ height: 720, frameRate: fullFps },
+					{ width: 1280, height: 720, frameRate: halfFps },
+					{ height: 720, frameRate: halfFps },
+					{ height: 480, frameRate: fullFps },
+					{ height: 480, frameRate: halfFps },
+					{ frameRate: halfFps },
+					{ height: 480 },
+				],
 			};
 		}
 

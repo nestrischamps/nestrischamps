@@ -202,6 +202,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 	#domrefs = null;
 	#pending_calibration = false; // we store the ref of interests
 	#mode = 'single'; // single or multiviewer
+	#multiViewerGrid = '2x2';
 
 	constructor() {
 		super();
@@ -238,17 +239,20 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		});
 
 		this.#domrefs.multiviewer2x2.addEventListener('click', () => {
-			this.#mode = 'multiviewer2x2';
+			this.#mode = 'multiviewer';
+			this.#multiViewerGrid = '2x2';
 			this.#showStep2();
 		});
 
 		this.#domrefs.multiviewer3x2.addEventListener('click', () => {
-			this.#mode = 'multiviewer3x2';
+			this.#mode = 'multiviewer';
+			this.#multiViewerGrid = '3x2';
 			this.#showStep2();
 		});
 
 		this.#domrefs.multiviewer4x2.addEventListener('click', () => {
-			this.#mode = 'multiviewer4x2';
+			this.#mode = 'multiviewer';
+			this.#multiViewerGrid = '4x2';
 			this.#showStep2();
 		});
 
@@ -411,12 +415,14 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		const ratioY = event.offsetY / css_size(video_styles.height);
 
 		// click is only valid in top-left corner
-		if (this.#mode === 'multiviewer2x2') {
-			if (ratioX > 1 / 2 || ratioY > 0.5) return;
-		} else if (this.#mode === 'multiviewer3x2') {
-			if (ratioX > 1 / 3 || ratioY > 0.5) return;
-		} else if (this.#mode === 'multiviewer4x2') {
-			if (ratioX > 1 / 4 || ratioY > 0.5) return;
+		if (this.#mode === 'multiviewer') {
+			if (this.#multiViewerGrid === '2x2') {
+				if (ratioX > 1 / 2 || ratioY > 0.5) return;
+			} else if (this.#multiViewerGrid === '3x2') {
+				if (ratioX > 1 / 3 || ratioY > 0.5) return;
+			} else if (this.#multiViewerGrid === '4x2') {
+				if (ratioX > 1 / 4 || ratioY > 0.5) return;
+			}
 		}
 
 		const floodStartPoint = [
@@ -632,7 +638,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				brightness: device_id === 'window' ? 1 : 1.75,
 				tasks: this.#getTasks(rom_type, tetris_ui_in_video_xywh),
 			});
-		} else if (this.#mode.startsWith('multiviewer')) {
+		} else if (this.#mode === 'multiviewer') {
 			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
 				const ui_xywh = [...tetris_ui_in_video_xywh];
 
@@ -664,7 +670,11 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		// typically called when input video is 1920x1080
 		const { videoWidth, videoHeight } = this.#domrefs.video;
 
-		if (this.#mode === 'multiviewer2x2') {
+		if (this.#mode !== 'multiviewer') {
+			throw new Error(`Invalid multiviewer mode: ${this.#mode}`);
+		}
+
+		if (this.#multiViewerGrid === '2x2') {
 			return [
 				{ x: 0, y: 0 },
 				{ x: Math.floor(videoWidth / 2), y: 0 },
@@ -674,7 +684,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 					y: Math.floor(videoHeight / 2),
 				},
 			];
-		} else if (this.#mode === 'multiviewer3x2') {
+		} else if (this.#multiViewerGrid === '3x2') {
 			return [
 				{ x: 0, y: 0 },
 				{ x: Math.floor((videoWidth * 1) / 3), y: 0 },
@@ -683,7 +693,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				{ x: Math.floor((videoWidth * 1) / 3), y: Math.floor(videoHeight / 2) },
 				{ x: Math.floor((videoWidth * 2) / 3), y: Math.floor(videoHeight / 2) },
 			];
-		} else if (this.#mode === 'multiviewer4x2') {
+		} else if (this.#multiViewerGrid === '4x2') {
 			return [
 				{ x: 0, y: 0 },
 				{ x: Math.floor((videoWidth * 1) / 4), y: 0 },
@@ -694,8 +704,6 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				{ x: Math.floor((videoWidth * 2) / 4), y: Math.floor(videoHeight / 2) },
 				{ x: Math.floor((videoWidth * 3) / 4), y: Math.floor(videoHeight / 2) },
 			];
-		} else {
-			throw new Error(`Invalid multiviewer mode: ${this.#mode}`);
 		}
 	}
 
@@ -737,7 +745,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 					retron_definitions[name] // retron-specific crop values
 				);
 			});
-		} else if (this.#mode.startsWith('multiviewer')) {
+		} else if (this.#mode === 'multiviewer') {
 			config.players = this.#getMultiviewerOffsets().map(({ x, y }) => {
 				const playerConfig = Object.assign(getDefaultOcrConfig(), {
 					game_type,
