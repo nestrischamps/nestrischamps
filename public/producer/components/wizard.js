@@ -341,6 +341,7 @@ export class NTC_Producer_Wizard extends NtcComponent {
 				playVideoFromDevice(video, {
 					device_id,
 					mode: this.#mode,
+					grid: this.#multiViewerGrid,
 				});
 			}
 		}

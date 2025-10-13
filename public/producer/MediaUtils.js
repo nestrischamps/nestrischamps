@@ -111,7 +111,7 @@ export async function getStream(config) {
 export async function playVideoFromDevice(video, options = {}) {
 	console.log('playVideoFromDevice()');
 
-	const { mode, device_id } = options;
+	const { mode, grid, device_id } = options;
 
 	try {
 		const initConstraints = {
@@ -142,14 +142,26 @@ export async function playVideoFromDevice(video, options = {}) {
 		const halfFps = CAP_TYPE === 'pal' ? 25 : 30;
 
 		if (mode === 'multiviewer') {
+			const resizeMode = 'none';
+
 			videoConstraints = {
 				height: { min: 720, ideal: 1080 },
 				frameRate: { ideal: halfFps },
 				advanced: [
 					// { height: 1080, frameRate: 60 }, // works on OSX, freezes on windows ??
-					{ width: 2880, height: 972, frameRate: halfFps }, // 720x486 x4 x2
-					{ width: 1920, height: 960, frameRate: halfFps }, // 640x480 x3 x2
-					{ width: 1920, height: 1080, frameRate: halfFps }, // assumes standards 4xMultiviewer device
+					...(grid === '4x2'
+						? [
+								{ width: 2880, height: 972, frameRate: halfFps, resizeMode }, // 720x486 x4 x2
+								{ width: 2560, height: 960, frameRate: halfFps, resizeMode }, // 640x480 x4 x2
+							]
+						: []),
+					...(grid === '3x2'
+						? [
+								{ width: 2160, height: 972, frameRate: halfFps, resizeMode }, // 720x486 x3 x2
+								{ width: 1920, height: 960, frameRate: halfFps, resizeMode }, // 640x480 x3 x2
+							]
+						: []),
+					{ width: 1920, height: 1080, frameRate: halfFps, resizeMode }, // assumes standards 4xMultiviewer device
 					{ height: 1080, frameRate: halfFps },
 					{ height: 960, frameRate: halfFps },
 					{ width: 1280, height: 720, frameRate: fullFps },
