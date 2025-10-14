@@ -121,19 +121,21 @@ export class NTC_Producer_Capture extends NtcComponent {
 			this.#domrefs.room.loadRoomView(detail.view_meta);
 		});
 
-		player.addEventListener('remote_config_update', ({ detail: config }) => {
-			this.#domrefs.calibration.handleRemoteConfigUpdate(config);
-		});
-
 		if (QueryString.get('tts') === '1') {
 			player.addEventListener('chat_message', ({ detail: msg }) => {
 				msg && speak(msg);
 			});
 		}
 
-		const ocr = await this.#player.ocrPromise;
-		this.#domrefs.ocr_results.setOCR(ocr);
-		this.#domrefs.calibration.setOCR(ocr);
+		if (this.#player.ocrPromise) {
+			player.addEventListener('remote_config_update', ({ detail: config }) => {
+				this.#domrefs.calibration.handleRemoteConfigUpdate(config);
+			});
+
+			const ocr = await this.#player.ocrPromise;
+			this.#domrefs.ocr_results.setOCR(ocr);
+			this.#domrefs.calibration.setOCR(ocr);
+		}
 
 		const gameTracker = this.#player.gameTracker;
 		this.#domrefs.ocr_results.setGameTracker(gameTracker);

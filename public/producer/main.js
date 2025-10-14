@@ -8,11 +8,15 @@ import { sleep, timer } from './timer.js';
 import { hasConfig, loadConfig } from './ConfigUtils.js';
 
 import { CaptureDriver } from './CaptureDriver.js';
-import { Player } from './Player.js';
+import { OcrPlayer } from './OcrPlayer.js';
+import { EverdrivePlayer } from './EverdrivePlayer.js';
 
-async function initEverDriveCapture(config, tabToOpen) {
-	removeCalibrationTab();
-	initCaptureFromEverdrive(config.frame_rate); // TODO
+function initEverDriveCapture(config, tabToOpen) {
+	console.log('initEverDriveCapture');
+
+	const capture = document.createElement('ntc-capture');
+	const player = new EverdrivePlayer(config);
+	capture.setPlayer(player);
 }
 
 async function initMultiViewerCapture(config) {
@@ -27,7 +31,7 @@ async function initMultiViewerCapture(config) {
 	})(QueryString.get('first_player'));
 
 	for (const playerConfig of config.players) {
-		const player = new Player(playerConfig, playerNum++);
+		const player = new OcrPlayer(playerConfig, playerNum++);
 		driver.addPlayer(player);
 	}
 
@@ -40,7 +44,7 @@ async function initOCRCapture(config, tabToOpen, stream) {
 	console.log(config);
 
 	const driver = new CaptureDriver(config, stream);
-	const player = new Player(config);
+	const player = new OcrPlayer(config);
 
 	driver.addPlayer(player);
 
