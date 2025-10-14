@@ -18,7 +18,11 @@ import {
 	getFieldCoordinates,
 	getCaptureCoordinates,
 } from '../../ocr/calibration.js';
-import { saveMultiviewerConfig, getDefaultOcrConfig } from '../ConfigUtils.js';
+import {
+	saveMultiviewerConfig,
+	saveConfig,
+	getDefaultOcrConfig,
+} from '../ConfigUtils.js';
 import { sleep } from '../timer.js';
 
 function css_size(css_pixel_width) {
@@ -586,6 +590,9 @@ export class NTC_Producer_Wizard extends NtcComponent {
 		ed_patch_link.classList.remove('is-hidden');
 		this.#saveAndDispatchConfig({
 			device_id: 'everdrive',
+			save: function save() {
+				saveConfig(this);
+			},
 		});
 	}
 
