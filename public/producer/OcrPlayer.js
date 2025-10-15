@@ -26,6 +26,7 @@ const remoteCalibrationImageArgsPromise = getRemoteCalibrationImageArgs(); // no
 export class OcrPlayer extends Player {
 	#ready = false;
 	#remoteCalibrationImageArgs;
+	#conn = null;
 	supportsRemoteCalibration = true;
 
 	constructor(config, num = null) {
@@ -37,9 +38,9 @@ export class OcrPlayer extends Player {
 		this.API.requestRemoteCalibration = async admin_peer_id => {
 			console.log('requestRemoteCalibration', admin_peer_id);
 
-			if (this.conn) {
-				clearInterval(this.conn.sendVideoFrameIntervalId);
-				this.conn.close();
+			if (this.#conn) {
+				clearInterval(this.#conn.sendVideoFrameIntervalId);
+				this.#conn.close();
 			}
 
 			const video = this._driver.getVideo();
@@ -49,7 +50,7 @@ export class OcrPlayer extends Player {
 			// strip out fields that should not be shared
 			delete remoteConfig.device_id; // this should never be shared - device_id is specific to the local hardware and site
 
-			this.conn = this.#peer.connect(admin_peer_id, {
+			this.#conn = this.getPeer().connect(admin_peer_id, {
 				metadata: {
 					video: {
 						width: video.videoWidth,
@@ -64,19 +65,19 @@ export class OcrPlayer extends Player {
 			const sendVideoFrame = async () => {
 				console.log('sending remote calibration frame');
 				const img = await this.#getVideoFrameAsImgBlob();
-				this.conn.send({ img });
+				this.#conn.send({ img });
 			};
 
-			this.conn.on('open', () => {
-				clearInterval(this.conn.sendVideoFrameIntervalId);
-				this.conn.sendVideoFrameIntervalId = setInterval(
+			this.#conn.on('open', () => {
+				clearInterval(this.#conn.sendVideoFrameIntervalId);
+				this.#conn.sendVideoFrameIntervalId = setInterval(
 					sendVideoFrame,
 					REMOTE_CALIBRATION_FRAME_INTERVAL_MS
 				);
 				sendVideoFrame();
 			});
 
-			this.conn.on('data', ({ config }) => {
+			this.#conn.on('data', ({ config }) => {
 				for (const [name, task] of Object.entries(config.tasks)) {
 					this.config.tasks[name].dirty = true;
 					Object.assign(this.config.tasks[name].crop, task.crop);
@@ -98,8 +99,8 @@ export class OcrPlayer extends Player {
 				);
 			});
 
-			this.conn.on('close', () => {
-				clearInterval(this.conn.sendVideoFrameIntervalId);
+			this.#conn.on('close', () => {
+				clearInterval(this.#conn.sendVideoFrameIntervalId);
 			});
 		};
 

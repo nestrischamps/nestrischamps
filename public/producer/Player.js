@@ -60,8 +60,6 @@ export class Player extends EventTarget {
 		};
 	}
 
-	processVideoFrame() {}
-
 	handleFrame = ({ detail: data }) => {
 		if (!this.#connection) return;
 
