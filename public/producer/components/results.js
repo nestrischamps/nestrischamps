@@ -43,10 +43,6 @@ export class NTC_Producer_Results extends NtcComponent {
 		driver.addEventListener('frame', this.#handleDriverFrame);
 	}
 
-	setOCR(ocr) {
-		ocr.addEventListener('frame', this.#handleOCRFrame);
-	}
-
 	setGameTracker(game_tracker) {
 		this.game_tracker = game_tracker;
 
@@ -57,9 +53,9 @@ export class NTC_Producer_Results extends NtcComponent {
 		this.#domrefs.capture_details.showCaptureDetails(event);
 	};
 
-	#handleOCRFrame = event => {
-		this.#domrefs.perf_data.showPerfData(event);
-	};
+	showPerfData() {
+		this.#domrefs.perf_data.showPerfData();
+	}
 
 	#handleGameTrackerFrame = ({ detail: frame }) => {
 		this.#setFrameData(frame);

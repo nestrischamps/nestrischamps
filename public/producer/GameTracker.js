@@ -331,11 +331,11 @@ export default class GameTracker extends EventTarget {
 			});
 		}
 
-		const event = new CustomEvent('frame', {
-			detail: pojo,
-		});
-
-		this.dispatchEvent(event);
+		this.dispatchEvent(
+			new CustomEvent('frame', {
+				detail: pojo,
+			})
+		);
 	}
 
 	processField(level, frame) {

@@ -9,14 +9,21 @@ import { hasConfig, loadConfig } from './ConfigUtils.js';
 
 import { CaptureDriver } from './CaptureDriver.js';
 import { OcrPlayer } from './OcrPlayer.js';
+import EDClient from '/ocr/EDClient.js'; // is the EDDriver!
 import { EverdrivePlayer } from './EverdrivePlayer.js';
 
-function initEverDriveCapture(config, tabToOpen) {
+function initEverDriveCapture(config) {
 	console.log('initEverDriveCapture');
 
+	const driver = new EDClient(config.frame_rate || 60);
 	const capture = document.createElement('ntc-capture');
 	const player = new EverdrivePlayer(config);
+
+	capture.setDriver(driver);
 	capture.setPlayer(player);
+
+	capture.dropTab('calibration');
+	capture.showTab('results');
 }
 
 async function initMultiViewerCapture(config) {

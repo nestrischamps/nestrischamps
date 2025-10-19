@@ -93,6 +93,18 @@ export class NTC_Producer_Capture extends NtcComponent {
 		});
 	}
 
+	dropTab(id) {
+		const { tabs, tabContents } = this.#domrefs;
+		const tab = [...tabs].find(tab => tab.dataset.target === id);
+
+		tabs.forEach(tab => tab.classList.remove('is-active'));
+		tab.classList.add('is-hidden');
+
+		tabContents.forEach(box => {
+			box.classList[box.id === id ? 'remove' : 'add']('is-hidden');
+		});
+	}
+
 	showTab(id) {
 		const { tabs, tabContents } = this.#domrefs;
 		const tab = [...tabs].find(tab => tab.dataset.target === id);
@@ -130,8 +142,13 @@ export class NTC_Producer_Capture extends NtcComponent {
 			});
 
 			const ocr = await this.#player.ocrPromise;
-			this.#domrefs.results.setOCR(ocr);
 			this.#domrefs.calibration.setOCR(ocr);
+
+			ocr.addEventListener('frame', () => {
+				this.#domrefs.results.showPerfData();
+			});
+		} else {
+			// everdrive!
 		}
 
 		const gameTracker = this.#player.gameTracker;

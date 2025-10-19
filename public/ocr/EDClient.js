@@ -68,10 +68,18 @@ async function readUntilPattern(reader, dataArray, compare) {
 	}
 }
 
-export default class EDClient {
+export default class EDClient extends EventTarget {
+	#captureDetails = null;
+
 	constructor(frameRate) {
 		this.frameDuration = 1000 / frameRate;
 		this.requestFrameFromEverDrive = this.requestFrameFromEverDrive.bind(this);
+
+		this.#captureDetails = {
+			mode: 'everdrive',
+			frameRate: frameRate,
+			frameMs: this.frameDuration,
+		};
 
 		this.init();
 	}
@@ -81,7 +89,7 @@ export default class EDClient {
 
 		if (this.everdrive) {
 			this.dataFrameBuffer = new Uint8Array(GAME_FRAME_SIZE);
-			this.startTime = Date.now();
+			this.startTime = performance.now();
 			this.requestFrameFromEverDrive();
 		} else {
 			// What to do?
@@ -169,6 +177,9 @@ export default class EDClient {
 	}
 
 	async requestFrameFromEverDrive() {
+		performance.clearMarks();
+		performance.clearMeasures();
+
 		performance.mark('edlink_comm_start');
 
 		// 0. prep request
@@ -211,13 +222,35 @@ export default class EDClient {
 			console.error(`Error reading from everdrive: ${e}`);
 		}
 
+		const frameTime = performance.now();
+
 		performance.mark('edlink_read_end');
 
-		try {
-			this.onData(this.dataFrameBuffer);
-		} catch (err) {
-			console.error(err);
-		}
+		performance.measure(
+			'edlink_write_cmd',
+			'edlink_comm_start',
+			'edlink_write_end'
+		);
+		performance.measure(
+			'edlink_read_data',
+			'edlink_write_end',
+			'edlink_read_end'
+		);
+		performance.measure('edlink_total', 'edlink_comm_start', 'edlink_read_end');
+
+		this.dispatchEvent(
+			new CustomEvent('frame', {
+				detail: {
+					ts: frameTime,
+					skipped: false,
+					elapsed: frameTime - (this.previousFrameTime || this.startTime || 0),
+					captureDetails: this.#captureDetails,
+					data: this.dataFrameBuffer,
+				},
+			})
+		);
+
+		this.previousFrameTime = frameTime;
 
 		// We trigger the next read immediately, the read will wait till the data is ready
 		setTimeout(this.requestFrameFromEverDrive, 0);

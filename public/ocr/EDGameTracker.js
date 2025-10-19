@@ -217,9 +217,9 @@ export default class EDGameTracker {
 		field.length = 200; // drops the tail
 
 		const gameModeState = gameModeStatePlayState >> 4;
-		const playState = gameModeStatePlayState & 0xF;
+		const playState = gameModeStatePlayState & 0xf;
 		const gameStart = gameStartGameMode >> 4;
-		const gameMode = gameStartGameMode & 0xF;
+		const gameMode = gameStartGameMode & 0xf;
 
 		const frameCounter = (frameCounter1 << 8) | frameCounter0;
 		const lines = this._bcdToDecimal(lines0, lines1);
@@ -362,6 +362,12 @@ export default class EDGameTracker {
 		performance.mark('extract_data_end');
 
 		this.onFrame(ntcFrameData);
+
+		this.dispatchEvent(
+			new CustomEvent('frame', {
+				detail: ntcFrameData,
+			})
+		);
 	}
 
 	// default callback

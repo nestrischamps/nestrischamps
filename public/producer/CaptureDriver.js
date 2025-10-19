@@ -1,6 +1,7 @@
 import QueryString from '/js/QueryString.js';
 import { timer } from './timer.js';
 import { getStream } from './MediaUtils.js';
+import { getOcrClass } from './ocrStrategy.js';
 
 const defaultDriverMode = (value =>
 	/^(mstp|callback|interval)$/.test(value) ? value : 'interval')(
@@ -91,7 +92,7 @@ export class CaptureDriver extends EventTarget {
 		}
 	}
 
-	#updateCaptureDetails() {
+	async #updateCaptureDetails() {
 		let trackFps = null;
 
 		try {
@@ -106,6 +107,7 @@ export class CaptureDriver extends EventTarget {
 			videoSize: `${this.#video.videoWidth} x ${this.#video.videoHeight}`,
 			videoFps: trackFps,
 			driverMode: DRIVER_MODE,
+			ocrClass: (await getOcrClass()).name,
 		};
 	}
 
@@ -123,7 +125,8 @@ export class CaptureDriver extends EventTarget {
 
 	#startFrameCapture = async () => {
 		this.#stopFrameCapture();
-		this.#updateCaptureDetails();
+
+		await this.#updateCaptureDetails();
 
 		console.log(
 			`#startFrameCapture: ${JSON.stringify(
@@ -132,6 +135,7 @@ export class CaptureDriver extends EventTarget {
 					MediaStreamTrackProcessorSupported,
 					videoFps: this.#captureDetails.videoFps,
 					diverMode: this.#captureDetails.driverMode,
+					ocrClass: this.#captureDetails.ocrClass,
 				},
 				null,
 				2
