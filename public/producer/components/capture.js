@@ -5,7 +5,7 @@ import speak from '/views/tts.js';
 
 import './settings.js';
 import './calibration.js';
-import './ocrresults.js';
+import './results.js';
 import './roomview.js';
 
 import { html } from '../StringUtils.js';
@@ -22,7 +22,7 @@ const MARKUP = html`
 						<span>Settings</span>
 					</a>
 				</li>
-				<li data-target="ocr_results">
+				<li data-target="results">
 					<a>
 						<span>Data</span>
 					</a>
@@ -42,10 +42,7 @@ const MARKUP = html`
 	</div>
 	<div id="content" class="container is-fluid">
 		<ntc-settings id="settings" class="tab-item is-hidden"></ntc-settings>
-		<ntc-ocrresults
-			id="ocr_results"
-			class="tab-item is-hidden"
-		></ntc-ocrresults>
+		<ntc-results id="results" class="tab-item is-hidden"></ntc-results>
 		<ntc-calibration
 			id="calibration"
 			class="tab-item is-hidden"
@@ -69,7 +66,7 @@ export class NTC_Producer_Capture extends NtcComponent {
 			content: this.shadow.getElementById('content'),
 			tabContents: this.shadow.querySelectorAll('#content .tab-item'),
 			settings: this.shadow.getElementById('settings'),
-			ocr_results: this.shadow.getElementById('ocr_results'),
+			results: this.shadow.getElementById('results'),
 			calibration: this.shadow.getElementById('calibration'),
 			room: this.shadow.getElementById('room'),
 		};
@@ -109,7 +106,7 @@ export class NTC_Producer_Capture extends NtcComponent {
 	}
 
 	async setDriver(driver) {
-		this.#domrefs.ocr_results.setDriver(driver);
+		this.#domrefs.results.setDriver(driver);
 	}
 
 	async setPlayer(player) {
@@ -133,12 +130,12 @@ export class NTC_Producer_Capture extends NtcComponent {
 			});
 
 			const ocr = await this.#player.ocrPromise;
-			this.#domrefs.ocr_results.setOCR(ocr);
+			this.#domrefs.results.setOCR(ocr);
 			this.#domrefs.calibration.setOCR(ocr);
 		}
 
 		const gameTracker = this.#player.gameTracker;
-		this.#domrefs.ocr_results.setGameTracker(gameTracker);
+		this.#domrefs.results.setGameTracker(gameTracker);
 
 		this.#domrefs.room.setReadyHandler(this.#player.sendReady);
 	}

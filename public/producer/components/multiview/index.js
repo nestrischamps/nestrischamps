@@ -149,21 +149,21 @@ export class NTC_MultiView extends NtcComponent {
 		a.textContent = `Player ${player.num}`;
 		tab.appendChild(a);
 
-		const cal = document.createElement('ntc-calibration');
-		cal.id = `player-${playerId}`;
-		cal.setAttribute('enable-show-parts', 'false');
-		cal.setAttribute('enable-capture-rate', 'false');
+		const calibration = document.createElement('ntc-calibration');
+		calibration.id = `player-${playerId}`;
+		calibration.setAttribute('enable-show-parts', 'false');
+		calibration.setAttribute('enable-capture-rate', 'false');
 
 		player.ocrPromise.then(ocr => {
-			cal.setOCR(ocr);
+			calibration.setOCR(ocr);
 		});
 
 		player.addEventListener('remote_config_update', ({ detail: config }) => {
-			cal.handleRemoteConfigUpdate(config);
+			calibration.handleRemoteConfigUpdate(config);
 		});
 
 		tabs.querySelector('ul').appendChild(tab);
-		content.appendChild(cal);
+		content.appendChild(calibration);
 
 		this.#players.push(player);
 	}
