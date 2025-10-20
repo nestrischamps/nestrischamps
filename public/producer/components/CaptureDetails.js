@@ -62,7 +62,7 @@ export class NTC_CaptureDetails extends NtcComponent {
 		}
 	}
 
-	async showCaptureDetails({ detail }) {
+	showCaptureDetails({ detail }) {
 		// showCaptureDetails is always called with data
 		while (detail.skipped-- > 0) {
 			this.#stats.addSkipped(detail.ts);
