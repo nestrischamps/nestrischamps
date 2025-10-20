@@ -93,15 +93,16 @@ export class NTC_Producer_Capture extends NtcComponent {
 		});
 	}
 
+	// ⚠️ destructive -- removes the tab from the dom
 	dropTab(id) {
 		const { tabs, tabContents } = this.#domrefs;
 		const tab = [...tabs].find(tab => tab.dataset.target === id);
 
-		tab.classList.add('is-hidden');
+		tab.remove();
 
 		tabContents.forEach(box => {
 			if (box.id === id) {
-				box.classList.add('is-hidden');
+				box.remove();
 			}
 		});
 	}
