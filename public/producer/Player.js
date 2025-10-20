@@ -66,45 +66,52 @@ export class Player extends EventTarget {
 	// handle the processed frame event from game tracker and send to server
 	handleFrame = ({ detail: data }) => {
 		if (!this.#connection) return;
+		if (!data) return;
 
-		data.game_type = this.config.game_type ?? BinaryFrame.GAME_TYPE.CLASSIC;
-		data.ctime = Date.now() - this.#startTime;
+		const localData = { ...data };
+
+		localData.game_type =
+			this.config.game_type ?? BinaryFrame.GAME_TYPE.CLASSIC;
+		localData.ctime = Date.now() - this.#startTime;
 
 		// delete data fields which are never meant to be sent over the wire
-		delete data.color1;
-		delete data.color2;
-		delete data.color3;
-		delete data.gym_pause_active;
-		delete data.raw;
+		delete localData.color1;
+		delete localData.color2;
+		delete localData.color3;
+		delete localData.gym_pause_active;
+		delete localData.raw;
 
 		// only send frame if changed
 		check_equal: do {
-			for (let key in data) {
+			for (let key in localData) {
 				if (key == 'ctime') continue;
+				if (key.startsWith('_')) continue; // private field - never sent, so we don't compare it
 				if (key == 'field') {
-					if (!data.field.every((v, i) => this.#lastFrame.field[i] === v)) {
+					if (
+						!localData.field.every((v, i) => this.#lastFrame.field[i] === v)
+					) {
 						break check_equal;
 					}
-				} else if (data[key] != this.#lastFrame[key]) {
+				} else if (localData[key] != this.#lastFrame[key]) {
 					break check_equal;
 				}
 			}
 
 			// all fields equal, do a sanity check on time
-			if (data.ctime - this.#lastFrame.ctime >= HEART_BEAT_TIMEOUT) break; // even if there's no change, send a "heartbeat frame" at least every HEART_BEAT_TIMEOUT ms
+			if (localData.ctime - this.#lastFrame.ctime >= HEART_BEAT_TIMEOUT) break; // even if there's no change, send a "heartbeat frame" at least every HEART_BEAT_TIMEOUT ms
 
 			// no need to send frame
 			return;
 		} while (false);
 
-		this.#lastFrame = data;
+		this.#lastFrame = localData;
 
 		if (this.#sendBinary) {
-			this.#connection?.send(BinaryFrame.encode(data));
+			this.#connection?.send(BinaryFrame.encode(localData));
 		} else {
 			// convert Uint8Array to normal array so it can be json-encoded properly
-			data.field = [...data.field];
-			this.#connection?.send(data);
+			localData.field = [...localData.field];
+			this.#connection?.send(localData);
 		}
 	};
 

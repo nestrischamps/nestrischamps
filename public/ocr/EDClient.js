@@ -11,6 +11,30 @@ const EVERDRIVE_TAIL = [0x00, 0xa5];
 const GAME_FRAME_TAIL = [0xaa, 0xaa];
 const ED_MAX_READ_ATTEMPTS = 10;
 
+export async function getEDSerialPort() {
+	let serialPort;
+
+	const ports = await navigator.serial.getPorts();
+
+	if (ports.length) {
+		serialPort = ports.find(port => {
+			const { usbProductId, usbVendorId } = port.getInfo();
+			return (
+				usbVendorId === EVERDRIVE_N8_PRO.usbVendorId &&
+				usbProductId === EVERDRIVE_N8_PRO.usbProductId
+			);
+		});
+
+		if (serialPort) return serialPort;
+	}
+
+	serialPort = await navigator.serial.requestPort({
+		filters: [EVERDRIVE_N8_PRO],
+	});
+
+	if (serialPort) return serialPort;
+}
+
 function getEDCommandHeader(command) {
 	// prettier-ignore
 	return [
@@ -70,8 +94,12 @@ async function readUntilPattern(reader, dataArray, compare) {
 
 export default class EDClient extends EventTarget {
 	#captureDetails = null;
+	#previousFrameTime;
+	#previousFrameCounter = null;
 
 	constructor(frameRate) {
+		super();
+
 		this.frameDuration = 1000 / frameRate;
 		this.requestFrameFromEverDrive = this.requestFrameFromEverDrive.bind(this);
 
@@ -97,7 +125,7 @@ export default class EDClient extends EventTarget {
 	}
 
 	async getEverDrive() {
-		const port = await this.getEDSerialPort();
+		const port = await getEDSerialPort();
 
 		if (!port) {
 			console.error('No ever drive not found');
@@ -122,29 +150,6 @@ export default class EDClient extends EventTarget {
 				writer,
 			};
 		}
-	}
-
-	async getEDSerialPort() {
-		let serialPort;
-
-		const ports = await navigator.serial.getPorts();
-		if (ports.length) {
-			serialPort = ports.find(port => {
-				const { usbProductId, usbVendorId } = port.getInfo();
-				return (
-					usbVendorId === EVERDRIVE_N8_PRO.usbVendorId &&
-					usbProductId === EVERDRIVE_N8_PRO.usbProductId
-				);
-			});
-
-			if (serialPort) return serialPort;
-		}
-
-		serialPort = await navigator.serial.requestPort({
-			filters: [EVERDRIVE_N8_PRO],
-		});
-
-		if (serialPort) return serialPort;
 	}
 
 	async verifyEDPort(reader, writer) {
@@ -238,23 +243,32 @@ export default class EDClient extends EventTarget {
 		);
 		performance.measure('edlink_total', 'edlink_comm_start', 'edlink_read_end');
 
+		// inspect data to evaluate if there are skipped frames
+		// kinda dirty because now the edclient knows the data format :(
+
+		const frameCounter0 = this.dataFrameBuffer[18];
+
+		let skipped = 0;
+		if (this.#previousFrameCounter !== null) {
+			skipped = frameCounter0 - this.#previousFrameCounter - 1;
+		}
+
 		this.dispatchEvent(
 			new CustomEvent('frame', {
 				detail: {
 					ts: frameTime,
-					skipped: false,
-					elapsed: frameTime - (this.previousFrameTime || this.startTime || 0),
+					skipped,
+					elapsed: frameTime - (this.#previousFrameTime || this.startTime || 0),
 					captureDetails: this.#captureDetails,
 					data: this.dataFrameBuffer,
 				},
 			})
 		);
 
-		this.previousFrameTime = frameTime;
+		this.#previousFrameCounter = frameCounter0;
+		this.#previousFrameTime = frameTime;
 
 		// We trigger the next read immediately, the read will wait till the data is ready
 		setTimeout(this.requestFrameFromEverDrive, 0);
 	}
-
-	onData() {}
 }

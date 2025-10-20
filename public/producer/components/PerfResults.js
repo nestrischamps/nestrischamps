@@ -83,7 +83,7 @@ export class NTC_PerfResults extends NtcComponent {
 		// TODO: force clean order of more of the known metrics 😢 (e.g. driver total, player total, etc.)
 		// For now, we push the driver metrics on top, since that's the most important total
 		[...this.#dompairs.keys()]
-			.filter(key => /(driver|processVideoFrame)-\d+/.test(key))
+			.filter(key => /(driver|processVideoFrame)-\d+|total/.test(key))
 			.sort(sortByDriverAndPlayerReverse) // reverse because we insert by prepend
 			.forEach(key => {
 				const { dt, dd } = this.#dompairs.get(key);

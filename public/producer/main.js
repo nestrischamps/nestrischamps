@@ -15,8 +15,10 @@ import { EverdrivePlayer } from './EverdrivePlayer.js';
 function initEverDriveCapture(config) {
 	console.log('initEverDriveCapture');
 
-	const edClient = new EDClient(config.frame_rate || 60);
 	const capture = document.createElement('ntc-capture');
+	document.body.prepend(capture);
+
+	const edClient = new EDClient(config.frame_rate || 60);
 	const player = new EverdrivePlayer(config);
 
 	edClient.addEventListener('frame', event => {
@@ -72,7 +74,7 @@ async function initFromConfig(tabToOpen, stream = null) {
 	const config = await loadConfig();
 
 	if (config.device_id === 'everdrive') {
-		initEverDriveCapture(config, 'ocr_results');
+		initEverDriveCapture(config);
 	} else if (config.mode === 'multiviewer') {
 		initMultiViewerCapture(config);
 	} else {
@@ -88,7 +90,7 @@ async function initFromConfig(tabToOpen, stream = null) {
 
 	if (hasConfig()) {
 		console.log('has config');
-		initFromConfig('ocr_results');
+		initFromConfig('results');
 	} else {
 		const wizard = document.createElement('ntc-wizard');
 		document.body.prepend(wizard);

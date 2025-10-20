@@ -1,6 +1,6 @@
 import QueryString from '/js/QueryString.js';
 import { timer } from './timer.js';
-import { getStream } from './MediaUtils.js';
+import { getStream, getDeviceLabel } from './MediaUtils.js';
 import { getOcrClass } from './ocrStrategy.js';
 
 const defaultDriverMode = (value =>
@@ -28,6 +28,7 @@ export class CaptureDriver extends EventTarget {
 	#captureIntervalId;
 	#captureFrameCallbackId;
 	#captureDetails;
+	#skippedFrames = 0;
 	#then;
 
 	constructor(config, stream = null) {
@@ -93,6 +94,7 @@ export class CaptureDriver extends EventTarget {
 	}
 
 	async #updateCaptureDetails() {
+		let deviceLabel;
 		let trackFps = null;
 
 		try {
@@ -103,6 +105,7 @@ export class CaptureDriver extends EventTarget {
 		}
 
 		this.#captureDetails = {
+			device: await getDeviceLabel(this.config.device_id),
 			video: this.#video,
 			videoSize: `${this.#video.videoWidth} x ${this.#video.videoHeight}`,
 			videoFps: trackFps,
@@ -189,16 +192,7 @@ export class CaptureDriver extends EventTarget {
 		const now = performance.now();
 
 		if (this.#working) {
-			this.dispatchEvent(
-				new CustomEvent('frame', {
-					detail: {
-						ts: now,
-						skipped: true,
-						elapsed: now - this.#then,
-						captureDetails: this.#captureDetails,
-					},
-				})
-			);
+			this.#skippedFrames += 1;
 			return;
 		}
 
@@ -230,13 +224,14 @@ export class CaptureDriver extends EventTarget {
 			new CustomEvent('frame', {
 				detail: {
 					ts: now,
-					skipped: false,
+					skipped: this.#skippedFrames,
 					elapsed: measure.duration,
 					captureDetails: this.#captureDetails,
 				},
 			})
 		);
 
+		this.#skippedFrames = 0;
 		this.#working = false;
 	}
 

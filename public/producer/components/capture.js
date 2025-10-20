@@ -97,11 +97,12 @@ export class NTC_Producer_Capture extends NtcComponent {
 		const { tabs, tabContents } = this.#domrefs;
 		const tab = [...tabs].find(tab => tab.dataset.target === id);
 
-		tabs.forEach(tab => tab.classList.remove('is-active'));
 		tab.classList.add('is-hidden');
 
 		tabContents.forEach(box => {
-			box.classList[box.id === id ? 'remove' : 'add']('is-hidden');
+			if (box.id === id) {
+				box.classList.add('is-hidden');
+			}
 		});
 	}
 
@@ -148,7 +149,9 @@ export class NTC_Producer_Capture extends NtcComponent {
 				this.#domrefs.results.showPerfData();
 			});
 		} else {
-			// everdrive!
+			player.gameTracker.addEventListener('frame', () => {
+				this.#domrefs.results.showPerfData();
+			});
 		}
 
 		const gameTracker = this.#player.gameTracker;

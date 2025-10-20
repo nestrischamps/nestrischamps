@@ -63,17 +63,17 @@ export class NTC_CaptureDetails extends NtcComponent {
 	}
 
 	async showCaptureDetails({ detail }) {
-		if (detail.skipped) {
+		// showCaptureDetails is always called with data
+		while (detail.skipped-- > 0) {
 			this.#stats.addSkipped(detail.ts);
-		} else {
-			this.#stats.addProcessed(detail.ts);
 		}
+
+		this.#stats.addProcessed(detail.ts);
 
 		const ss = this.#stats.snapshot();
 
 		const data = {
 			...detail.captureDetails,
-			'ocr-class': (await getOcrClass()).name,
 			'skipped-frames-60s': `${ss.last60s.skipped} / ${ss.last60s.processed} (${(100 * ss.last60s.skipRate).toFixed(2)}%)`,
 			'skipped-frames-5mins': `${ss.last5m.skipped} / ${ss.last5m.processed} (${(100 * ss.last5m.skipRate).toFixed(2)}%)`,
 		};

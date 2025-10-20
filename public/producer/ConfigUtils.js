@@ -135,7 +135,7 @@ export function getSerializableConfigCopy(config) {
 		tasks: {},
 	};
 
-	for (const [name, task] of Object.entries(config.tasks)) {
+	for (const [name, task] of Object.entries(config.tasks || {})) {
 		const { crop, pattern, luma, red_luma } = task;
 		config_copy.tasks[name] = { crop, pattern, luma, red_luma };
 	}

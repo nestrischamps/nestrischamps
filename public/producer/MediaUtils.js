@@ -10,7 +10,7 @@ export async function getConnectedDevices(type) {
 		// prompt for permission if needed
 		// on windows, this requests the first available capture device and it may fail
 		// BUT if permission has been granted, then listing the devices below might still work
-		// SO, we wrap the device call in a try..catch, and ignore errors
+		// So, we wrap the device call in a try..catch, and ignore errors
 		stream = await navigator.mediaDevices.getUserMedia({ video: true });
 	} catch (err) {
 		// We log a warning but we do nothing
@@ -23,9 +23,18 @@ export async function getConnectedDevices(type) {
 		device => device.kind === type && device.deviceId
 	);
 
-	if (stream) stream.getTracks()[0].stop();
+	if (stream) {
+		stream.getTracks().forEach(track => track.stop());
+	}
 
 	return devices;
+}
+
+export async function getDeviceLabel(device_id) {
+	if (!device_id) throw new Error('device_id not provided');
+	const devices = await getConnectedDevices('videoinput');
+	const device = devices.find(d => d.deviceId === device_id);
+	return device ? device.label : 'Unknown Device';
 }
 
 export function getStreamSettings(stream) {

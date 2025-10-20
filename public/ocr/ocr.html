@@ -164,17 +164,17 @@
 				font-size: 1em;
 			}
 
-			#ocr_results {
+			#results {
 				display: flex;
 				flex-direction: row;
 				flex-wrap: nowrap;
 			}
 
-			#ocr_results fieldset {
+			#results fieldset {
 				flex-grow: 1;
 			}
 
-			#ocr_results dd {
+			#results dd {
 				white-space: nowrap;
 				overflow: hidden;
 				text-overflow: ellipsis;
@@ -266,7 +266,7 @@
 		<nav id="tabs" class="tabs is-hidden">
 			<ul>
 				<li data-target="inputs"><a>Settings</a></li>
-				<li data-target="ocr_results"><a>Data</a></li>
+				<li data-target="results"><a>Data</a></li>
 				<li data-target="calibration"><a>Calibration</a></li>
 				<li data-target="room"><a>Room View</a></li>
 			</ul>
@@ -322,7 +322,7 @@
 				</fieldset>
 			</div>
 
-			<div id="ocr_results">
+			<div id="results">
 				<fieldset>
 					<legend>Frame Data</legend>
 					<dl id="frame_data"></dl>
