@@ -154,7 +154,7 @@ export class OcrPlayer extends Player {
 		});
 	}
 
-	processVideoFrame(frame) {
+	processFrame(frame) {
 		if (!this.#ready) return;
 
 		return this.ocr.processVideoFrame(frame);

@@ -64,8 +64,10 @@ const PIECE_ORIENTATION_TO_NTC_BLOCK_COLOR = [
     1, 1 // I
 ];
 
-export default class EDGameTracker {
+export default class EDGameTracker extends EventTarget {
 	constructor() {
+		super();
+
 		this.gameid = 0;
 		this.startTime = Date.now();
 		this.pieceSpawnDas = 16;
@@ -75,7 +77,7 @@ export default class EDGameTracker {
 		this.totalFrameDropped = 0;
 
 		// bound methods
-		this.setData = this.setData.bind(this);
+		this.processFrame = this.processFrame.bind(this);
 	}
 
 	_bcdToDecimal(byte1, byte2) {
@@ -170,7 +172,7 @@ export default class EDGameTracker {
 		return newField;
 	}
 
-	setData(frameBuffer) {
+	processFrame(frameBuffer) {
 		performance.mark('extract_data_start');
 
 		const ctime = Date.now() - this.startTime; // record ctime as early as possible
@@ -291,7 +293,14 @@ export default class EDGameTracker {
 					this.previousFrameFieldData.frameCounter = frameCounter;
 				}
 				performance.mark('extract_data_end');
-				this.onFrame(null); // bit gross to send a null event... we do it to have the perf metric still work...
+
+				// bit gross to send a null event... we do it to have the perf metric still work...
+				this.dispatchEvent(
+					new CustomEvent('frame', {
+						detail: null,
+					})
+				);
+
 				return;
 			} else {
 				// new game starts!
@@ -361,16 +370,10 @@ export default class EDGameTracker {
 
 		performance.mark('extract_data_end');
 
-		this.onFrame(ntcFrameData);
-
 		this.dispatchEvent(
 			new CustomEvent('frame', {
 				detail: ntcFrameData,
 			})
 		);
 	}
-
-	// default callback
-	// Caller to overwrite
-	onFrame() {}
 }

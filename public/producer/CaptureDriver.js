@@ -216,7 +216,7 @@ export class CaptureDriver extends EventTarget {
 		};
 
 		// Run all players in parallel
-		await Promise.allSettled(this.players.map(p => p.processVideoFrame(frame)));
+		await Promise.allSettled(this.players.map(p => p.processFrame(frame)));
 
 		performance.mark(`end-driver-${this.driverSuffix}`);
 

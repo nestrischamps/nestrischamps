@@ -90,7 +90,7 @@ g_connection.onMessage = function (frame) {
 	}
 };
 
-g_edGameTracker.onFrame = data => {
+g_edGameTracker.addEventListener('frame', ({ detail: data }) => {
 	if (!data) return;
 
 	// 6. transmit frame to NTC server if necessary
@@ -108,7 +108,7 @@ g_edGameTracker.onFrame = data => {
 		}
 
 		// all fields equal, do a sanity check on time
-		if (data.ctime - last_frame.ctime >= 250) break; // max 1 in 15 frames (4fps)
+		if (data.ctime - last_frame.ctime >= 1000) break; // max 1fps heartbeat
 
 		// no need to send frame
 		return;
@@ -116,7 +116,7 @@ g_edGameTracker.onFrame = data => {
 
 	last_frame = data;
 	g_connection.send(BinaryFrame.encode(data));
-};
+});
 
 // ========== Init which does not depend on DOM ========
 
@@ -194,7 +194,7 @@ function startWorker() {
 				g_rendered_frames.shift(); // and throw it away
 			}
 
-			g_edGameTracker.setData(e.data.mem_values);
+			g_edGameTracker.processFrame(e.data.mem_values);
 		}
 
 		if (e.data.type == 'reportPerformance') {

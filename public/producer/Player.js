@@ -60,6 +60,10 @@ export class Player extends EventTarget {
 		};
 	}
 
+	// process a single frame from source device, be it a video or a memory grab
+	processFrame() {}
+
+	// handle the processed frame event from game tracker and send to server
 	handleFrame = ({ detail: data }) => {
 		if (!this.#connection) return;
 

@@ -15,11 +15,15 @@ import { EverdrivePlayer } from './EverdrivePlayer.js';
 function initEverDriveCapture(config) {
 	console.log('initEverDriveCapture');
 
-	const driver = new EDClient(config.frame_rate || 60);
+	const edClient = new EDClient(config.frame_rate || 60);
 	const capture = document.createElement('ntc-capture');
 	const player = new EverdrivePlayer(config);
 
-	capture.setDriver(driver);
+	edClient.addEventListener('frame', event => {
+		player.processFrame(event.detail.data);
+	});
+
+	capture.setDriver(edClient);
 	capture.setPlayer(player);
 
 	capture.dropTab('calibration');
