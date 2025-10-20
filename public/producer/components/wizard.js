@@ -575,9 +575,9 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 	async #finalizeEverdriveConfig() {
 		try {
-			// we get the serial port NOW (on handling a user gesture)
-			// on very first interaction, that will prompt the user to agree to use serial
-			// Not doing it now would mean not able to auto-start the everdrive capture later on, and on particular on refresh
+			// We get the serial port NOW (i.e. on handling a user gesture)
+			// On very first interaction, that will prompt the user to agree to use serial
+			// Not doing it now would mean not able to auto-start the everdrive capture later on, and in particular on refresh
 			const port = await getEDSerialPort();
 		} catch (err) {
 			let msg = `Unexpected error requesting serial port: ${err.message}`;
