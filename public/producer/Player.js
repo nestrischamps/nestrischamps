@@ -2,7 +2,7 @@ import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
 import Connection from '/js/connection.js';
 
-import { peerServerOptions } from '/views/constants.js';
+import { peerServerOptions } from '/js/peerjsOptions.js';
 
 const SEND_BINARY = QueryString.get('binary') !== '0';
 const HEART_BEAT_TIMEOUT = 1000;

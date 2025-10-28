@@ -112,6 +112,10 @@ export class CaptureDriver extends EventTarget {
 			driverMode: DRIVER_MODE,
 			ocrClass: (await getOcrClass()).name,
 		};
+
+		if (!this.#captureDetails.device) {
+			delete this.#captureDetails.device;
+		}
 	}
 
 	#stopFrameCapture() {

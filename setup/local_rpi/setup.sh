@@ -33,22 +33,42 @@ sudo apt install -y nodejs
 npm install
 sudo npm install peer -g
 
+HOSTNAME=nestrischamps.local
+
 # generate the server keys
 openssl req -x509 \
   -sha256 \
   -nodes \
   -newkey rsa:2048 \
   -days 3650 \
-  -subj "/C=SG/O=Yobi/OU=Nestrischamps/CN=nestrischamps.local/" \
-  -keyout nestrischamps.local.key \
-  -out nestrischamps.local.crt
+  -subj "/C=SG/O=Yobi/OU=Nestrischamps/CN=${HOSTNAME}/" \
+  -keyout ${HOSTNAME}.key \
+  -out ${HOSTNAME}.crt
 
-sed -r -i 's/isLocalRpi = false/isLocalRpi = true/g' public/views/constants.js
+tee public/views/constants.js > /dev/null << EOF
+export const peerServerOptions = {
+	host: '${HOSTNAME}',
+	path: '/',
+	port: 9000,
+	secure: true,
+	config: {
+		iceServers: [
+			{ urls: ['stun:${HOSTNAME}:3478'] },
+			{
+				urls: ['turn:${HOSTNAME}:3478'],
+				username: 'ntc',
+				credential: 'ntc',
+			},
+		],
+	},
+};
+EOF
+
 
 SESSION_SECRET=$(echo "console.log(require('ulid').ulid())" | node)
 PORT=5443
-TLS_KEY_PATH=/home/yobi/src/nestrischamps/nestrischamps.local.key
-TLS_CERT_PATH=/home/yobi/src/nestrischamps/nestrischamps.local.crt
+TLS_KEY_PATH=/home/yobi/src/nestrischamps/${HOSTNAME}.key
+TLS_CERT_PATH=/home/yobi/src/nestrischamps/${HOSTNAME}.crt
 
 tee .env > /dev/null << EOF
 TLS_KEY=${TLS_KEY_PATH}

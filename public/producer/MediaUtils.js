@@ -31,7 +31,7 @@ export async function getConnectedDevices(type) {
 }
 
 export async function getDeviceLabel(device_id) {
-	if (!device_id) throw new Error('device_id not provided');
+	if (!device_id) return '';
 	const devices = await getConnectedDevices('videoinput');
 	const device = devices.find(d => d.deviceId === device_id);
 	return device ? device.label : 'Unknown Device';

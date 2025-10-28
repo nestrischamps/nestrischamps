@@ -367,7 +367,7 @@ class Player {
 
 					driver = new CaptureDriver(config, stream);
 					driver.addPlayer({
-						processVideoFrame(frame) {
+						processFrame(frame) {
 							ocr.processVideoFrame(frame);
 						},
 					});

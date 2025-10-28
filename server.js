@@ -3,6 +3,8 @@ import { Server } from 'http';
 import { createServer } from 'https';
 import { readFileSync } from 'fs';
 
+import './modules/expressturn.js'; // conditionnaly sets up peerjs server options
+
 import app from './modules/app.js';
 
 let server;
