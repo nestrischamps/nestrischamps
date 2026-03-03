@@ -154,6 +154,8 @@ export class NTC_MultiView extends NtcComponent {
 		calibration.setAttribute('enable-show-parts', 'false');
 		calibration.setAttribute('enable-capture-rate', 'false');
 
+		calibration.setPlayer(player);
+
 		player.ocrPromise.then(ocr => {
 			calibration.setOCR(ocr);
 		});

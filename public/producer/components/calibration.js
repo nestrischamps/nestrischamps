@@ -1,4 +1,5 @@
 import './cropcontrol.js';
+import './camera.js';
 
 import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
@@ -14,6 +15,8 @@ const MARKUP = html`
 				When you are done, move to another tab to save processing resources.
 			</p>
 		</div>
+
+		<ntc-camera class="is-hidden mt-4" id="camera"></ntc-camera>
 
 		<fieldset class="inputs">
 			<legend>Controls</legend>
@@ -165,6 +168,7 @@ export class NTC_Producer_Calibration extends NtcComponent {
 		this.#domrefs = {
 			capture: this.shadow.getElementById('capture'),
 			adjustments: this.shadow.getElementById('adjustments'),
+			camera: this.shadow.getElementById('camera'),
 
 			instructions: this.shadow.getElementById('instructions'),
 
@@ -471,6 +475,13 @@ export class NTC_Producer_Calibration extends NtcComponent {
 
 		this.#video.dispatchEvent(new CustomEvent('playback-settings-update'));
 	};
+
+	setPlayer(player) {
+		if (player.num !== null) {
+			this.#domrefs.camera.classList.remove('is-hidden');
+			this.#domrefs.camera.setPlayer(player);
+		}
+	}
 
 	setDriver(driver) {
 		this.driver = driver;

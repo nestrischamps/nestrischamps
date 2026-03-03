@@ -138,6 +138,8 @@ export class NTC_Producer_Capture extends NtcComponent {
 			});
 		}
 
+		this.#domrefs.calibration.setPlayer(player);
+
 		if (this.#player.ocrPromise) {
 			player.addEventListener('remote_config_update', ({ detail: config }) => {
 				this.#domrefs.calibration.handleRemoteConfigUpdate(config);

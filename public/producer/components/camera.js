@@ -1,0 +1,317 @@
+import QueryString from '/js/QueryString.js';
+import { NtcComponent } from './NtcComponent.js';
+import { html } from '../StringUtils.js';
+import { getConnectedDevices } from '../MediaUtils.js';
+
+const MARKUP = html`
+	<fieldset id="privacy" class="column">
+		<legend>Privacy / Camera</legend>
+		<p>
+			<div class="field">
+				<label for="allow_video_feed" class="checkbox">
+					Share webcam feed with peerjs
+					<input
+						type="checkbox"
+						class="checkbox"
+						id="allow_video_feed"
+						checked
+					/>
+				</label>
+			</div>
+
+			<div class="select">
+				<select id="video_feed_selector"></select>
+			</div>
+			<br />
+			<video width="200" height="150" id="video_feed"></video>
+		</p>
+		<p>
+			<div class="field">
+				<label class="checkbox">
+					OR use vdo.ninja
+					<input type="checkbox" class="checkbox" id="vdo_ninja" />
+				</label>
+			</div>
+			<div id="vdo_ninja_url"></div>
+			<br />
+			<iframe
+				allow="autoplay;camera;microphone;fullscreen;picture-in-picture;display-capture;midi;geolocation;gyroscope;"
+				id="vdoninja_iframe"
+			></iframe>
+		</p>
+	</fieldset>
+`;
+
+const cssOverride = new CSSStyleSheet();
+cssOverride.replaceSync(`
+	#vdoninja_iframe {
+		width: 100%;
+		height: 30em;
+	}
+`);
+
+export class NTC_Producer_Camera extends NtcComponent {
+	#domrefs;
+	#player;
+	#ongoing_call;
+
+	constructor() {
+		super();
+
+		this._bulmaSheets.then(() => {
+			this.shadow.adoptedStyleSheets.push(cssOverride);
+		});
+
+		this.shadow.innerHTML = MARKUP;
+		this.style.display = 'block';
+
+		this.#domrefs = {
+			privacy: this.shadow.getElementById('privacy'),
+
+			allow_video_feed: this.shadow.getElementById('allow_video_feed'),
+			video_feed_selector: this.shadow.getElementById('video_feed_selector'),
+			video_feed: this.shadow.getElementById('video_feed'),
+
+			vdo_ninja: this.shadow.getElementById('vdo_ninja'),
+			vdo_ninja_url: this.shadow.getElementById('vdo_ninja_url'),
+			vdoninja_iframe: this.shadow.getElementById('vdoninja_iframe'),
+		};
+
+		this.#domrefs.video_feed_selector.addEventListener(
+			'change',
+			this.#onVideoFeedSelectorChange
+		);
+		this.#domrefs.allow_video_feed.addEventListener(
+			'change',
+			this.#onAllowVideoFeedChange
+		);
+		this.#domrefs.vdo_ninja.addEventListener('change', this.#onVdoNinjaChange);
+
+		this.resetDevices();
+	}
+
+	async setPlayer(player) {
+		this.#player = player;
+
+		// update IDs for this specific player so labels work correctly
+		if (player.num !== null) {
+			const num = player.num;
+			this.#domrefs.allow_video_feed.id = `allow_video_feed_${num}`;
+			this.shadow
+				.querySelector('label[for="allow_video_feed"]')
+				.setAttribute('for', `allow_video_feed_${num}`);
+		}
+
+		const { allow_video_feed } = this.#domrefs;
+
+		allow_video_feed.checked = !!player.config.allow_video_feed;
+
+		player.addEventListener('make_player', ({ detail }) => {
+			this.is_player = true;
+			this.view_meta = detail.view_meta;
+			this.startSharingVideoFeed();
+		});
+
+		player.addEventListener('drop_player', ({ detail }) => {
+			this.is_player = false;
+			this.stopSharingVideoFeed();
+		});
+
+		player.addEventListener('peer_open', () => {
+			this.startSharingVideoFeed();
+		});
+
+		await this.resetDevices();
+
+		this.startSharingVideoFeed();
+	}
+
+	async resetDevices() {
+		const { video_feed_selector } = this.#domrefs;
+
+		const devicesList = await getConnectedDevices('videoinput');
+
+		const mappedDevices = devicesList.map(camera => {
+			const device = { label: camera.label, deviceId: camera.deviceId };
+
+			// Drop the manufacturer:make identifier because it's (typically) not useful
+			device.label = device.label.replace(
+				/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/,
+				''
+			);
+
+			return device;
+		});
+
+		video_feed_selector.replaceChildren(
+			...[{ label: '-', deviceId: 'default' }, ...mappedDevices].map(camera => {
+				const camera_option = document.createElement('option');
+				camera_option.text = camera.label;
+				camera_option.value = camera.deviceId;
+
+				if (this.#player?.config?.video_feed_device_id === camera.deviceId) {
+					camera_option.selected = true;
+				}
+
+				return camera_option;
+			})
+		);
+	}
+
+	startSharingVideoFeed = async () => {
+		const { allow_video_feed, video_feed, video_feed_selector } = this.#domrefs;
+
+		this.stopSharingVideoFeed();
+
+		if (!allow_video_feed.checked) return;
+		if (!video_feed_selector.value) return;
+		if (
+			!this.#player ||
+			!this.is_player ||
+			!this.#player.getPeer() ||
+			!this.#player.getViewPeerId() ||
+			!this.view_meta ||
+			!this.view_meta._video
+		)
+			return;
+
+		const video_constraints = {
+			width: { ideal: 320 },
+			height: { ideal: 240 },
+			frameRate: { ideal: 15 }, // players hardly move... no need high fps?
+		};
+
+		const m = (this.view_meta?._video || '').match(/^(\d+)x(\d+)$/);
+
+		if (m) {
+			video_constraints.width.ideal = parseInt(m[1], 10);
+			video_constraints.height.ideal = parseInt(m[2], 10);
+		}
+
+		if (video_feed_selector.value === 'default') {
+			delete video_constraints.deviceId;
+		} else {
+			video_constraints.deviceId = { exact: video_feed_selector.value };
+		}
+
+		console.log(Date.now(), 'Probing for cam feed');
+
+		const stream = await navigator.mediaDevices.getUserMedia({
+			audio: QueryString.get('webcam_audio') === '1',
+			video: video_constraints,
+		});
+
+		video_feed.srcObject = stream;
+		video_feed.play();
+
+		this.#ongoing_call = this.#player
+			.getPeer()
+			.call(this.#player.getViewPeerId(), stream);
+	};
+
+	restartSharingVideoFeed = () => {
+		if (!this.#ongoing_call) return;
+		this.startSharingVideoFeed();
+	};
+
+	stopSharingVideoFeed = () => {
+		this.#domrefs.video_feed.pause();
+		this.#domrefs.video_feed.srcObject = null;
+
+		try {
+			this.#ongoing_call.close();
+		} catch (err) {}
+
+		this.#ongoing_call = null;
+	};
+
+	#onAllowVideoFeedChange = () => {
+		const { allow_video_feed, video_feed, vdo_ninja } = this.#domrefs;
+
+		this.#player.config.allow_video_feed = !!allow_video_feed.checked;
+		this.#player.config.save();
+
+		if (allow_video_feed.checked) {
+			this.startSharingVideoFeed();
+
+			vdo_ninja.checked = false;
+			this.#onVdoNinjaChange();
+		} else {
+			video_feed.pause();
+			video_feed.srcObject?.getTracks().forEach(track => track.stop());
+			video_feed.srcObject = null;
+		}
+	};
+
+	#onVideoFeedSelectorChange = () => {
+		this.#player.config.video_feed_device_id =
+			this.#domrefs.video_feed_selector.value;
+		this.#player.config.save();
+
+		this.startSharingVideoFeed();
+	};
+
+	#onVdoNinjaChange = () => {
+		const { allow_video_feed, vdo_ninja, vdoninja_iframe, vdo_ninja_url } =
+			this.#domrefs;
+
+		if (vdo_ninja.checked) {
+			// 1. start up vdo ninja
+			const chars =
+				'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split(
+					''
+				);
+			const streamid = `_NTC_${Array(8)
+				.fill()
+				.map(() => chars[Math.floor(Math.random() * chars.length)])
+				.join('')}`;
+
+			const pushURL = new URL('https://vdo.ninja/');
+			pushURL.searchParams.set('push', streamid);
+			pushURL.searchParams.set('transparent', 0);
+			pushURL.searchParams.set('webcam', 1);
+			pushURL.searchParams.set('audiodevice', 0);
+			pushURL.searchParams.set('autostart', 1);
+			pushURL.searchParams.set('easyexit', 1);
+
+			vdoninja_iframe.src = pushURL.toString();
+
+			const viewURL = new URL('https://vdo.ninja/');
+			viewURL.searchParams.set('view', streamid);
+			viewURL.searchParams.set('cover', 1);
+			viewURL.searchParams.set('transparent', 0);
+
+			this.#player.sendVdoNinjaUrl(viewURL.toString());
+
+			const a = document.createElement('a');
+			a.href = a.textContent = viewURL.toString();
+
+			a.addEventListener('click', event => {
+				event.preventDefault();
+				event.stopPropagation();
+				navigator.clipboard.writeText(viewURL.toString());
+
+				vdo_ninja_url.querySelectorAll('div').forEach(s => s.remove());
+
+				const div = document.createElement('div');
+				div.innerHTML = `<i>(URL has been copied to clipboard)</i>`;
+
+				vdo_ninja_url.append(div);
+
+				setTimeout(() => div.remove(), 1000);
+			});
+
+			vdo_ninja_url.replaceChildren(a);
+			a.click();
+
+			// 2. cancel peerjs video
+			allow_video_feed.checked = false;
+			this.#onAllowVideoFeedChange();
+		} else {
+			vdoninja_iframe.src = '';
+			vdo_ninja_url.textContent = '';
+		}
+	};
+}
+
+customElements.define('ntc-camera', NTC_Producer_Camera);
