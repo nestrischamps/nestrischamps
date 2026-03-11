@@ -7,10 +7,10 @@ import '../PerfResults.js';
 import '../CaptureDetails.js';
 
 const MARKUP = html`
-	<div class="container is-fluid mt-5">
+	<div id="nav_container" class="container is-fluid pt-5 pb-3">
 		<div
 			id="tabs"
-			class="tabs is-toggle is-toggle-rounded is-fullwidth is-medium"
+			class="tabs is-toggle is-toggle-rounded is-fullwidth is-medium m-0"
 		>
 			<ul>
 				<li data-target="settings" class="is-active">
@@ -56,7 +56,14 @@ const MARKUP = html`
 const cssOverride = new CSSStyleSheet();
 cssOverride.replaceSync(`
 	:host {
-		display: block
+		display: block;
+	}
+
+	#nav_container {
+		position: sticky;
+		top: 0;
+		z-index: 10;
+		background-color: var(--scheme-main, #000);
 	}
 
     #content > * {

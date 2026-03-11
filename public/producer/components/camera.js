@@ -25,7 +25,7 @@ const MARKUP = html`
 			<br />
 			<video width="200" height="150" id="video_feed"></video>
 		</p>
-		<p>
+		<div class="vdoninja-container">
 			<div class="field">
 				<label class="checkbox">
 					OR use vdo.ninja
@@ -38,7 +38,7 @@ const MARKUP = html`
 				allow="autoplay;camera;microphone;fullscreen;picture-in-picture;display-capture;midi;geolocation;gyroscope;"
 				id="vdoninja_iframe"
 			></iframe>
-		</p>
+		</div>
 	</fieldset>
 `;
 
@@ -47,6 +47,10 @@ cssOverride.replaceSync(`
 	#vdoninja_iframe {
 		width: 100%;
 		height: 30em;
+	}
+
+	:host([no-vdoninja]) .vdoninja-container {
+		display: none;
 	}
 `);
 
