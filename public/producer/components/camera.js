@@ -4,7 +4,7 @@ import { html } from '../StringUtils.js';
 import { getConnectedDevices } from '../MediaUtils.js';
 
 const MARKUP = html`
-	<fieldset id="privacy" class="column">
+	<fieldset id="privacy">
 		<legend>Privacy / Camera</legend>
 		<p>
 			<div class="field">
