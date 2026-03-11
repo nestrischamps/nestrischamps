@@ -110,7 +110,7 @@ cssOverride.replaceSync(`
 		row-gap: 1em;
 		align-items: center;
 		position: sticky;
-		top: 0;
+		top: 7rem;
 		padding-top: 1.5em;
 	}
 

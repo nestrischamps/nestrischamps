@@ -63,7 +63,7 @@ cssOverride.replaceSync(`
 		position: sticky;
 		top: 0;
 		z-index: 10;
-		background-color: var(--scheme-main, #000);
+		background-color: var(--scheme-main, #181c20);
 	}
 
     #content > * {
