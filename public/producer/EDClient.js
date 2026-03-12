@@ -38,11 +38,11 @@ export async function getEDSerialPort() {
 function getEDCommandHeader(command) {
 	// prettier-ignore
 	return [
-        '+'.charCodeAt(0),
-        '+'.charCodeAt(0) ^ 0xff,
-        command,
-        command ^ 0xff
-    ];
+		'+'.charCodeAt(0),
+		'+'.charCodeAt(0) ^ 0xff,
+		command,
+		command ^ 0xff
+	];
 }
 
 async function readInto(reader, dataArray) {
@@ -104,6 +104,7 @@ export default class EDClient extends EventTarget {
 		this.requestFrameFromEverDrive = this.requestFrameFromEverDrive.bind(this);
 
 		this.#captureDetails = {
+			device: 'EverDrive N8 PRO',
 			mode: 'everdrive',
 			frameRate: frameRate,
 			frameMs: this.frameDuration,

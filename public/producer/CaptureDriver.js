@@ -106,6 +106,7 @@ export class CaptureDriver extends EventTarget {
 
 		this.#captureDetails = {
 			device: await getDeviceLabel(this.config.device_id),
+			deviceID: this.config.device_id,
 			video: this.#video,
 			videoSize: `${this.#video.videoWidth} x ${this.#video.videoHeight}`,
 			videoFps: trackFps,
@@ -115,6 +116,7 @@ export class CaptureDriver extends EventTarget {
 
 		if (!this.#captureDetails.device) {
 			delete this.#captureDetails.device;
+			delete this.#captureDetails.deviceID;
 		}
 	}
 
