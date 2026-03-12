@@ -7,28 +7,30 @@ import './camera.js';
 
 const MARKUP = html`
 	<div id="inputs" class="columns container is-fluid">
-		<fieldset id="controls" class="column">
-			<legend>Controls</legend>
+		<div class="column">
+			<fieldset id="controls">
+				<legend>Controls</legend>
 
-			<div class="field">
-				<button id="clear_config" class="button is-light">
-					Clear Config and Restart
-				</button>
-			</div>
+				<div class="field">
+					<button id="clear_config" class="button is-light">
+						Clear Config and Restart
+					</button>
+				</div>
 
-			<div class="field">
-				<button id="save_game_palette" class="button is-light" disabled>
-					Save Last Game's Palette
-				</button>
-			</div>
+				<div class="field">
+					<button id="save_game_palette" class="button is-light" disabled>
+						Save Last Game's Palette
+					</button>
+				</div>
 
-			<div id="timer_control" class="field is-hidden">
-				<button id="start_timer" class="button">Start Timer</button>
-				for
-				<input type="number" id="minutes" value="120" min="5" max="5949" />
-				minutes
-			</div>
-		</fieldset>
+				<div id="timer_control" class="field is-hidden">
+					<button id="start_timer" class="button">Start Timer</button>
+					for
+					<input type="number" id="minutes" value="120" min="5" max="5949" />
+					minutes
+				</div>
+			</fieldset>
+		</div>
 
 		<ntc-camera id="camera" class="column"></ntc-camera>
 	</div>
@@ -36,6 +38,10 @@ const MARKUP = html`
 
 const cssOverride = new CSSStyleSheet();
 cssOverride.replaceSync(`
+	.column {
+		padding: 0;
+	}
+		
 	#vdoninja_iframe {
 		width: 100%;
 		height: 30em;

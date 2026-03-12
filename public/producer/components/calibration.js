@@ -17,82 +17,88 @@ const MARKUP = html`
 		</div>
 
 		<div class="columns is-align-items-flex-start mt-4">
-			<fieldset class="inputs column mb-0">
-				<legend>Controls</legend>
+			<div class="column p-0">
+				<fieldset class="inputs">
+					<legend>Controls</legend>
 
-				<div class="field">
-					<label class="checkbox">
-						7 digits score
-						<input type="checkbox" id="score7" />
-					</label>
-				</div>
-
-				<div
-					class="field"
-					title="If you are not using a Retron, and if you are using an active splitter, you can disable this"
-				>
-					<label class="checkbox">
-						Handle Retron levels X6 and X7 ⓘ
-						<input
-							type="checkbox"
-							id="handle_retron_levels_6_7"
-							checked
-							autocomplete="off"
-						/>
-					</label>
-				</div>
-
-				<div class="field">
-					<label>
-						Capture Rate
-						<span class="select is-small">
-							<select id="capture_rate">
-								<option value="24">24 fps</option>
-								<option value="25">25 fps</option>
-								<option value="30">30 fps</option>
-								<option value="50">50 fps</option>
-								<option value="60">60 fps</option>
-							</select>
-						</span>
-					</label>
-				</div>
-
-				<div id="image_corrections">
-					<div class="field brightness">
-						Brightness:
-						<input
-							id="brightness"
-							type="range"
-							min="1"
-							max="3"
-							step="0.05"
-							value="1"
-						/>
-						<span>1</span> <a href="#">Reset</a>
+					<div class="field">
+						<label class="checkbox">
+							7 digits score
+							<input type="checkbox" id="score7" />
+						</label>
 					</div>
-					<div class="field contrast">
-						Contrast:
-						<input
-							id="contrast"
-							type="range"
-							min="0"
-							max="2"
-							step="0.05"
-							value="1"
-						/>
-						<span>1</span> <a href="#">Reset</a>
-					</div>
-				</div>
-			</fieldset>
 
-			<ntc-camera class="is-hidden column" id="camera" no-vdoninja></ntc-camera>
+					<div
+						class="field"
+						title="If you are not using a Retron, and if you are using an active splitter, you can disable this"
+					>
+						<label class="checkbox">
+							Handle Retron levels X6 and X7 ⓘ
+							<input
+								type="checkbox"
+								id="handle_retron_levels_6_7"
+								checked
+								autocomplete="off"
+							/>
+						</label>
+					</div>
+
+					<div class="field">
+						<label>
+							Capture Rate
+							<span class="select is-small">
+								<select id="capture_rate">
+									<option value="24">24 fps</option>
+									<option value="25">25 fps</option>
+									<option value="30">30 fps</option>
+									<option value="50">50 fps</option>
+									<option value="60">60 fps</option>
+								</select>
+							</span>
+						</label>
+					</div>
+
+					<div id="image_corrections">
+						<div class="field brightness">
+							Brightness:
+							<input
+								id="brightness"
+								type="range"
+								min="1"
+								max="3"
+								step="0.05"
+								value="1"
+							/>
+							<span>1</span> <a href="#">Reset</a>
+						</div>
+						<div class="field contrast">
+							Contrast:
+							<input
+								id="contrast"
+								type="range"
+								min="0"
+								max="2"
+								step="0.05"
+								value="1"
+							/>
+							<span>1</span> <a href="#">Reset</a>
+						</div>
+					</div>
+				</fieldset>
+			</div>
+
+			<ntc-camera
+				class="is-hidden column p-0"
+				id="camera"
+				no-vdoninja
+			></ntc-camera>
 		</div>
 
 		<div id="extraction" class="columns mt-4">
 			<div id="capture-container" class="column is-5">
 				<div id="capture"></div>
 			</div>
-			<div id="adjustments" class="column is-7" data-crop-scope></div>
+			<div id="adjustments" class="column p-0 is-7" data-crop-scope></div>
 		</div>
 	</div>
 `;
@@ -110,7 +116,7 @@ cssOverride.replaceSync(`
 		row-gap: 1em;
 		align-items: center;
 		position: sticky;
-		top: 7rem;
+		top: 6rem;
 		padding-top: 1.5em;
 	}
 
