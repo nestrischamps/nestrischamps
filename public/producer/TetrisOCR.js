@@ -1,6 +1,6 @@
 import { CONFIGS, TASK_RESIZE } from './constants.js';
-import { timingDecorator } from '/ocr/utils.js';
-import { luma } from '/ocr/image_tools.js';
+import { timingDecorator } from './utils.js';
+import { luma } from './image_tools.js';
 
 // canvas for the digit templates
 const digit_canvas_0 = document.createElement('canvas');
@@ -10,7 +10,7 @@ const DIGITS = '0123456789ABCDEF'.split('');
 DIGITS.unshift('null');
 
 async function getTemplateData(digit) {
-	const response = await fetch(`/ocr/${digit.toLowerCase()}.png`);
+	const response = await fetch(`/producer/${digit.toLowerCase()}.png`);
 	const blob = await response.blob();
 
 	return createImageBitmap(blob);

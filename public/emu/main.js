@@ -2,7 +2,7 @@ import { MarcFile, parseBPSFile } from '/emu/bps.js';
 import { address_maps, getDataAddresses } from '/emu/addresses.js';
 import Connection from '/js/connection.js';
 import BinaryFrame from '/js/BinaryFrame.js';
-import EDGameTracker from '/ocr/EDGameTracker.js';
+import EDGameTracker from '/producer/EDGameTracker.js';
 
 // ========== Global Application State ==========
 

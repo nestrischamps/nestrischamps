@@ -1,6 +1,6 @@
 import QueryString from '/js/QueryString.js';
 import BinaryFrame from '/js/BinaryFrame.js';
-import { getPalette } from '/ocr/palettes.js';
+import { getPalette } from './palettes.js';
 
 const OLD_CONFIG_NAME = 'config_v2';
 

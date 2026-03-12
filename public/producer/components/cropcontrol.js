@@ -1,6 +1,6 @@
 import { NtcComponent } from './NtcComponent.js';
 import { html } from '../StringUtils.js';
-import { u32ToRgba } from '/ocr/utils.js';
+import { u32ToRgba } from '../utils.js';
 
 const MARKUP = html`
 	<fieldset>

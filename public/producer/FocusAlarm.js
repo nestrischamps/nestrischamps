@@ -1,8 +1,8 @@
 import { timer } from './timer.js';
 import speak from '/views/tts.js';
 
-const UNFOCUSED_ALARM_SND = new Audio('/ocr/alarm.mp3');
-// const UNFOCUSED_SILENCE_SND = new Audio('/ocr/silence.mp3');
+const UNFOCUSED_ALARM_SND = new Audio('/producer/alarm.mp3');
+// const UNFOCUSED_SILENCE_SND = new Audio('/producer/silence.mp3');
 const UNFOCUSED_ALARM_LOOPS = 4;
 
 let target_interval = 1000 / 10; // 30 fps

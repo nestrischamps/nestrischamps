@@ -25,7 +25,7 @@ export function getPalette(name) {
 
 	if (!palettePromises[name]) {
 		palettePromises[name] = (async () => {
-			const response = await fetch(`/ocr/palettes/${name}.json`);
+			const response = await fetch(`/producer/palettes/${name}.json`);
 			const json = await response.json();
 
 			return json.map(colors => {

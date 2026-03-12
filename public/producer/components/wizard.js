@@ -13,12 +13,9 @@ import {
 	REFERENCE_LOCATIONS,
 	RETRON_HD_CONFIG,
 } from '../constants.js';
-import loadPalettes from '../../ocr/palettes.js';
-import {
-	getFieldCoordinates,
-	getCaptureCoordinates,
-} from '../../ocr/calibration.js';
-import { getEDSerialPort } from '../../ocr/EDClient.js';
+import loadPalettes from '../palettes.js';
+import { getFieldCoordinates, getCaptureCoordinates } from '../calibration.js';
+import { getEDSerialPort } from '../EDClient.js';
 import {
 	saveConfig,
 	saveMultiviewerConfig,

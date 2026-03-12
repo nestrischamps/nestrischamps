@@ -1,6 +1,6 @@
 import { Player } from './Player.js';
 
-import EDGameTracker from '/ocr/EDGameTracker.js';
+import EDGameTracker from './EDGameTracker.js';
 
 export class EverdrivePlayer extends Player {
 	constructor(config, num = null) {

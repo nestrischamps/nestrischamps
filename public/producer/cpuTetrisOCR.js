@@ -1,12 +1,12 @@
 import { TetrisOCR } from './TetrisOCR.js';
-import { crop, luma } from '/ocr/image_tools.js';
+import { crop, luma } from './image_tools.js';
 import {
 	PATTERN_MAX_INDEXES,
 	SHINE_LUMA_THRESHOLD,
 	GYM_PAUSE_CROP_RELATIVE_TO_FIELD,
 	GYM_PAUSE_LUMA_THRESHOLD,
 } from './constants.js';
-import { clamp, rgbaToU32 } from '/ocr/utils.js';
+import { clamp, rgbaToU32 } from './utils.js';
 
 export class CpuTetrisOCR extends TetrisOCR {
 	#ready = false;

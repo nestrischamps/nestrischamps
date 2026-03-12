@@ -1,7 +1,7 @@
-import ScoreFixer from '/ocr/ScoreFixer.js';
+import ScoreFixer from './ScoreFixer.js';
 import { PIECES, TRANSITIONS } from '/views/constants.js';
 import { getNextGameId } from './gameid.js';
-import { u32ToRgba, rgbToOklab, findClosestOklabIndex } from '/ocr/utils.js';
+import { u32ToRgba, rgbToOklab, findClosestOklabIndex } from './utils.js';
 
 const FRAME_BUFFER_MAXSIZE = 3; // all tracked changes are stable over 2 frames - using 3 for safety
 const DEFAULT_COLOR_0 = [0x00, 0x00, 0x00];

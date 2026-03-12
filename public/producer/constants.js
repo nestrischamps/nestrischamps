@@ -97,7 +97,7 @@ export const GYM_PAUSE_CROP_RELATIVE_TO_FIELD = { x: 37, y: 47, w: 22, h: 1 };
 export const CONFIGS = {
 	classic: {
 		game_type: GAME_TYPE.CLASSIC,
-		reference: '/ocr/reference_ui_classic.png',
+		reference: '/producer/reference_ui_classic.png',
 		fields: [
 			'score',
 			'level',
@@ -141,7 +141,7 @@ export const CONFIGS = {
 	},
 	das_trainer: {
 		game_type: GAME_TYPE.DAS_TRAINER,
-		reference: '/ocr/reference_ui_das_trainer.png',
+		reference: '/producer/reference_ui_das_trainer.png',
 		palette: 'easiercap',
 		fields: [
 			'score',
@@ -171,7 +171,7 @@ export const CONFIGS = {
 	},
 	minimal: {
 		game_type: GAME_TYPE.MINIMAL,
-		reference: '/ocr/reference_ui_classic.png',
+		reference: '/producer/reference_ui_classic.png',
 		palette: 'easiercap',
 		fields: ['score', 'level', 'lines', 'field', 'preview'],
 		packing: {

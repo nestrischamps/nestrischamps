@@ -9,7 +9,7 @@ import { hasConfig, loadConfig } from './ConfigUtils.js';
 
 import { CaptureDriver } from './CaptureDriver.js';
 import { OcrPlayer } from './OcrPlayer.js';
-import EDClient from '/ocr/EDClient.js'; // is the EDDriver!
+import EDClient from './EDClient.js'; // is the EDDriver!
 import { EverdrivePlayer } from './EverdrivePlayer.js';
 
 function initEverDriveCapture(config) {

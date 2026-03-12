@@ -1,6 +1,6 @@
 import { GpuTetrisOCR } from '../gpuTetrisOCR.js';
 import { PATTERN_MAX_INDEXES, GYM_PAUSE_LUMA_THRESHOLD } from '../constants.js';
-import { findMinIndex, u32ToRgba } from '/ocr/utils.js';
+import { findMinIndex, u32ToRgba } from '../utils.js';
 
 const MAX_SHINE_SPOTS = 20 + 14;
 
