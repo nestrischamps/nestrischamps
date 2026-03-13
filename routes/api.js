@@ -37,6 +37,10 @@ function parseStackRabbitRequest(query) {
 	]);
 }
 
+router.get('/is_public_server', (req, res) => {
+	res.json({ is_public_server: process.env.IS_PUBLIC_SERVER === '1' });
+});
+
 // proxy to stack rabbit engine API
 // careis taken to make sure only valid requests are forwarded
 router.get('/recommendation', async (req, res) => {

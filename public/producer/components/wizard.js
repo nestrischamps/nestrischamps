@@ -272,8 +272,27 @@ export class NTC_Producer_Wizard extends NtcComponent {
 
 		// we only show 4xMultiviewer when in a match room
 		const is_match_room = new URL(location).pathname.startsWith('/room/u/');
+
 		if (!is_match_room) {
 			this.#domrefs.single.click(); // simulate selection of single player mode to move on
+		} else {
+			// In a match room, we need to check if we are on a public server
+			// Public servers do not support multiviewer mode, since they lack local player secrets
+			this.#domrefs.step1.classList.add('is-hidden'); // Hide temporarily to avoid flicker
+
+			fetch('/api/is_public_server')
+				.then(res => res.json())
+				.then(({ is_public_server }) => {
+					if (is_public_server) {
+						this.#domrefs.single.click();
+					} else {
+						this.#domrefs.step1.classList.remove('is-hidden');
+					}
+				})
+				.catch(err => {
+					console.error('Failed to check public server status', err);
+					this.#domrefs.step1.classList.remove('is-hidden');
+				});
 		}
 	}
 
