@@ -5,16 +5,17 @@ import got from 'got';
 import middlewares from '../modules/middlewares.js';
 
 import { OAuth2Client as GoogleOAuth2Client } from 'google-auth-library';
+import config from '../modules/config.js';
 
 const googleOAuth2Client = new GoogleOAuth2Client(
-	process.env.GOOGLE_AUTH_CLIENT_ID,
-	process.env.GOOGLE_AUTH_CLIENT_SECRET,
-	process.env.GOOGLE_AUTH_REDIRECT_URL
+	config.get('auth.google.client_id'),
+	config.get('auth.google.client_secret'),
+	config.get('auth.google.redirect_url')
 );
 
 const TWITCH_LOGIN_BASE_URI = 'https://id.twitch.tv/oauth2/authorize?';
 const TWITCH_LOGIN_QS = new URLSearchParams({
-	client_id: process.env.TWITCH_CLIENT_ID,
+	client_id: config.get('auth.twitch.client_id'),
 	scope: 'user:read:email chat:read',
 	response_type: 'code',
 	force_verify: true,
@@ -22,7 +23,7 @@ const TWITCH_LOGIN_QS = new URLSearchParams({
 
 const DISCORD_LOGIN_BASE_URI = 'https://discord.com/oauth2/authorize?';
 const DISCORD_LOGIN_QS = new URLSearchParams({
-	client_id: process.env.DISCORD_CLIENT_ID,
+	client_id: config.get('auth.discord.client_id'),
 	scope: 'identify email',
 	response_type: 'code',
 	force_verify: true,
@@ -35,7 +36,7 @@ const router = express.Router();
 function getTwitchAuthUrl(req) {
 	TWITCH_LOGIN_QS.set(
 		'redirect_uri',
-		`${process.env.IS_PUBLIC_SERVER ? 'https' : req.protocol}://${req.get(
+		`${config.get('server.is_public') ? 'https' : req.protocol}://${req.get(
 			'host'
 		)}/auth/twitch/callback`
 	);
@@ -75,7 +76,7 @@ function getDiscordAuthUrl(req) {
 
 	return `${DISCORD_LOGIN_BASE_URI}${qs}`;
 }
-if (process.env.IS_PUBLIC_SERVER === '1') {
+if (config.get('server.is_public')) {
 	router.get('/', (_req, res) => {
 		res.render('login');
 	});
@@ -143,8 +144,8 @@ router.get('/twitch/callback', async (req, res) => {
 			'https://id.twitch.tv/oauth2/token',
 			{
 				searchParams: {
-					client_id: process.env.TWITCH_CLIENT_ID,
-					client_secret: process.env.TWITCH_CLIENT_SECRET,
+					client_id: config.get('auth.twitch.client_id'),
+					client_secret: config.get('auth.twitch.client_secret'),
 					code: req.query.code,
 					grant_type: 'authorization_code',
 					redirect_uri: `${req.protocol}://${req.get(
@@ -177,7 +178,7 @@ router.get('/twitch/callback', async (req, res) => {
 			'https://api.twitch.tv/helix/users',
 			{
 				headers: {
-					'Client-Id': process.env.TWITCH_CLIENT_ID,
+					'Client-Id': config.get('auth.twitch.client_id'),
 					'Authorization': `Bearer ${token.access_token}`,
 				},
 				searchParams: {
@@ -271,7 +272,7 @@ router.get('/google/callback', async (req, res) => {
 			// 3) Verify ID token, including nonce + get user info
 			const ticket = await googleOAuth2Client.verifyIdToken({
 				idToken: tokens.id_token,
-				audience: process.env.GOOGLE_AUTH_CLIENT_ID,
+				audience: config.get('auth.google.client_id'),
 			});
 			const payload = ticket.getPayload();
 
@@ -359,7 +360,7 @@ router.get('/discord/callback', async (req, res) => {
 					'Authorization':
 						'Basic ' +
 						Buffer.from(
-							`${process.env.DISCORD_CLIENT_ID}:${process.env.DISCORD_CLIENT_SECRET}`
+							`${config.get('auth.discord.client_id')}:${config.get('auth.discord.client_secret')}`
 						).toString('base64'),
 					'Content-Type': 'application/x-www-form-urlencoded',
 				},

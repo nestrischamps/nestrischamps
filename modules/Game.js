@@ -11,6 +11,7 @@ import zlib from 'zlib';
 
 import fs from 'fs';
 import path from 'path';
+import config from './config.js';
 
 const PIECES = ['T', 'J', 'Z', 'O', 'S', 'L', 'I'];
 const SCORE_BASES = [0, 40, 100, 300, 1200];
@@ -26,7 +27,7 @@ class Game {
 		this.over = false;
 		this.num_frames = 0;
 
-		this.save_frame = process.env.FF_SAVE_GAME_FRAMES !== '0'; // explicit zero needed to NOT save frames - anything else saves!
+		this.save_frame = config.get('game.save_frames');
 
 		if (this.save_frame) {
 			// We use ulid ids for games, and games get binned into part of the 10 bits timestamp
@@ -41,12 +42,12 @@ class Game {
 			// Set up a streaming upload system to S3
 			this.frame_stream = zlib.createGzip();
 
-			if (process.env.GAME_FRAMES_BUCKET) {
+			if (config.get('game.frames_bucket')) {
 				const upload = new Upload({
-					client: new S3Client({ region: process.env.GAME_FRAMES_REGION }),
+					client: new S3Client({ region: config.get('game.frames_region') }),
 					leavePartsOnError: false,
 					params: {
-						Bucket: process.env.GAME_FRAMES_BUCKET,
+						Bucket: config.get('game.frames_bucket'),
 						Key: this.frame_file,
 						Body: this.frame_stream,
 						ACL: 'public-read',
@@ -65,7 +66,7 @@ class Game {
 							`Unable to upload game file ${this.frame_file}: ${err.message}`
 						)
 				);
-			} else if (process.env.IS_PUBLIC_SERVER !== '1') {
+			} else if (!config.get('server.is_public')) {
 				// Saving on local filesystem
 
 				fs.mkdirSync(dir, { recursive: true }); // sync action is no good! Can we do without the sync? 😰

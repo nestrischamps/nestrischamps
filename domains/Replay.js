@@ -4,6 +4,7 @@ import fs from 'fs';
 
 import BinaryFrame from '../public/js/BinaryFrame.js';
 import ScoreDAO from '../daos/ScoreDAO.js';
+import config from '../modules/config.js';
 
 class Replay {
 	constructor(connection, player_num, game_id_or_url, time_scale = 1) {
@@ -67,10 +68,10 @@ class Replay {
 				score_data.country_code,
 			]);
 
-			if (process.env.GAME_FRAMES_BUCKET) {
+			if (config.get('game.frames_bucket')) {
 				// data comes from S3
 				//https://nestrischamps.s3-us-west-1.amazonaws.com/
-				const base_url = `https://${process.env.GAME_FRAMES_BUCKET}.s3-${process.env.GAME_FRAMES_REGION}.amazonaws.com/`;
+				const base_url = `https://${config.get('game.frames_bucket')}.s3-${config.get('game.frames_region')}.amazonaws.com/`;
 
 				this.game_stream = got.stream(`${base_url}${file_path}`);
 			} else {

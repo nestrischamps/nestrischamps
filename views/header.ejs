@@ -114,7 +114,7 @@
 
 			<% } else { %>
 
-				<% if (!process.env.IS_PUBLIC_SERVER) { %>
+				<% if (!is_public_server) { %>
 					<div class="navbar-item">
 						<a class="button is-primary" href="/settings">
 							<strong>Local log in</strong>

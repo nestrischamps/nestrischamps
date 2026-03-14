@@ -3,16 +3,17 @@ import { v4 as uuidv4 } from 'uuid';
 import dbPool from './db.js';
 import pgConnect from 'connect-pg-simple';
 import UserDAO from '../daos/UserDAO.js';
+import config from './config.js';
 
 const pgSession = pgConnect(session);
 
 export default {
 	sessionMiddleware: session({
-		secret: process.env.SESSION_SECRET || uuidv4(),
+		secret: config.get('server.session_secret') || uuidv4(),
 		resave: false,
 		saveUninitialized: true,
 		cookie: {
-			secure: process.env.IS_PUBLIC_SERVER === '1',
+			secure: config.get('server.is_public'),
 		},
 		genid: uuidv4,
 		store: new pgSession({

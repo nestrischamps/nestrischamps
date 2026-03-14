@@ -1,10 +1,11 @@
 import express from 'express';
 import ScoreDAO from '../daos/ScoreDAO.js';
 import { importUsers } from '../modules/LocalUsers.js';
+import config from '../modules/config.js';
 
 const router = express.Router();
 
-if (process.env.IS_PUBLIC_SERVER != '1') {
+if (!config.get('server.is_public')) {
 	router.get('/import-local-users', async (req, res) => {
 		const data = await importUsers({
 			clearOldUsers: req.query.clear === '1',

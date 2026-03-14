@@ -1,15 +1,16 @@
 import pg from 'pg';
+import config from './config.js';
 
 let pool;
 
-const isPublicServer = /^(1|on|true)$/i.test(process.env.IS_PUBLIC_SERVER);
+const isPublicServer = config.get('server.is_public');
 
 console.log(`DB initialization`, {
 	IS_PUBLIC_SERVER: isPublicServer,
 });
 
 pool = new pg.Pool({
-	connectionString: process.env.DATABASE_URL,
+	connectionString: config.get('db.url'),
 	ssl: {
 		rejectUnauthorized: false, // isPublicServer,
 	},

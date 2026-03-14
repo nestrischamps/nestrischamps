@@ -9,11 +9,12 @@ import { peek } from '../public/views/utils.js';
 import { Upload } from '@aws-sdk/lib-storage';
 import { S3Client } from '@aws-sdk/client-s3';
 import zlib from 'zlib';
+import config from './config.js';
 
 async function getGameFrames({ frame_file }) {
 	console.log(`Fetching game file`);
 
-	const base_url = `https://${process.env.GAME_FRAMES_BUCKET}.s3-${process.env.GAME_FRAMES_REGION}.amazonaws.com/`;
+	const base_url = `https://${config.get('game.frames_bucket')}.s3-${config.get('game.frames_region')}.amazonaws.com/`;
 	const frame_url = `${base_url}${frame_file}`;
 
 	const response = await fetch(frame_url);
@@ -54,14 +55,14 @@ async function getScoreRecords(whereClause) {
 }
 
 async function updateGameFile(frames, frame_file) {
-	const s3Client = new S3Client({ region: process.env.GAME_FRAMES_REGION });
+	const s3Client = new S3Client({ region: config.get('game.frames_region') });
 	const zlibStream = zlib.createGzip();
 
 	const upload = new Upload({
 		client: s3Client,
 		leavePartsOnError: false,
 		params: {
-			Bucket: process.env.GAME_FRAMES_BUCKET,
+			Bucket: config.get('game.frames_bucket'),
 			Key: frame_file,
 			Body: zlibStream,
 			ACL: 'public-read',

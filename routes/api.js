@@ -5,6 +5,7 @@ import express from 'express';
 import got from 'got';
 import ScoreDAO from '../daos/ScoreDAO.js';
 import UserDAO from '../daos/UserDAO.js';
+import config from '../modules/config.js';
 
 const STACKRABBIT_URL = 'https://stackrabbit.herokuapp.com/get-move';
 
@@ -38,7 +39,7 @@ function parseStackRabbitRequest(query) {
 }
 
 router.get('/is_public_server', (req, res) => {
-	res.json({ is_public_server: process.env.IS_PUBLIC_SERVER === '1' });
+	res.json({ is_public_server: config.get('server.is_public') });
 });
 
 // proxy to stack rabbit engine API
@@ -97,8 +98,8 @@ router.get('/games/:id', async (req, res) => {
 		return;
 	}
 
-	if (process.env.GAME_FRAMES_BUCKET) {
-		const base_url = `https://${process.env.GAME_FRAMES_BUCKET}.s3-${process.env.GAME_FRAMES_REGION}.amazonaws.com/`;
+	if (config.get('game.frames_bucket')) {
+		const base_url = `https://${config.get('game.frames_bucket')}.s3-${config.get('game.frames_region')}.amazonaws.com/`;
 
 		game.frame_url = `${base_url}${game.frame_file}`;
 	} else {

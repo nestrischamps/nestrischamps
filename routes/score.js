@@ -3,6 +3,7 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import middlewares from '../modules/middlewares.js';
 import UserDAO from '../daos/UserDAO.js';
 import ScoreDAO from '../daos/ScoreDAO.js';
+import config from '../modules/config.js';
 
 const router = express.Router();
 
@@ -301,7 +302,7 @@ router.get(
 
 		if (score) {
 			if (score.frame_file) {
-				score.frame_file_url = `${process.env.GAME_FRAMES_BASEURL}${score.frame_file}`;
+				score.frame_file_url = `${config.get('game.frames_baseurl')}${score.frame_file}`;
 
 				delete score.frame_file;
 			}
@@ -326,14 +327,14 @@ router.delete(
 
 		if (score && score.frame_file) {
 			const s3_client = new S3Client({
-				region: process.env.GAME_FRAMES_REGION,
+				region: config.get('game.frames_region'),
 			});
 
 			// fire and forget, and log
 			s3_client
 				.send(
 					new DeleteObjectCommand({
-						Bucket: process.env.GAME_FRAMES_BUCKET,
+						Bucket: config.get('game.frames_bucket'),
 						Key: score.frame_file,
 					})
 				)

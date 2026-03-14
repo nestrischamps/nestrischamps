@@ -6,16 +6,17 @@ import { readFileSync } from 'fs';
 import './modules/expressturn.js'; // conditionnaly sets up peerjs server options
 
 import app from './modules/app.js';
+import config from './modules/config.js';
 
 let server;
 
-if (process.env.TLS_KEY && process.env.TLS_CERT) {
+if (config.get('server.tls_key') && config.get('server.tls_cert')) {
 	const options = {
-		key: readFileSync(process.env.TLS_KEY),
-		cert: readFileSync(process.env.TLS_CERT),
+		key: readFileSync(config.get('server.tls_key')),
+		cert: readFileSync(config.get('server.tls_cert')),
 	};
 	server = createServer(options, app);
-} else if (process.env.TLS_KEY || process.env.TLS_CERT) {
+} else if (config.get('server.tls_key') || config.get('server.tls_cert')) {
 	throw new Error('HTTPS requires both TLS_KEY and TLS_CERT');
 } else {
 	server = Server(app);
@@ -30,4 +31,4 @@ import websocketInitializer from './routes/websocket.js';
 
 websocketInitializer(server, wss);
 
-server.listen(process.env.PORT || 5000);
+server.listen(config.get('server.port'));

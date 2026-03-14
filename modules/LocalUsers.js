@@ -6,6 +6,7 @@ import got from 'got';
 import { performance } from 'node:perf_hooks';
 import crypto from 'node:crypto';
 import ScoreDAO from '../daos/ScoreDAO.js';
+import config from './config.js';
 
 function identity(v) {
 	return v;
@@ -346,7 +347,7 @@ const _importUsers = async (
 };
 
 export const importUsers = async options => {
-	if (process.env.LOCAL_USERS_ALLOW_IMPORT !== '1') return;
+	if (!config.get('local_users.allow_import')) return;
 
 	console.log('importUsers() running...');
 
@@ -364,7 +365,7 @@ export const importUsers = async options => {
 		throw new Error(`Operation importUsers() is not allowed to run`);
 	}
 
-	const csvURL = process.env.LOCAL_USERS_CSV_URL;
+	const csvURL = config.get('local_users.csv_url');
 
 	if (!csvURL) {
 		console.error(`User CSV URL is not provided - ABORTING`);
@@ -384,12 +385,12 @@ export const importUsers = async options => {
 };
 
 if (
-	process.env.IS_PUBLIC_SERVER !== '1' &&
-	process.env.IN_SCRIPT !== '1' &&
-	/^[1-9]\d*$/.test(process.env.LOCAL_USERS_REFRESH)
+	!config.get('server.is_public') &&
+	!config.get('server.in_script') &&
+	config.get('local_users.refresh_interval') > 0
 ) {
 	console.log(`starting local users import refresh background process...`);
-	setInterval(importUsers, parseInt(process.env.LOCAL_USERS_REFRESH) * 1000);
+	setInterval(importUsers, config.get('local_users.refresh_interval') * 1000);
 
 	// fetch on startup
 	importUsers({ clearOldUsers: true }); // start up loading data

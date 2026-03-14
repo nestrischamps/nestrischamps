@@ -6,6 +6,7 @@ import { countries } from '../modules/countries.js';
 import layouts from '../modules/layouts.js';
 import UserDAO from '../daos/UserDAO.js';
 import ScoreDAO from '../daos/ScoreDAO.js';
+import config from '../modules/config.js';
 
 const router = express.Router({ caseSensitive: true });
 
@@ -32,7 +33,7 @@ router.get(
 	async (req, res) => {
 		const data = { countries };
 
-		if (process.env.IS_PUBLIC_SERVER === '1') {
+		if (config.get('server.is_public')) {
 			data.users = null;
 		} else {
 			data.users = await UserDAO.getAssignableUsers();

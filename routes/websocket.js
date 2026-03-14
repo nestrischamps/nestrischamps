@@ -3,6 +3,7 @@ import layouts from '../modules/layouts.js';
 import UserDAO from '../daos/UserDAO.js';
 import Replay from '../domains/Replay.js';
 import Connection from '../modules/Connection.js';
+import config from '../modules/config.js';
 
 function passThrough(cb) {
 	cb();
@@ -167,7 +168,7 @@ export default function init(server, wss) {
 			return;
 		}
 
-		if (process.env.IS_PUBLIC_SERVER !== '1') {
+		if (!config.get('server.is_public')) {
 			m = request.nc_url.pathname.match(/^\/ws\/room\/admin\/([a-zA-Z0-9-]+)/);
 
 			request.is_secret_admin = !!m;

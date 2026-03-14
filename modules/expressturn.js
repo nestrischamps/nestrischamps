@@ -8,6 +8,7 @@ import fs from 'fs';
 import crypto from 'crypto';
 import { shuffle } from '../public/views/utils.js';
 import _ from 'lodash';
+import config from './config.js';
 
 const TTL = 86400 * 2; // 2 days
 
@@ -22,17 +23,20 @@ function generateTurnCredentials(username) {
 
 	// Generate password using HMAC-SHA1 and encode in Base64
 	const password = crypto
-		.createHmac('sha1', process.env.EXPRESSTURN_SECRET_KEY)
+		.createHmac('sha1', config.get('expressturn.secret_key'))
 		.update(turnUsername)
 		.digest('base64');
 
 	return [turnUsername, password];
 }
 
-if (process.env.EXPRESSTURN_SECRET_KEY && process.env.EXPRESSTURN_USERNAME) {
+if (
+	config.get('expressturn.secret_key') &&
+	config.get('expressturn.username')
+) {
 	// Generate and display credentials
 	const [username, credential] = generateTurnCredentials(
-		process.env.EXPRESSTURN_USERNAME
+		config.get('expressturn.username')
 	);
 
 	// expressturn has 17 relay servers, we will randomly pick 3 to use
