@@ -479,7 +479,8 @@ class MatchRoom extends Room {
 					break;
 				}
 
-				case 'restartCamera': {
+				case 'restartCamera':
+				case 'restartOcr': {
 					update_admin = false;
 					forward_to_views = false;
 
@@ -493,9 +494,14 @@ class MatchRoom extends Room {
 					if (user && this.last_view) {
 						const producer = user.getProducer();
 
-						producer.send(['dropPlayer']);
-						producer.send(['setViewPeerId', this.last_view.id]);
-						producer.send(['makePlayer', p_num, this.getViewMeta()]); // should reset camera!
+						if (command === 'restartCamera') {
+							producer.send(['dropPlayer']);
+							producer.send(['setViewPeerId', this.last_view.id]);
+							producer.send(['makePlayer', p_num, this.getViewMeta()]); // should reset camera!
+						} else {
+							// restartOcr
+							producer.send(['restartOcr']);
+						}
 					}
 
 					break;
