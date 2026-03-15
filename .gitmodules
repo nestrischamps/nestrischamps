@@ -1,0 +1,4 @@
+[submodule "everdrive/TetrisGYM"]
+	path = everdrive/TetrisGYM
+	url = https://github.com/kirjavascript/TetrisGYM
+	branch = ed2ntc

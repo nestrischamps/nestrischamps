@@ -1,0 +1,3 @@
+save nestris rom backup as clean.nes and place in TetrisGYM
+copy tetris.bps to producer/ed2ntcYYMMDD.bps
+update producer/components/wizard.js
