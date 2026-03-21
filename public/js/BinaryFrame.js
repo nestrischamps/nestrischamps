@@ -1,9 +1,10 @@
-const FORMAT_VERSION = 3;
+const FORMAT_VERSION = 4;
 
 const FRAME_SIZE_BY_VERSION = {
 	1: 71,
 	2: 72,
 	3: 73,
+	4: 74,
 };
 
 const GAME_TYPE = {
@@ -83,8 +84,11 @@ export default class BinaryFrame {
 		let bidx = 0; // byte index
 
 		// header
-		buffer[bidx++] =
-			((FORMAT_VERSION & 0b111) << 5) | ((sanitized.game_type & 0b11) << 3);
+		buffer[bidx++] = 0b10000000 |
+			((FORMAT_VERSION & 0b11111) << 2) | ((sanitized.game_type & 0b11) << 0);
+
+		// player number (5) + lines (1) + score (2)
+		buffer[bidx++] = (((sanitized.player_num || 0) & 0b11111) << 3) | ((sanitized.score & 0x3000000) >> 24) | ((sanitized.lines & 0x1000) >> 10);
 
 		// gameid - 16 bits
 		buffer[bidx++] = (sanitized.gameid & 0xff00) >> 8;
@@ -106,7 +110,7 @@ export default class BinaryFrame {
 		// score - 24 bits
 		buffer[bidx++] = (sanitized.score & 0xff0000) >> 16;
 		buffer[bidx++] = (sanitized.score & 0x00ff00) >> 8;
-		buffer[bidx++] = (sanitized.score & 0x0000ff);
+		buffer[bidx++] = (sanitized.score & 0x0000ff) >> 0;
 
 		// instant_das (5) + preview (3)
 		buffer[bidx++] =
@@ -154,9 +158,17 @@ export default class BinaryFrame {
 
 		let bidx = 0;
 
-		pojo.version = (f[bidx] & 0b11100000) >> 5;
-		pojo.game_type = (f[bidx] & 0b11000) >> 3;
-		pojo.player_num = f[bidx++] & 0b111;
+		if (f[bidx] & 0b10000000) {
+			// version >= 4
+			pojo.version = (f[bidx] & 0b01111100) >> 2;
+			pojo.game_type = f[bidx++] & 0b11;
+			pojo.player_num = (f[bidx++] & 0b11111000) >> 3;
+		} else {
+			// version < 4
+			pojo.version = (f[bidx] & 0b11100000) >> 5;
+			pojo.game_type = (f[bidx] & 0b11000) >> 3;
+			pojo.player_num = f[bidx++] & 0b111;
+		}
 
 		pojo.gameid = (f[bidx++] << 8) | f[bidx++];
 
@@ -173,6 +185,11 @@ export default class BinaryFrame {
 
 			pojo.score = (f[bidx++] << 16) | (f[bidx++] << 8) | f[bidx++];
 
+			if (pojo.version >= 4) {
+				pojo.lines |= (f[1] & 0b100) << 10;
+				pojo.score |= (f[1] & 0b011) << 24;
+			}
+
 			pojo.instant_das = (f[bidx] & 0b11111000) >> 3;
 			pojo.preview = f[bidx++] & 0b111;
 
@@ -180,7 +197,7 @@ export default class BinaryFrame {
 			pojo.cur_piece = f[bidx++] & 0b111;
 
 			// piece stats
-			if (pojo.version === 3) { // v3 - 10 bits per field
+			if (pojo.version >= 3) { // v>=3 - 10 bits per field
 				pojo.T = ((f[bidx++] & 0b11111111) << 2) | ((f[bidx] & 0b11000000) >> 6);
 				pojo.J = ((f[bidx++] & 0b00111111) << 4) | ((f[bidx] & 0b11110000) >> 4);
 				pojo.Z = ((f[bidx++] & 0b00001111) << 6) | ((f[bidx] & 0b11111100) >> 2);
@@ -242,12 +259,17 @@ export default class BinaryFrame {
 		// we've extracted all the value, now checks for nulls
 
 		if (pojo.version >= 2) {
-			if (pojo.score === 0xffffff) pojo.score = null;
-			if (pojo.lines === 0xfff) pojo.lines = null;
+			if (pojo.version >= 4) {
+				if (pojo.score === 0x3ffffff) pojo.score = null;
+				if (pojo.lines === 0x1fff) pojo.lines = null;
+			} else {
+				if (pojo.score === 0xffffff) pojo.score = null;
+				if (pojo.lines === 0xfff) pojo.lines = null;
+			}
 			if (pojo.level === 0xff) pojo.level = null;
 
-			// v3: 10 bits, v2: 9 bits
-			const piece_null_value = pojo.version === 3 ? 0x3ff : 0x1ff;
+			// v>=3: 10 bits, v2: 9 bits
+			const piece_null_value = pojo.version >= 3 ? 0x3ff : 0x1ff;
 
 			PIECES.forEach(piece => {
 				if (pojo[piece] === piece_null_value) {
@@ -286,11 +308,12 @@ export default class BinaryFrame {
 	}
 
 	static getCTime(frame_arr) {
+		let bidx = (frame_arr[0] & 0b10000000) ? 4 : 3; // must account for v>=4 extra header byte
 		return (
-			(frame_arr[3] << 20) |
-			(frame_arr[4] << 12) |
-			(frame_arr[5] << 4) |
-			((frame_arr[6] & 0xf0) >> 4)
+			(frame_arr[bidx++] << 20) |
+			(frame_arr[bidx++] << 12) |
+			(frame_arr[bidx++] << 4) |
+			((frame_arr[bidx++] & 0xf0) >> 4)
 		);
 	}
 
@@ -303,7 +326,8 @@ export default class BinaryFrame {
 			f = new Uint8Array(buffer_or_uintarray);
 		}
 
-		const version = f[0] >> 5; // 3 bits with mask 0b11100000
+		const isVersionGT4 = f[0] & 0b10000000;
+		const version = isVersionGT4 ? (f[0] & 0b01111100) >> 2 : f[0] >> 5;
 
 		if (!FRAME_SIZE_BY_VERSION[version]) {
 			throw new Error(`Invalid Frame: Version not supported: ${version}`);

@@ -2,37 +2,39 @@ import BinaryFrame from '../public/js/BinaryFrame.js';
 
 describe('BinaryFrame', () => {
 	describe('encode and parse', () => {
-		it('should correctly round-trip a basic frame for version 3', () => {
+		it('should correctly round-trip a basic frame for version 4', () => {
 			const original = {
 				game_type: BinaryFrame.GAME_TYPE.CLASSIC,
+				player_num: 31, // Up to 5 bits map to 31
 				gameid: 12345,
 				ctime: Math.floor(Date.now() / 1000) & 0xfffffff, // 28 bits max
-				lines: 125,
-				level: 18,
-				score: 550000,
-				instant_das: 12,
+				lines: 2 ** 13 - 2, // -1 is the null value, -2 is the max value
+				level: 2 ** 8 - 2,
+				score: 2 ** 26 - 2,
+				instant_das: 16, // 16 is max das value
 				preview: 'T',
-				cur_piece_das: 8,
+				cur_piece_das: 16, // 16 is max das value
 				cur_piece: 'J',
-				T: 15,
-				J: 12,
-				Z: 10,
-				O: 22,
-				S: 25,
-				L: 18,
-				I: 33,
+				T: 2 ** 10 - 2,
+				J: 2 ** 10 - 2,
+				Z: 2 ** 10 - 2,
+				O: 2 ** 10 - 2,
+				S: 2 ** 10 - 2,
+				L: 2 ** 10 - 2,
+				I: 2 ** 10 - 2,
 				field: Array.from({ length: 200 }, (_, i) => i % 3), // some non-zeros
 			};
 
 			const buffer = BinaryFrame.encode(original);
 
-			// Version 3 size is 73
-			expect(buffer.length).toBe(73);
+			// Version 4 size is 74
+			expect(buffer.length).toBe(74);
 
 			const parsed = BinaryFrame.parse(buffer);
 
-			expect(parsed.version).toBe(3);
+			expect(parsed.version).toBe(4);
 			expect(parsed.game_type).toBe(original.game_type);
+			expect(parsed.player_num).toBe(original.player_num);
 			expect(parsed.gameid).toBe(original.gameid);
 			expect(parsed.ctime).toBe(original.ctime);
 			expect(parsed.lines).toBe(original.lines);
@@ -59,6 +61,7 @@ describe('BinaryFrame', () => {
 		it('should handle nullable fields correctly', () => {
 			const originalWithNulls = {
 				game_type: BinaryFrame.GAME_TYPE.CLASSIC,
+				player_num: 0,
 				gameid: 54321,
 				ctime: 1234567,
 				lines: null,
@@ -173,6 +176,129 @@ describe('BinaryFrame', () => {
 			expect(parsed.version).toBe(3);
 			// All fields should be 0 (the default missing array values)
 			expect(parsed.field.every(val => val === 0)).toBe(true);
+		});
+
+		it('should correctly decode a version 1 frame', () => {
+			const v1Buffer = new Uint8Array([
+				42, 48, 57, 255, 255, 255, 244, 50, 56, 25, 18, 96, 65, 15, 12, 10, 22,
+				25, 18, 33, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97,
+				134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134,
+				24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97,
+				134, 24, 97, 0,
+			]);
+			const parsed = BinaryFrame.parse(v1Buffer);
+			expect(parsed.version).toBe(1);
+			expect(parsed.game_type).toBe(1);
+			expect(parsed.player_num).toBe(2);
+			expect(parsed.gameid).toBe(12345);
+			expect(parsed.ctime).toBe(268435455);
+			expect(parsed.lines).toBe(100);
+			expect(parsed.level).toBe(18);
+			expect(parsed.score).toBe(550000);
+			expect(parsed.instant_das).toBe(12);
+			expect(parsed.preview).toBe('T');
+			expect(parsed.cur_piece_das).toBe(8);
+			expect(parsed.cur_piece).toBe('J');
+			expect(parsed.T).toBe(15);
+			expect(parsed.J).toBe(12);
+			expect(parsed.Z).toBe(10);
+			expect(parsed.O).toBe(22);
+			expect(parsed.S).toBe(25);
+			expect(parsed.L).toBe(18);
+			expect(parsed.I).toBe(33);
+			expect(parsed.field).toEqual([
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1,
+			]);
+		});
+
+		it('should correctly decode a version 2 frame', () => {
+			const v2Buffer = new Uint8Array([
+				74, 48, 57, 255, 255, 255, 240, 100, 18, 8, 100, 112, 96, 65, 7, 131, 1,
+				65, 96, 200, 72, 66, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134,
+				24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97,
+				134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134,
+				24, 97, 134, 24, 97,
+			]);
+			const parsed = BinaryFrame.parse(v2Buffer);
+			expect(parsed.version).toBe(2);
+			expect(parsed.game_type).toBe(1);
+			expect(parsed.player_num).toBe(2);
+			expect(parsed.gameid).toBe(12345);
+			expect(parsed.ctime).toBe(268435455);
+			expect(parsed.lines).toBe(100);
+			expect(parsed.level).toBe(18);
+			expect(parsed.score).toBe(550000);
+			expect(parsed.instant_das).toBe(12);
+			expect(parsed.preview).toBe('T');
+			expect(parsed.cur_piece_das).toBe(8);
+			expect(parsed.cur_piece).toBe('J');
+			expect(parsed.T).toBe(15);
+			expect(parsed.J).toBe(12);
+			expect(parsed.Z).toBe(10);
+			expect(parsed.O).toBe(22);
+			expect(parsed.S).toBe(25);
+			expect(parsed.L).toBe(18);
+			expect(parsed.I).toBe(33);
+			expect(parsed.field).toEqual([
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1,
+			]);
+		});
+
+		it('should correctly decode a version 3 frame', () => {
+			const v3Buffer = new Uint8Array([
+				106, 48, 57, 255, 255, 255, 240, 100, 18, 8, 100, 112, 96, 65, 3, 192,
+				192, 40, 22, 6, 65, 32, 132, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24,
+				97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97,
+				134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134, 24, 97, 134,
+				24, 97, 134, 24, 97, 134, 24, 97,
+			]);
+			const parsed = BinaryFrame.parse(v3Buffer);
+			expect(parsed.version).toBe(3);
+			expect(parsed.game_type).toBe(1);
+			expect(parsed.player_num).toBe(2);
+			expect(parsed.gameid).toBe(12345);
+			expect(parsed.ctime).toBe(268435455);
+			expect(parsed.lines).toBe(100);
+			expect(parsed.level).toBe(18);
+			expect(parsed.score).toBe(550000);
+			expect(parsed.instant_das).toBe(12);
+			expect(parsed.preview).toBe('T');
+			expect(parsed.cur_piece_das).toBe(8);
+			expect(parsed.cur_piece).toBe('J');
+			expect(parsed.T).toBe(15);
+			expect(parsed.J).toBe(12);
+			expect(parsed.Z).toBe(10);
+			expect(parsed.O).toBe(22);
+			expect(parsed.S).toBe(25);
+			expect(parsed.L).toBe(18);
+			expect(parsed.I).toBe(33);
+			expect(parsed.field).toEqual([
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2, 0, 1, 2,
+				0, 1, 2, 0, 1, 2, 0, 1,
+			]);
 		});
 	});
 });
