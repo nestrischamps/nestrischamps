@@ -58,6 +58,100 @@ describe('BinaryFrame', () => {
 			expect(parsed.field).toEqual(original.field);
 		});
 
+		it('should correctly round-trip a minimal frame for version 4', () => {
+			const original = {
+				game_type: BinaryFrame.GAME_TYPE.MINIMAL,
+				player_num: 31,
+				gameid: 12345,
+				ctime: Math.floor(Date.now() / 1000) & 0xfffffff,
+				lines: 2 ** 13 - 2,
+				level: 2 ** 8 - 2,
+				score: 2 ** 26 - 2,
+				instant_das: 16,
+				preview: 'T',
+				field: Array.from({ length: 200 }, (_, i) => i % 3),
+			};
+
+			const buffer = BinaryFrame.encode(original);
+
+			// Version 4 minimal size is 64
+			expect(buffer.length).toBe(64);
+
+			const parsed = BinaryFrame.parse(buffer);
+
+			expect(parsed.version).toBe(4);
+			expect(parsed.game_type).toBe(original.game_type);
+			expect(parsed.player_num).toBe(original.player_num);
+			expect(parsed.gameid).toBe(original.gameid);
+			expect(parsed.ctime).toBe(original.ctime);
+			expect(parsed.lines).toBe(original.lines);
+			expect(parsed.level).toBe(original.level);
+			expect(parsed.score).toBe(original.score);
+			expect(parsed.instant_das).toBe(original.instant_das);
+			expect(parsed.preview).toBe(original.preview);
+
+			// Not encoded fields should be undefined
+			expect(parsed.cur_piece_das).toBeUndefined();
+			expect(parsed.cur_piece).toBeUndefined();
+			expect(parsed.T).toBeUndefined();
+			expect(parsed.J).toBeUndefined();
+			expect(parsed.Z).toBeUndefined();
+			expect(parsed.O).toBeUndefined();
+			expect(parsed.S).toBeUndefined();
+			expect(parsed.L).toBeUndefined();
+			expect(parsed.I).toBeUndefined();
+
+			expect(parsed.field).toEqual(original.field);
+		});
+
+		it('should correctly round-trip a das trainer frame for version 4', () => {
+			const original = {
+				game_type: BinaryFrame.GAME_TYPE.DAS_TRAINER,
+				player_num: 31,
+				gameid: 12345,
+				ctime: Math.floor(Date.now() / 1000) & 0xfffffff,
+				lines: 2 ** 13 - 2,
+				level: 2 ** 8 - 2,
+				score: 2 ** 26 - 2,
+				instant_das: 16,
+				preview: 'T',
+				cur_piece_das: 16,
+				cur_piece: 'J',
+				field: Array.from({ length: 200 }, (_, i) => i % 3),
+			};
+
+			const buffer = BinaryFrame.encode(original);
+
+			// Version 4 das trainer size is 65
+			expect(buffer.length).toBe(65);
+
+			const parsed = BinaryFrame.parse(buffer);
+
+			expect(parsed.version).toBe(4);
+			expect(parsed.game_type).toBe(original.game_type);
+			expect(parsed.player_num).toBe(original.player_num);
+			expect(parsed.gameid).toBe(original.gameid);
+			expect(parsed.ctime).toBe(original.ctime);
+			expect(parsed.lines).toBe(original.lines);
+			expect(parsed.level).toBe(original.level);
+			expect(parsed.score).toBe(original.score);
+			expect(parsed.instant_das).toBe(original.instant_das);
+			expect(parsed.preview).toBe(original.preview);
+			expect(parsed.cur_piece_das).toBe(original.cur_piece_das);
+			expect(parsed.cur_piece).toBe(original.cur_piece);
+
+			// Piece distributions should be undefined
+			expect(parsed.T).toBeUndefined();
+			expect(parsed.J).toBeUndefined();
+			expect(parsed.Z).toBeUndefined();
+			expect(parsed.O).toBeUndefined();
+			expect(parsed.S).toBeUndefined();
+			expect(parsed.L).toBeUndefined();
+			expect(parsed.I).toBeUndefined();
+
+			expect(parsed.field).toEqual(original.field);
+		});
+
 		it('should handle nullable fields correctly', () => {
 			const originalWithNulls = {
 				game_type: BinaryFrame.GAME_TYPE.CLASSIC,

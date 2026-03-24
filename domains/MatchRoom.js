@@ -1,6 +1,7 @@
 import _ from 'lodash';
 import UserDAO from '../daos/UserDAO.js';
 import Room from './Room.js';
+import BinaryFrame from '../public/js/BinaryFrame.js';
 
 const PRODUCER_FIELDS = [
 	'id',
@@ -739,7 +740,7 @@ class MatchRoom extends Room {
 					// we make a copy to ensure each player gets its own message
 					message = new Uint8Array(message);
 				}
-				message[0] = (message[0] & 0b11111000) | p_idx; // sets player number in header byte of binary message
+				BinaryFrame.setPlayerIndex(message, p_idx);
 				this.sendGameFrameToViews(message);
 			} else if (Array.isArray(message)) {
 				this.sendToViews([message[0], p_idx, ...message.slice(1)]);

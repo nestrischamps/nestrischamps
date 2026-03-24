@@ -100,10 +100,10 @@ class Replay {
 					}
 
 					const b = new Uint8Array(buf);
-					const version = b[0] >> 5 || 1;
+					const frame_size = BinaryFrame.getFrameSize(b);
 
-					if (BinaryFrame.FRAME_SIZE_BY_VERSION[version]) {
-						this.frame_size = BinaryFrame.FRAME_SIZE_BY_VERSION[version];
+					if (frame_size) {
+						this.frame_size = frame_size;
 						this.game_stream.unshift(buf);
 						console.info(
 							`Found version ${version} with size ${this.frame_size}`
@@ -131,8 +131,8 @@ class Replay {
 				}
 
 				if (!this.start_time) {
-					// Parsing the frame may not be needed just to get ctime
-					// but we should also check the version format
+					// Parsing the whole is not needed just to get ctime
+					// but we do it to nothandle another buffer to uint array conversion here 🤷
 
 					const data = BinaryFrame.parse(buf);
 
@@ -157,7 +157,7 @@ class Replay {
 
 		const frame = new Uint8Array(this.frame_buffer.shift());
 
-		frame[0] = (frame[0] & 0b11111000) | this.player_num;
+		BinaryFrame.setPlayerIndex(frame, this.player_num);
 
 		const tdiff = Math.round(
 			(BinaryFrame.getCTime(frame) - this.start_ctime) / this.time_scale
