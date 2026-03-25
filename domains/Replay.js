@@ -105,15 +105,13 @@ class Replay {
 					if (frame_size) {
 						this.frame_size = frame_size;
 						this.game_stream.unshift(buf);
-						console.info(
-							`Found version ${version} with size ${this.frame_size}`
-						);
+						console.info(`Found frame size ${this.frame_size}`);
 						continue;
 					} else {
 						// unknown version, do nothing
 						// is this a memory leak? 🤔
 						console.warn(
-							`warning: unknown version in replay file ${this.game_id_or_url}: ${version}`
+							`warning: unknown version in replay file ${this.game_id_or_url}: ${b[0].toString(2)}`
 						);
 						return;
 					}
