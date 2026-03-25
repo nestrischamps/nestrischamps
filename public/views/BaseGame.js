@@ -849,7 +849,7 @@ export default class BaseGame {
 		this.prior_preview = data.preview;
 		this.pending_prior_preview = true;
 
-		if (data.cur_piece_das !== null) {
+		if (data.cur_piece_das != null) {
 			// record real das stats
 			this.data.das.cur = data.cur_piece_das;
 			this.data.das.total += data.cur_piece_das;
