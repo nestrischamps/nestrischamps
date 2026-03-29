@@ -146,8 +146,8 @@ async function runWorker() {
 		const buffer = new Uint8Array(
 			zlib.unzipSync(fs.readFileSync(new URL(`./${filename}`, import.meta.url)))
 		);
-		const version = buffer[0] >> 5;
-		const frame_size = BinaryFrame.FRAME_SIZE_BY_VERSION[version];
+		const version = BinaryFrame.getFrameVersion(buffer);
+		const frame_size = BinaryFrame.getFrameSize(buffer);
 
 		localGames.push({
 			frames: buffer,

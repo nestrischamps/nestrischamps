@@ -24,8 +24,8 @@ export async function getGameFrames(gameid) {
 	const response = await fetch(gamedata.frame_url);
 	const blob = await response.blob();
 	const buffer = new Uint8Array(await blob.arrayBuffer());
-	const version = buffer[0] >> 5 || 1;
-	const frame_size = BinaryFrame.FRAME_SIZE_BY_VERSION[version];
+	const version = BinaryFrame.getFrameVersion(buffer);
+	const frame_size = BinaryFrame.getFrameSize(buffer);
 
 	console.log({
 		header: buffer[0].toString(2).padStart(8, '0'),
