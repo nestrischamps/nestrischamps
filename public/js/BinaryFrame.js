@@ -116,6 +116,12 @@ export default class BinaryFrame {
 		// player number (5) + lines (1) + score (2)
 		buffer[bidx++] = ((sanitized.player_num & 0b11111) << 3) | ((sanitized.score & 0x3000000) >> 24) | ((sanitized.lines & 0x1000) >> 10);
 
+		// Note: Instead of a 2-bytes header, we could have a 3 bytes header to provide some bits for info flags (e.g. provide bit flag if OCR was done on 7-digit score)
+		// See discord thread with message from Fractal here: https://discordapp.com/channels/817528744565932043/875591588359831602/1485478482841440417
+		// This was NOT done in V4 however, because there's only one potential flag (7-digit score), so it's not worth wasting a byte for it, and we do not need more than 5 bits for player_num
+		// So we used the last  bits to expand the range of lines and score
+		// A new transport version can always be introduced later if there's a need for it
+
 		// gameid - 16 bits
 		buffer[bidx++] = (sanitized.gameid & 0xff00) >> 8;
 		buffer[bidx++] = (sanitized.gameid & 0x00ff) >> 0;
