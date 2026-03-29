@@ -105,7 +105,7 @@ export default class BaseGame {
 	onGameOver() {}
 	onNewGame() {}
 	onCurtainDown() {}
-	onTetris() {}
+	onTetris(full_rows) {}
 
 	end() {
 		if (!this.over) {
@@ -782,7 +782,7 @@ export default class BaseGame {
 				this.data.num_blocks -= this.full_rows.length * 10;
 
 				if (this.full_rows.length === 4) {
-					this.onTetris();
+					this.onTetris([...this.full_rows]);
 				}
 
 				this.full_rows.length = 0;
@@ -807,7 +807,7 @@ export default class BaseGame {
 				this.data.num_blocks -= clear * 10;
 
 				if (clear === 4) {
-					this.onTetris();
+					this.onTetris([...this.full_rows]);
 				}
 
 				this.full_rows.length = 0;

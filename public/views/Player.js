@@ -506,7 +506,7 @@ export default class Player extends EventTarget {
 	onGameStart() {}
 	onGameOver() {}
 	onCurtainDown() {}
-	onTetris() {}
+	onTetris(full_rows) {}
 	onMoveRating() {}
 
 	setupSounds() {
@@ -731,7 +731,7 @@ export default class Player extends EventTarget {
 		showRemainingTime();
 	}
 
-	_doTetris() {
+	_doTetris(full_rows) {
 		const final_black = 'rgba(0,0,0,0)';
 		const duration = (25 / 60) * 1000;
 
@@ -837,7 +837,7 @@ export default class Player extends EventTarget {
 			this.sounds.tetris();
 		}
 
-		this.onTetris();
+		this.onTetris(full_rows);
 	}
 
 	clearTetrisAnimation() {

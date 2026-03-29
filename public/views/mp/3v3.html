@@ -326,13 +326,29 @@
 				explosions.appendChild(sprite);
 			}
 
-			function renderTetrisExplosion(player) {
+			function renderTetrisExplosion(player, full_rows) {
 				// find center of the tetris field
 				const fieldRect = player.dom.field.getBoundingClientRect();
 				const centerX = Math.round(fieldRect.left + fieldRect.width / 2);
-				const centerY = Math.round(
-					fieldRect.top + fieldRect.height * (0.5 + Math.random() * 0.1)
-				);
+
+				let centerY;
+
+				if (full_rows && full_rows.length > 0) {
+					// full_rows contains the indices of the rows that were cleared.
+					// 0 is top, 19 is bottom.
+					const avgRow =
+						full_rows.reduce((sum, r) => sum + r, 0) / full_rows.length;
+
+					// Each row's height is fieldRect.height / 20.
+					// Add 0.5 to target the middle of the row block.
+					centerY = Math.round(
+						fieldRect.top + (avgRow + 0.5) * (fieldRect.height / 20)
+					);
+				} else {
+					centerY = Math.round(
+						fieldRect.top + fieldRect.height * (0.5 + Math.random() * 0.1)
+					);
+				}
 
 				// create the element(s)
 				addExplosion(64, centerX, centerY);
@@ -414,8 +430,8 @@
 
 						player.onGameOver();
 
-						player.onTetris = function () {
-							renderTetrisExplosion(this);
+						player.onTetris = function (full_rows) {
+							renderTetrisExplosion(this, full_rows);
 						};
 
 						players.push(player);
