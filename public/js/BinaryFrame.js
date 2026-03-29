@@ -191,11 +191,11 @@ export default class BinaryFrame {
 		const f = BinaryFrame.getFrameFromBuffer(buffer_or_uintarray); // may throw
 
 		const pojo = {};
-		const isVersionGT4 = f[0] & 0b10000000;
+		const isVersionGTE4 = f[0] & 0b10000000;
 
 		let bidx = 0;
 
-		if (isVersionGT4) {
+		if (isVersionGTE4) {
 			pojo.version = (f[bidx] & 0b01111100) >> 2;
 			pojo.game_type = f[bidx++] & 0b11;
 			pojo.player_num = (f[bidx++] & 0b11111000) >> 3;
@@ -220,7 +220,7 @@ export default class BinaryFrame {
 
 			pojo.score = (f[bidx++] << 16) | (f[bidx++] << 8) | f[bidx++];
 
-			if (pojo.version >= 4) {
+			if (isVersionGTE4) {
 				pojo.lines |= (f[1] & 0b100) << 10;
 				pojo.score |= (f[1] & 0b011) << 24;
 			}
@@ -229,14 +229,14 @@ export default class BinaryFrame {
 			pojo.preview = f[bidx++] & 0b111;
 
 			// yuk, conditional is becoming hard to read...
-			if (!isVersionGT4 || pojo.game_type === GAME_TYPE.CLASSIC || pojo.game_type === GAME_TYPE.DAS_TRAINER) {
+			if (!isVersionGTE4 || pojo.game_type === GAME_TYPE.CLASSIC || pojo.game_type === GAME_TYPE.DAS_TRAINER) {
 				pojo.cur_piece_das = (f[bidx] & 0b11111000) >> 3;
 				pojo.cur_piece = f[bidx++] & 0b111;
 			}
 
 			// piece stats
 			if (pojo.version >= 3) { // v>=3 - 10 bits per field
-				if (!isVersionGT4 || pojo.game_type === GAME_TYPE.CLASSIC) {
+				if (!isVersionGTE4 || pojo.game_type === GAME_TYPE.CLASSIC) {
 					pojo.T = ((f[bidx++] & 0b11111111) << 2) | ((f[bidx] & 0b11000000) >> 6);
 					pojo.J = ((f[bidx++] & 0b00111111) << 4) | ((f[bidx] & 0b11110000) >> 4);
 					pojo.Z = ((f[bidx++] & 0b00001111) << 6) | ((f[bidx] & 0b11111100) >> 2);
@@ -349,8 +349,8 @@ export default class BinaryFrame {
 	}
 
 	static getCTime(frame_arr) {
-		const isVersionGT4 = frame_arr[0] & 0b10000000;
-		let bidx = isVersionGT4 ? 4 : 3; // must account for v>=4 extra header byte
+		const isVersionGTE4 = frame_arr[0] & 0b10000000;
+		let bidx = isVersionGTE4 ? 4 : 3; // must account for v>=4 extra header byte
 		return (
 			(frame_arr[bidx++] << 20) |
 			(frame_arr[bidx++] << 12) |
@@ -360,14 +360,14 @@ export default class BinaryFrame {
 	}
 
 	static getFrameVersion(frame_arr) {
-		const isVersionGT4 = frame_arr[0] & 0b10000000;
-		return isVersionGT4 ? (frame_arr[0] & 0b01111100) >> 2 : frame_arr[0] >> 5;
+		const isVersionGTE4 = frame_arr[0] & 0b10000000;
+		return isVersionGTE4 ? (frame_arr[0] & 0b01111100) >> 2 : frame_arr[0] >> 5;
 	}
 
 	static setPlayerIndex(frame_arr, player_idx) {
-		const isVersionGT4 = BinaryFrame.getFrameVersion(frame_arr) >= 4;
+		const isVersionGTE4 = BinaryFrame.getFrameVersion(frame_arr) >= 4;
 
-		if (isVersionGT4) {
+		if (isVersionGTE4) {
 			frame_arr[1] = (frame_arr[1] & 0b00000111) | ((player_idx & 0b11111) << 3);
 		} else {
 			frame_arr[0] = (frame_arr[0] & 0b11111000) | (player_idx & 0b111);
