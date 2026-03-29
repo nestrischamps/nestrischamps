@@ -20,8 +20,7 @@ async function getGameFrames({ frame_file }) {
 	const response = await fetch(frame_url);
 	const blob = await response.blob();
 	const buffer = new Uint8Array(await blob.arrayBuffer());
-	const version = buffer[0] >> 5 || 1;
-	const frame_size = BinaryFrame.FRAME_SIZE_BY_VERSION[version];
+	const frame_size = BinaryFrame.getFrameSize(buffer);
 
 	const raw_frames = [];
 
