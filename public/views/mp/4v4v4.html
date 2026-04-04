@@ -1,0 +1,457 @@
+<!doctype html>
+<html>
+	<head>
+		<link rel="stylesheet" type="text/css" href="/views/tetris.css" />
+		<link rel="stylesheet" type="text/css" href="/views/mmp.css" />
+		<style>
+			.box {
+				--border-size: 9;
+				border-image-source: url(/views/border_narrow_3px.png);
+			}
+
+			.team {
+				position: absolute;
+				top: 154px; /* leaves room for leaderboard and team score */
+			}
+
+			.team-score {
+				font-size: 32px;
+				line-height: 48px;
+				width: 556px; /* team width (140+10+198+10+198) */
+				height: 45px;
+				top: -60px;
+			}
+
+			/* Override widths and positions for a 2x2 layout per team */
+			.player {
+				position: absolute;
+			}
+
+			/* Col 0 Board & Score */
+			.player.col-0 .score,
+			.player.col-0 .board {
+				left: 150px; /* 140 (video) + 10 (gap) */
+			}
+
+			/* Col 1 Board & Score */
+			.player.col-1 .score,
+			.player.col-1 .board {
+				left: 358px; /* 150 + 198 (board) + 10 (gap) */
+			}
+
+			/* All Videos on the left of the team */
+			.player.col-0 .video.box,
+			.player.col-1 .video.box {
+				left: 0;
+			}
+
+			/* Row 0 vertical offsets */
+			.player.row-0 .score {
+				top: 0;
+			}
+			.player.row-0 .board {
+				top: 55px; /* Board center: 55 + 199 = 254 */
+			}
+			/* Col 0 Video (Top video in the pair) */
+			.player.row-0.col-0 .video.box {
+				top: 173px; /* 254 - 81 = 173 */
+			}
+			/* Col 1 Video (Bottom video in the pair) */
+			.player.row-0.col-1 .video.box {
+				top: 256px; /* 173 + 79 + 4 = 256 */
+			}
+
+			/* Row 1 vertical offsets */
+			.player.row-1 .board {
+				top: 0; /* Board center: 199 */
+			}
+			.player.row-1 .score {
+				top: 403px;
+			}
+			/* Col 0 Video (Top video in the pair) */
+			.player.row-1.col-0 .video.box {
+				top: 118px; /* 199 - 81 = 118 */
+			}
+			/* Col 1 Video (Bottom video in the pair) */
+			.player.row-1.col-1 .video.box {
+				top: 201px; /* 118 + 79 + 4 = 201 */
+			}
+
+			.video.box {
+				--width: 140px;
+				--height: 79px; /* 16:9 ratio */
+			}
+
+			.explosions {
+				position: relative;
+			}
+
+			/* Handle explosions styles */
+			/* 1. Define the generic animation logic */
+			.sprite-anim {
+				--size: 16px;
+				--scale: 4; /* Change this to 3 or 4 if you want even bigger! */
+				--frames: 16;
+				--duration: 0.8s;
+				--delay-steps: 0; /* Default to starting immediately */
+
+				width: calc(var(--size) * var(--scale));
+				height: calc(var(--size) * var(--scale));
+
+				position: absolute;
+				opacity: 0;
+				transform: translate(-50%, -50%);
+
+				background-repeat: no-repeat;
+				background-size: auto calc(var(--size) * var(--scale));
+				image-rendering: pixelated;
+
+				animation: move-sprite var(--duration) steps(var(--frames)) forwards;
+
+				/* Calculation: (Total Duration / Total Frames) * Number of Steps to Wait */
+				animation-delay: calc(
+					(var(--duration) / var(--frames)) * var(--delay-steps)
+				);
+
+				/* Crucial: animation-fill-mode must be 'both' or 'backwards' */
+				/* This ensures the sprite stays invisible/first-frame until the delay ends */
+				animation-fill-mode: both;
+			}
+
+			@keyframes move-sprite {
+				/* Keep it at 0 until the very instant it starts */
+				0% {
+					opacity: 0;
+					background-position: 0 0;
+				}
+				/* Pop to visible at the tiniest fraction into the animation */
+				0.01% {
+					opacity: 1;
+					background-position: 0 0;
+				}
+				100% {
+					opacity: 1;
+					background-position: calc(
+							var(--size) * var(--scale) * var(--frames) * -1
+						)
+						0;
+				}
+			}
+
+			/* 2. Create size-specific utility classes */
+			.s16 {
+				background-image: url('/vendor/itch.io/explosion-pack/16x16-Explosion-Full-Colour.png');
+				--size: 16px;
+				--delay-steps: 6;
+			}
+			.s32 {
+				background-image: url('/vendor/itch.io/explosion-pack/32x32-Explosion-Full-Colour.png');
+				--size: 32px;
+				--delay-steps: 3;
+			}
+			.s48 {
+				background-image: url('/vendor/itch.io/explosion-pack/48x48-Explosion-Full-Colour.png');
+				--size: 48px;
+				--delay-steps: 1;
+			}
+			.s64 {
+				background-image: url('/vendor/itch.io/explosion-pack/64x64-Explosion-Full-Colour.png');
+				--size: 64px;
+			}
+		</style>
+	</head>
+	<body>
+		<div id="stream_bg">
+			<template id="pair">
+				<div class="team">
+					<div class="players"></div>
+					<div class="box team-score">
+						<div class="aligner">
+							<span class="letter">Z 1</span> <span class="sum">0</span>
+						</div>
+					</div>
+				</div>
+			</template>
+
+			<template id="player">
+				<div class="player">
+					<div class="box board">
+						<div class="lines">000</div>
+						<div class="next_piece"></div>
+					</div>
+
+					<div class="box score">
+						<div class="header">PLAYER</div>
+						<div class="value">0&#x202F;000&#x202F;000</div>
+					</div>
+
+					<div class="box video"><video class="player_vid"></video></div>
+				</div>
+			</template>
+
+			<div id="explosions"></div>
+		</div>
+		<!-- End Stream BG -->
+
+		<!-- Audio -->
+		<script>
+			// custom view parameters which will be passed in the websocket URI
+			const view_meta = new URLSearchParams({
+				video: '352x240',
+				players: 12,
+			});
+		</script>
+		<script src="/vendor/peerjs.1.5.5.min.js"></script>
+		<script type="module">
+			import '/views/bg.js';
+			import QueryString from '/js/QueryString.js';
+			import Color from '/views/color.js';
+			import Gradient from '/views/gradient.js';
+			import { peerServerOptions } from '/views/constants.js';
+			import { translate, readableScoreFomatter } from '/views/utils.js';
+			import Player from '/views/Player.js';
+			import Competition from '/views/competition.js';
+
+			const stream_bg = document.getElementById('stream_bg');
+			const team_template = document.getElementById('pair');
+			const player_template = document.getElementById('player');
+			const explosions = document.getElementById('explosions');
+			const color_gradient = new Gradient( // green - orange - red
+				'#0eff0e',
+				new Color(255, 165, 0),
+				'#fd0009'
+			);
+
+			const players = [];
+			let num_teams = 3;
+
+			class Team {
+				constructor(index) {
+					this.index = index;
+					this.players = [];
+					this.score = 0;
+					this.letter = String.fromCharCode(65 + index);
+
+					const team_fragment = document.importNode(
+						team_template.content,
+						true
+					);
+
+					this.node = team_fragment.querySelector('.team');
+					this.node.querySelector('.aligner .letter').textContent = this.letter;
+					explosions.before(this.node);
+				}
+
+				updateScore() {
+					this.score = this.players.reduce(
+						(acc, player) => acc + player.getScore(),
+						0
+					);
+					this.node.querySelector('.aligner .sum').textContent =
+						readableScoreFomatter(this.score);
+					updateDiffs();
+				}
+			}
+
+			const teams = Array(num_teams)
+				.fill()
+				.map((_, idx) => new Team(idx));
+
+			const rank_colors = teams.map((_, idx) =>
+				color_gradient.getColorAt(idx / (teams.length - 1)).toHexString()
+			);
+
+			function updateDiffs() {
+				teams
+					.sort((t1, t2) =>
+						t2.score === t1.score ? t1.idx - t2.idx : t2.score - t1.score
+					)
+					.forEach((team, idx) => {
+						const color = rank_colors[idx];
+
+						team.node.querySelector('.aligner .letter').textContent = `${
+							team.letter
+						} ${idx + 1}`;
+						team.node.querySelector('.aligner .letter').style.color = color;
+					});
+			}
+
+			function setWinner(player_idx) {
+				const winning_team = players[player_idx]?.team;
+
+				players.forEach(player => player.setGameOver());
+
+				teams.forEach(team => {
+					if (team === winning_team) {
+						team.players.forEach(player => player.playWinnerAnimation());
+					} else {
+						team.players.forEach(player => player.showLoserFrame());
+					}
+				});
+			}
+
+			function getPosInRing(x, y, minR, maxR) {
+				const angle = Math.random() * Math.PI * 2; // Random angle 0 to 360°
+				const r = Math.random() * (maxR - minR) + minR; // Random radius in range
+				return {
+					x: Math.round(x + Math.cos(angle) * r),
+					y: Math.round(y + Math.sin(angle) * r),
+				};
+			}
+
+			function addExplosion(size, x, y, delay) {
+				const sprite = document.createElement('div');
+				sprite.classList.add('sprite-anim');
+				sprite.style.setProperty('--size', `${size}px`);
+				sprite.style.setProperty('--delay-steps', delay);
+				sprite.style.backgroundImage = `url('/vendor/itch.io/explosion-pack/${size}x${size}-Explosion-Full-Colour.png')`;
+				sprite.style.left = `${x}px`;
+				sprite.style.top = `${y}px`;
+				sprite.addEventListener('animationend', () => sprite.remove(), {
+					once: true,
+				});
+				explosions.appendChild(sprite);
+			}
+
+			function renderTetrisExplosion(player, full_rows) {
+				// find center of the tetris field
+				const fieldRect = player.dom.field.getBoundingClientRect();
+				const centerX = Math.round(fieldRect.left + fieldRect.width / 2);
+
+				let centerY;
+
+				if (full_rows && full_rows.length) {
+					// full_rows contains the indices of the rows that were cleared.
+					// 0 is top, 19 is bottom.
+					const avgRow =
+						full_rows.reduce((sum, r) => sum + r, 0) / full_rows.length;
+
+					const yPos = Math.min(16.5, Math.max(avgRow + 0.5, 3.5));
+
+					// Each row's height is fieldRect.height / 20.
+					// Add 0.5 to target the middle of the row block.
+					centerY = Math.round(fieldRect.top + yPos * (fieldRect.height / 20));
+				} else {
+					centerY = Math.round(
+						fieldRect.top + fieldRect.height * (0.5 + Math.random() * 0.1)
+					);
+				}
+
+				// create the element(s)
+				addExplosion(64, centerX, centerY);
+
+				// 3. Spawn 32px explosions in a specific ring
+				let delay = 3;
+
+				for (let i = 0; i < 3; i++) {
+					const pos = getPosInRing(centerX, centerY, 40, 80);
+					addExplosion(32, pos.x, pos.y, delay);
+					if (Math.random() < 0.5) delay++;
+				}
+
+				delay++;
+
+				// 4. Spawn 16px explosions in a wider/different ring
+				for (let i = 0; i < 5; i++) {
+					const pos = getPosInRing(centerX, centerY, 60, 110);
+					addExplosion(16, pos.x, pos.y, delay);
+					if (Math.random() < 0.5) delay++;
+				}
+			}
+
+			window.onload = () => {
+				const team_width = 556;
+				const row_height = 473; // 403 (board+score height) + 70 (gap)
+
+				// Calculate left margin safely:
+				const remaining_width = 1920 - team_width * num_teams;
+				const team_gap = remaining_width / (num_teams + 1);
+				const left_margin = team_gap;
+
+				let player_num = 0;
+
+				teams.forEach((team, team_idx) => {
+					team.node.style.left = `${left_margin + (team_width + team_gap) * team_idx}px`;
+
+					// 4 players per team in a 2x2 grid
+					[0, 1, 2, 3].forEach(player_in_team_idx => {
+						const col = player_in_team_idx % 2;
+						const row = Math.floor(player_in_team_idx / 2);
+
+						const player_idx = player_num++;
+						const player_fragment = document.importNode(
+							player_template.content,
+							true
+						);
+						const player_node = player_fragment.querySelector('.player');
+
+						player_node.classList.add(`p${player_num}`);
+						player_node.classList.add(`col-${col}`);
+						player_node.classList.add(`row-${row}`);
+						team.node.appendChild(player_node);
+
+						// Handle running_trt removal since it's not in the 4v4v4 layout template
+						// player_node.querySelector(`.running_trt`) won't exist because we didn't add it in template
+
+						const player = new Player(
+							{
+								name: player_node.querySelector(`.score .header`),
+								score: player_node.querySelector(`.score .value`),
+								lines: player_node.querySelector(`.board .lines`),
+								preview: player_node.querySelector(`.board .next_piece`),
+								field: player_node.querySelector(`.board`),
+								video: player_node.querySelector(`video`),
+							},
+							{
+								field_pixel_size: 2.5,
+								preview_pixel_size: 2,
+								preview_align: 'tr',
+								stereo: translate([0, num_teams - 1], [-1, 1], team_idx),
+								format_score: v => readableScoreFomatter(v),
+							}
+						);
+
+						player.onGameStart = function () {
+							this.dom.lines.hidden = false;
+							this.dom.preview.hidden = false;
+						};
+
+						player.onGameOver = function () {
+							this.dom.lines.hidden = true;
+							this.dom.preview.hidden = true;
+						};
+
+						player.onGameOver();
+
+						player.onTetris = function (full_rows) {
+							renderTetrisExplosion(this, full_rows);
+						};
+
+						players.push(player);
+
+						// cross reference for convenience
+						team.players.push(player);
+						player.team = team;
+
+						Object.assign(player_node.style, {
+							left: `0px`,
+							top: `${row * row_height}px`,
+						});
+					});
+				});
+
+				const competition = new Competition(players, { setWinner });
+
+				players.forEach(player => {
+					player.onScore = () => player.team.updateScore();
+				});
+
+				window.players = players;
+
+				if (!competition.has_video) {
+					stream_bg.classList.add('no-video');
+				}
+			};
+		</script>
+	</body>
+</html>
