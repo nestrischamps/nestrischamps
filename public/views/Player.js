@@ -234,6 +234,7 @@ const DEFAULT_OPTIONS = {
 		const value = QueryString.get('flags');
 		return /^(c?fi|fpw?)$/.test(value) ? value : 'cfi'; // cfi: country-flag-icons - fi: flag-icons
 	})(),
+	seekableFrames: false,
 };
 
 const flagUrisFn = {
@@ -1028,7 +1029,9 @@ export default class Player extends EventTarget {
 	createGame() {
 		this._destroyGame();
 
-		this.game = new BaseGame();
+		this.game = new BaseGame({
+			seekableFrames: this.options.seekableFrames,
+		});
 
 		// Handlers with local rendering actions or custom behaviours
 		this.game.onScore = this._renderScore;

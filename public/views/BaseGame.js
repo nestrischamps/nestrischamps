@@ -70,7 +70,7 @@ function fuzzyBinarySearchWithLowerBias(array, path, target_value) {
 
 const DEFAULT_OPTIONS = {
 	usePieceStats: false,
-	seekableFrames: true,
+	seekableFrames: false,
 };
 
 export default class BaseGame {
@@ -141,8 +141,8 @@ export default class BaseGame {
 			}
 		}
 
-		if (this.frames.length > 0) {
-			this.duration = frame.ctime - this.frames[0].raw.ctime;
+		if (this.num_frames > 0 && this.start_ctime !== undefined) {
+			this.duration = frame.ctime - this.start_ctime;
 		}
 
 		// Warning: order of the 3 operations below matters!
@@ -210,6 +210,8 @@ export default class BaseGame {
 			points: [],
 			clears: [],
 		};
+
+		this.num_frames = 0;
 
 		// this.data is used to track game stats and data as they progress
 		// snapshots of them will be stored in frames as needed
@@ -457,7 +459,7 @@ export default class BaseGame {
 
 	_addFrame(data) {
 		const frame = {
-			idx: this.frames.length,
+			idx: this.num_frames,
 			raw: data,
 
 			pieces: this.array_views.pieces,
@@ -467,7 +469,14 @@ export default class BaseGame {
 			in_clear_animation: this.clear_animation_remaining_frames >= 0,
 		};
 
-		this.frames.push(frame);
+		if (this.options.seekableFrames) {
+			this.frames.push(frame);
+		} else {
+			this.frames.push(frame);
+			if (this.frames.length > 2) this.frames.shift();
+		}
+
+		this.num_frames++;
 
 		return frame;
 	}
@@ -671,7 +680,9 @@ export default class BaseGame {
 				return acc;
 			}, {}),
 		};
+
 		this.points.push(evt);
+
 		this.array_views.points = new ArrayView(this.points);
 	}
 
@@ -684,7 +695,9 @@ export default class BaseGame {
 				return acc;
 			}, {}),
 		};
+
 		this.clears.push(evt);
+
 		this.array_views.clears = new ArrayView(this.clears);
 
 		// record the fact that the last piece caused a clear event
@@ -895,7 +908,9 @@ export default class BaseGame {
 
 				// mark past pieces as being in drought
 				for (let offset = DROUGHT_PANIC_THRESHOLD - 1; offset > 0; offset--) {
-					this.pieces[this.pieces.length - offset].in_drought = true;
+					if (this.pieces.length - offset >= 0) {
+						this.pieces[this.pieces.length - offset].in_drought = true;
+					}
 				}
 			}
 
@@ -925,9 +940,7 @@ export default class BaseGame {
 				Math.sqrt(distance_square / PIECES.length);
 
 		// handle deviation
-		const len = this.pieces.length;
-
-		if (len > 28) {
+		if (this.pieces.length >= 28) {
 			// compute the 28 and 56 deviation
 			// TODO: compute over "true" bags, that would always yield 0 deviation in modern tetrises
 			const counts = {};
@@ -935,7 +948,7 @@ export default class BaseGame {
 			PIECES.forEach(name => (counts[name] = 0));
 
 			for (let offset = 28; offset > 0; offset--) {
-				counts[this.pieces[len - offset].piece]++;
+				counts[this.pieces[this.pieces.length - offset].piece]++;
 			}
 
 			last_piece_event.deviation_28 = Math.sqrt(
@@ -945,9 +958,9 @@ export default class BaseGame {
 				) / PIECES.length
 			);
 
-			if (len >= 56) {
+			if (this.pieces.length >= 56) {
 				for (let offset = 28; offset > 0; offset--) {
-					counts[this.pieces[len - 28 - offset].piece]++;
+					counts[this.pieces[this.pieces.length - 28 - offset].piece]++;
 				}
 
 				last_piece_event.deviation_56 = Math.sqrt(
