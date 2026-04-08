@@ -469,14 +469,12 @@ export default class BaseGame {
 			in_clear_animation: this.clear_animation_remaining_frames >= 0,
 		};
 
-		if (this.options.seekableFrames) {
-			this.frames.push(frame);
-		} else {
-			this.frames.push(frame);
-			if (this.frames.length > 2) this.frames.shift();
-		}
-
+		this.frames.push(frame);
 		this.num_frames++;
+
+		if (!this.options.seekableFrames && this.frames.length > 2) {
+			this.frames.shift();
+		}
 
 		return frame;
 	}
@@ -680,9 +678,7 @@ export default class BaseGame {
 				return acc;
 			}, {}),
 		};
-
 		this.points.push(evt);
-
 		this.array_views.points = new ArrayView(this.points);
 	}
 
@@ -695,9 +691,7 @@ export default class BaseGame {
 				return acc;
 			}, {}),
 		};
-
 		this.clears.push(evt);
-
 		this.array_views.clears = new ArrayView(this.clears);
 
 		// record the fact that the last piece caused a clear event
@@ -908,9 +902,7 @@ export default class BaseGame {
 
 				// mark past pieces as being in drought
 				for (let offset = DROUGHT_PANIC_THRESHOLD - 1; offset > 0; offset--) {
-					if (this.pieces.length - offset >= 0) {
-						this.pieces[this.pieces.length - offset].in_drought = true;
-					}
+					this.pieces[this.pieces.length - offset].in_drought = true;
 				}
 			}
 
