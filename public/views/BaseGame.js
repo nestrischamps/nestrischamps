@@ -923,6 +923,8 @@ export default class BaseGame {
 		// we will update piece event with the deviation reactively
 		this._recordPieceEvent(cur_piece, data);
 
+		const len = this.pieces.length;
+
 		// Handle deviation
 		let distance_square = 0;
 
@@ -931,7 +933,7 @@ export default class BaseGame {
 		PIECES.forEach(name => {
 			const stats = this.data.pieces[name];
 
-			distance_square += Math.pow(stats.count / this.pieces.length - 1 / 7, 2);
+			distance_square += Math.pow(stats.count / len - 1 / 7, 2);
 		});
 
 		last_piece_event.deviation =
@@ -940,7 +942,7 @@ export default class BaseGame {
 				Math.sqrt(distance_square / PIECES.length);
 
 		// handle deviation
-		if (this.pieces.length >= 28) {
+		if (len >= 28) {
 			// compute the 28 and 56 deviation
 			// TODO: compute over "true" bags, that would always yield 0 deviation in modern tetrises
 			const counts = {};
@@ -948,7 +950,7 @@ export default class BaseGame {
 			PIECES.forEach(name => (counts[name] = 0));
 
 			for (let offset = 28; offset > 0; offset--) {
-				counts[this.pieces[this.pieces.length - offset].piece]++;
+				counts[this.pieces[len - offset].piece]++;
 			}
 
 			last_piece_event.deviation_28 = Math.sqrt(
@@ -958,9 +960,9 @@ export default class BaseGame {
 				) / PIECES.length
 			);
 
-			if (this.pieces.length >= 56) {
+			if (len >= 56) {
 				for (let offset = 28; offset > 0; offset--) {
-					counts[this.pieces[this.pieces.length - 28 - offset].piece]++;
+					counts[this.pieces[len - 28 - offset].piece]++;
 				}
 
 				last_piece_event.deviation_56 = Math.sqrt(
