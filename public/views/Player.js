@@ -1185,34 +1185,50 @@ export default class Player extends EventTarget {
 			point_evt.score.current
 		);
 
-		if (point_evt.score.transition === null) {
+		if (
+			point_evt.score.transition === null &&
+			this.dom.runway_tr !== DOM_DEV_NULL
+		) {
 			this.dom.runway_tr.textContent = this.options.format_score(
 				point_evt.score.tr_runway,
 				6
 			);
 		}
 
-		this.dom.runway_game.textContent = this.options.format_score(
-			point_evt.score.runway,
-			7
-		);
+		if (this.dom.runway_game !== DOM_DEV_NULL) {
+			this.dom.runway_game.textContent = this.options.format_score(
+				point_evt.score.runway,
+				7
+			);
+		}
 
-		this.dom.runway_lv19.textContent = this.options.format_score(
-			point_evt.score.runways.LV19,
-			6
-		);
-		this.dom.runway_lv29.textContent = this.options.format_score(
-			point_evt.score.runways.LV29,
-			7
-		);
-		this.dom.runway_lv39.textContent = this.options.format_score(
-			point_evt.score.runways.LV39,
-			7
-		);
-		this.dom.projection.textContent = this.options.format_score(
-			point_evt.score.projection,
-			7
-		);
+		if (this.dom.runway_lv19 !== DOM_DEV_NULL) {
+			this.dom.runway_lv19.textContent = this.options.format_score(
+				point_evt.score.runways.LV19,
+				6
+			);
+		}
+
+		if (this.dom.runway_lv29 !== DOM_DEV_NULL) {
+			this.dom.runway_lv29.textContent = this.options.format_score(
+				point_evt.score.runways.LV29,
+				7
+			);
+		}
+
+		if (this.dom.runway_lv39 !== DOM_DEV_NULL) {
+			this.dom.runway_lv39.textContent = this.options.format_score(
+				point_evt.score.runways.LV39,
+				7
+			);
+		}
+
+		if (this.dom.projection !== DOM_DEV_NULL) {
+			this.dom.projection.textContent = this.options.format_score(
+				point_evt.score.projection,
+				7
+			);
+		}
 
 		this.onScore(frame);
 	}
@@ -1220,10 +1236,12 @@ export default class Player extends EventTarget {
 	_renderTransition(frame) {
 		const point_evt = peek(frame.points);
 
-		this.dom.runway_tr.textContent = this.options.format_score(
-			point_evt.score.transition,
-			6
-		);
+		if (this.dom.runway_tr !== DOM_DEV_NULL) {
+			this.dom.runway_tr.textContent = this.options.format_score(
+				point_evt.score.transition,
+				6
+			);
+		}
 
 		this.onTransition(frame);
 	}
@@ -1234,13 +1252,21 @@ export default class Player extends EventTarget {
 		if (!clear_evt) clear_evt = fake_clear_evt;
 
 		this.dom.lines.textContent = `${frame.raw.lines}`.padStart(3, '0');
-		this.dom.burn.textContent = clear_evt.burn;
+
+		if (this.dom.burn !== DOM_DEV_NULL) {
+			this.dom.burn.textContent = clear_evt.burn;
+		}
 
 		if (frame.clears.length) {
-			this.dom.trt.textContent = getPercent(clear_evt.tetris_rate);
-			this.dom.eff.textContent = (Math.round(clear_evt.efficiency) || 0)
-				.toString()
-				.padStart(3, '0');
+			if (this.dom.trt !== DOM_DEV_NULL) {
+				this.dom.trt.textContent = getPercent(clear_evt.tetris_rate);
+			}
+
+			if (this.dom.eff !== DOM_DEV_NULL) {
+				this.dom.eff.textContent = (Math.round(clear_evt.efficiency) || 0)
+					.toString()
+					.padStart(3, '0');
+			}
 
 			this.renderRunningTRT(frame.clears);
 		}
@@ -1256,7 +1282,9 @@ export default class Player extends EventTarget {
 	}
 
 	_renderLevel(frame) {
-		this.dom.level.textContent = `${frame.raw.level}`.padStart(2, '0');
+		if (this.dom.level !== DOM_DEV_NULL) {
+			this.dom.level.textContent = `${frame.raw.level}`.padStart(2, '0');
+		}
 
 		this.onLevel(frame);
 	}
