@@ -274,13 +274,15 @@ export default class Player extends EventTarget {
 
 		this.hide_profile_card_on_next_game = false;
 
-		this.field_pixel_size =
-			this.options.field_pixel_size || this.options.pixel_size;
+		const styles = getComputedStyle(this.dom.field);
+
+		this.field_pixel_size = Math.max(
+			1,
+			Math.floor(css_size(styles.width) / 79)
+		);
 		this.preview_pixel_size =
 			this.options.preview_pixel_size || this.options.pixel_size;
 		this.render_running_trt_rtl = !!this.options.running_trt_rtl;
-
-		const styles = getComputedStyle(this.dom.field);
 
 		// getComputedStyle returns padding in Chrome,
 		// but Firefox returns 4 individual properties paddingTop, paddingLeft, etc...
@@ -303,11 +305,12 @@ export default class Player extends EventTarget {
 		} else {
 			// when padding is zero, we assume the padding is embedded in the border itself and equal on all sides
 			// and the padding has the size of this.field_pixel_size
-			bg_width = css_size(styles.width) + this.field_pixel_size * 2;
-			bg_height = css_size(styles.height) + this.field_pixel_size * 2;
-			bg_offset = this.field_pixel_size * -1;
-			field_canva_offset_t = this.field_pixel_size;
-			field_canva_offset_l = this.field_pixel_size;
+			const effective_pixel_size = css_size(styles.width) / 79;
+			bg_width = css_size(styles.width) + effective_pixel_size * 2;
+			bg_height = css_size(styles.height) + effective_pixel_size * 2;
+			bg_offset = effective_pixel_size * -1;
+			field_canva_offset_t = effective_pixel_size;
+			field_canva_offset_l = effective_pixel_size;
 		}
 
 		this.bg_height = bg_height; // store value for curtain animation
@@ -338,11 +341,12 @@ export default class Player extends EventTarget {
 
 		// Avatar Block
 		if (this.options.avatar) {
+			const effective_pixel_size = css_size(styles.width) / 79;
 			this.avatar = document.createElement('div');
 			this.avatar.classList.add('avatar');
 			Object.assign(this.avatar.style, {
 				position: 'absolute',
-				top: `${field_padding_tb + this.field_pixel_size * 8}px`,
+				top: `${field_padding_tb + Math.floor(effective_pixel_size * 8)}px`,
 				left: `${bg_offset}px`,
 				width: `${bg_width}px`,
 				height: `${bg_width}px`,
@@ -367,8 +371,16 @@ export default class Player extends EventTarget {
 				canvas.style.left = styles.paddingLeft;
 			}
 
-			canvas.setAttribute('width', css_size(styles.width));
-			canvas.setAttribute('height', css_size(styles.height));
+			if (name === 'field') {
+				canvas.setAttribute('width', 79 * this.field_pixel_size);
+				canvas.setAttribute('height', 159 * this.field_pixel_size);
+				canvas.style.width = styles.width;
+				canvas.style.height = styles.height;
+				canvas.style.imageRendering = 'auto'; // ensure bicubic stretch natively
+			} else {
+				canvas.setAttribute('width', css_size(styles.width));
+				canvas.setAttribute('height', css_size(styles.height));
+			}
 
 			this.dom[name].appendChild(canvas);
 
