@@ -34,6 +34,7 @@
 			}
 		</style>
 	</head>
+
 	<body>
 		<div id="stream_bg">
 			<div id="team" class="team">
@@ -133,6 +134,10 @@
 						player_node.classList.add(`p${player_idx + 1}`);
 						players_node.appendChild(player_node);
 
+						if (QueryString.get('rtrt') === '0') {
+							player_node.querySelector(`.running_trt`).remove();
+						}
+
 						const player = new Player(
 							{
 								name: player_node.querySelector(`.score .header`),
@@ -167,10 +172,6 @@
 						Object.assign(player_node.style, {
 							left: `${player_idx * player_width}px`,
 						});
-
-						if (QueryString.get('rtrt') === '0') {
-							player.dom.running_trt.remove();
-						}
 
 						players.push(player);
 					});

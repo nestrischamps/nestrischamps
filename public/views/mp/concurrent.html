@@ -88,18 +88,21 @@
 				width: 266px;
 				z-index: 3;
 			}
+
 			.player.focus .board {
 				transform: scale(var(--focus-scale));
 				left: calc(var(--focus-left) + 32px);
 				top: calc(var(--focus-top) + 221px);
 				z-index: 2;
 			}
+
 			.player.focus .score {
 				transform: scale(var(--focus-scale));
 				left: var(--focus-left);
 				top: calc(var(--focus-top) + 77px);
 				z-index: 3;
 			}
+
 			.player.focus .running_trt {
 				transform: scale(var(--focus-scale));
 				left: var(--focus-left);
@@ -117,6 +120,7 @@
 			}
 		</style>
 	</head>
+
 	<body>
 		<div id="stream_bg">
 			<template id="player">
@@ -194,6 +198,10 @@
 						player_node.classList.add(`p${player_idx + 1}`);
 						stream_bg.appendChild(player_node);
 
+						if (QueryString.get('rtrt') === '0') {
+							player_node.querySelector(`.running_trt`).remove();
+						}
+
 						const player = new Player(
 							{
 								name: player_node.querySelector(`.name`),
@@ -238,10 +246,6 @@
 								hspacer + col_idx * (player_width + hspacer)
 							)}px`,
 						});
-
-						if (QueryString.get('rtrt') === '0') {
-							player.dom.running_trt.remove();
-						}
 
 						player._layout_data = {
 							left: player_node.style.left,

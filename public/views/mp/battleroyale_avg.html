@@ -35,6 +35,7 @@
 			}
 		</style>
 	</head>
+
 	<body>
 		<div id="stream_bg">
 			<div class="box leaderboard">
@@ -156,6 +157,10 @@
 						player_node.classList.add(`p${player_idx + 1}`);
 						stream_bg.appendChild(player_node);
 
+						if (QueryString.get('rtrt') === '0') {
+							player_node.querySelector(`.running_trt`).remove();
+						}
+
 						const rank_fragment = document.importNode(
 							rank_template.content,
 							true
@@ -231,10 +236,6 @@
 								spacer + player_idx * (player_width + spacer)
 							)}px`,
 						});
-
-						if (QueryString.get('rtrt') === '0') {
-							player.dom.running_trt.remove();
-						}
 					});
 
 				const competition = new Competition(players);
