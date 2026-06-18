@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 	<head>
 		<style>
@@ -12,7 +12,7 @@
 				margin: 0;
 				font-family: Gotham;
 				color: white;
-				--beige: #fee28a;
+				--beige: #feef8b;
 			}
 
 			.beige {
@@ -34,74 +34,67 @@
 				left: 0;
 				opacity: 0;
 				overflow: hidden;
-				width: 1280px;
-				padding-top: 1px;
-				height: 30px;
-				font-size: 22px;
-				line-height: 32px;
-				text-align: center;
+				width: 1920px;
+				height: 57px;
+				font-size: 38px;
+				line-height: 57px;
+				text-align: left;
+			}
 
-				border-top: solid 1px white;
+			#footer .item {
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
 				display: none;
+				white-space: nowrap;
 			}
 
-			#footer .ctwc {
-				border-top: solid 1px var(--beige);
-				background: linear-gradient(#2a2a2a, #181818);
-			}
-
-			#footer .youtube {
-				background: linear-gradient(#bd171d, #ac0c0f);
-			}
-
-			#footer img {
-				vertical-align: middle;
-				margin-top: -4px;
-				padding-right: 4px;
-			}
-
-			#footer .twitch {
-				background: linear-gradient(#593785, #4c297e);
-			}
-
-			#footer .twitch img {
-				margin-top: -3px;
-			}
-
-			#footer .facebook {
-				background: linear-gradient(#445999, #304b89);
-			}
-
-			#footer > div.active {
+			#footer .item.active {
 				display: block;
 				animation: fadeIn ease 1s;
 				animation-fill-mode: forwards;
+			}
+
+			#footer .item.overflowing .wrapper {
+				display: inline-block;
+				will-change: transform;
+				animation: revealGraphic 11s linear infinite;
+			}
+
+			@keyframes revealGraphic {
+				0% {
+					transform: translateX(0);
+				}
+				100% {
+					/* Move it left by exactly the overflow amount */
+					transform: translateX(calc(-1px * var(--overflow-distance)));
+				}
 			}
 		</style>
 	</head>
 	<body>
 		<div id="footer">
-			<div class="ctwc active">
-				<span class="beige">CLASSIC TETRIS®</span>
-				<span class="system">NTSC</span>
-				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-				<span class="event beige">SINGAPORE CHAMPIONSHIP 2021</span>
-				&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; on NESTRISCHAMPS
+			<div class="item ctsc26 active">
+				<img src="./ctsc26.png" />
 			</div>
-
-			<div class="youtube">
-				<img src="./youtube.png" />
-				YOUTUBE.COM/CLASSICTETRIS
+			<div class="item socials">
+				<img src="./socials.png" />
 			</div>
-
-			<div class="twitch">
-				<img src="./twitch.png" />
-				TWITCH.TV/CLASSICTETRIS
+			<div class="item merch">
+				<img src="./merch.png" />
 			</div>
-
-			<div class="facebook">
-				<img src="./facebook.png" />
-				FACEBOOK.COM/CLASSICTETRIS
+			<div class="item matcherino">
+				<img src="./matcherino.png" />
+			</div>
+			<div class="item blank">
+				<img src="./blank.png" />
+			</div>
+			<div class="item razer">
+				<div class="wrapper">
+					<img src="./razer.png" /><img src="./razer.png" />
+				</div>
 			</div>
 		</div>
 
@@ -109,23 +102,7 @@
 			const CYCLE_DURATION_S = 10;
 
 			// 1. get query string args and do initial setup
-			const QueryString = new URL(location).searchParams;
-			const ctwc = document.querySelector(`#footer .ctwc`);
-			const system = QueryString.get('system');
-			const event = QueryString.get('event');
-			const cycle_seconds = QueryString.get('cycle_seconds');
-
-			if (system !== null) {
-				ctwc.querySelector('.system').textContent = system;
-			}
-
-			if (event !== null) {
-				ctwc.querySelector('.event').textContent = event;
-			}
-
-			const footers = ['ctwc', 'youtube', 'twitch', 'facebook'].map(name =>
-				document.querySelector(`#footer .${name}`)
-			);
+			const footers = [...document.querySelectorAll('#footer .item')];
 
 			let curr_index = footers.length - 1;
 			let curZIndex = 1;
@@ -138,17 +115,26 @@
 
 				const new_footer = footers[curr_index];
 				new_footer.style.zIndex = ++curZIndex;
-				new_footer.onanimationend = () => {
-					old_footer.classList.remove('active');
+				new_footer.onanimationend = e => {
+					if (e.animationName === 'fadeIn') {
+						old_footer.classList.remove('active');
+						old_footer.classList.remove('overflowing');
+					}
 				};
 				new_footer.classList.add('active');
+
+				const containerWidth =
+					new_footer.getBoundingClientRect().width || new_footer.clientWidth;
+				const contentWidth = new_footer.scrollWidth;
+
+				if (contentWidth > containerWidth) {
+					const overflowDistance = contentWidth - containerWidth;
+					new_footer.style.setProperty('--overflow-distance', overflowDistance);
+					new_footer.classList.add('overflowing');
+				}
 			}
 
 			let cycle_duration_s = CYCLE_DURATION_S;
-
-			if (/^\d+$/.test(cycle_seconds)) {
-				cycle_duration_s = parseInt(cycle_seconds, 10);
-			}
 
 			setInterval(run, cycle_duration_s * 1000);
 		</script>
