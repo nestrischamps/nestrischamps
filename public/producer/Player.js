@@ -188,6 +188,13 @@ export class Player extends EventTarget {
 				console.log(Date.now(), `peer opened (${this.#peer.id} / ${id})`);
 				this.dispatchEvent(new CustomEvent('peer_open'));
 			});
+			this.#peer.on('disconnected', () => {
+				console.log(
+					Date.now(),
+					'Peer signaling connection disconnected. Reconnecting...'
+				);
+				this.#peer.reconnect();
+			});
 			this.#peer.on('error', err => {
 				console.log(`Peer error: ${err.message}`);
 				this.#peer.retryTO = clearTimeout(this.#peer.retryTO); // there should only be one retry scheduled

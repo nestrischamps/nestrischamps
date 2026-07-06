@@ -315,6 +315,10 @@ class Player {
 				const peerid = `${connection.id}-${this.idx}`;
 				const peer = (this.peer = new Peer(peerid, peerServerOptions));
 
+				peer.on('error', err => {
+					console.error('Admin peer connection error:', err);
+				});
+
 				let driver;
 				let ocr;
 				let srcCanvas;
@@ -329,6 +333,10 @@ class Player {
 						dataConnection.metadata
 					);
 					this.dataConnection = dataConnection;
+
+					dataConnection.on('error', err => {
+						console.error('Admin data connection error:', err);
+					});
 
 					const { config, video } = dataConnection.metadata;
 

@@ -38,70 +38,98 @@ export class OcrPlayer extends Player {
 		this.API.requestRemoteCalibration = async admin_peer_id => {
 			console.log('requestRemoteCalibration', admin_peer_id);
 
-			if (this.#conn) {
-				clearInterval(this.#conn.sendVideoFrameIntervalId);
-				this.#conn.close();
+			const peer = this.getPeer();
+			if (!peer) {
+				console.error('Peer is not initialized');
+				return;
 			}
 
 			const video = this._driver.getVideo();
-
 			const remoteConfig = getSerializableConfigCopy(this.config);
 
 			// strip out fields that should not be shared
 			delete remoteConfig.device_id; // this should never be shared - device_id is specific to the local hardware and site
 
-			this.#conn = this.getPeer().connect(admin_peer_id, {
-				metadata: {
-					video: {
-						width: video.videoWidth,
-						height: video.videoHeight,
-					},
-					config: remoteConfig,
-					imageArgs: this.#remoteCalibrationImageArgs,
-					userAgent: window.navigator.userAgent,
-				},
-			});
-
-			const sendVideoFrame = async () => {
-				console.log('sending remote calibration frame');
-				const img = await this.#getVideoFrameAsImgBlob();
-				this.#conn.send({ img });
-			};
-
-			this.#conn.on('open', () => {
-				clearInterval(this.#conn.sendVideoFrameIntervalId);
-				this.#conn.sendVideoFrameIntervalId = setInterval(
-					sendVideoFrame,
-					REMOTE_CALIBRATION_FRAME_INTERVAL_MS
-				);
-				sendVideoFrame();
-			});
-
-			this.#conn.on('data', ({ config }) => {
-				for (const [name, task] of Object.entries(config.tasks)) {
-					this.config.tasks[name].dirty = true;
-					Object.assign(this.config.tasks[name].crop, task.crop);
+			const establishConnection = () => {
+				if (this.#conn) {
+					clearInterval(this.#conn.sendVideoFrameIntervalId);
+					this.#conn.close();
 				}
 
-				// TODO: how to update the controls?
-				['brightness', 'contrast'].forEach(prop => {
-					if (prop in config) {
-						this.config[prop] = config[prop];
-					}
+				this.#conn = peer.connect(admin_peer_id, {
+					metadata: {
+						video: {
+							width: video.videoWidth,
+							height: video.videoHeight,
+						},
+						config: remoteConfig,
+						imageArgs: this.#remoteCalibrationImageArgs,
+						userAgent: window.navigator.userAgent,
+					},
 				});
 
-				// TODO: carry score7 and reset entire config
+				const sendVideoFrame = async () => {
+					console.log('sending remote calibration frame');
+					const img = await this.#getVideoFrameAsImgBlob();
+					this.#conn.send({ img });
+				};
 
-				this.config.save();
+				this.#conn.on('open', () => {
+					clearInterval(this.#conn.sendVideoFrameIntervalId);
+					this.#conn.sendVideoFrameIntervalId = setInterval(
+						sendVideoFrame,
+						REMOTE_CALIBRATION_FRAME_INTERVAL_MS
+					);
+					sendVideoFrame();
+				});
 
-				this.dispatchEvent(
-					new CustomEvent('remote_config_update', { detail: config })
-				);
-			});
+				this.#conn.on('data', ({ config }) => {
+					for (const [name, task] of Object.entries(config.tasks)) {
+						this.config.tasks[name].dirty = true;
+						Object.assign(this.config.tasks[name].crop, task.crop);
+					}
 
-			this.#conn.on('close', () => {
-				clearInterval(this.#conn.sendVideoFrameIntervalId);
-			});
+					// TODO: how to update the controls?
+					['brightness', 'contrast'].forEach(prop => {
+						if (prop in config) {
+							this.config[prop] = config[prop];
+						}
+					});
+
+					// TODO: carry score7 and reset entire config
+
+					this.config.save();
+
+					this.dispatchEvent(
+						new CustomEvent('remote_config_update', { detail: config })
+					);
+				});
+
+				this.#conn.on('close', () => {
+					clearInterval(this.#conn.sendVideoFrameIntervalId);
+				});
+
+				this.#conn.on('error', err => {
+					console.error('Calibration peer connection error:', err);
+				});
+			};
+
+			if (peer.disconnected) {
+				console.log('Peer is disconnected. Reconnecting first...');
+				peer.once('open', () => {
+					console.log('Peer re-opened. Establishing connection...');
+					establishConnection();
+				});
+				peer.reconnect();
+			} else if (!peer.open) {
+				console.log('Peer is not open yet. Waiting for open event...');
+				peer.once('open', () => {
+					console.log('Peer opened. Establishing connection...');
+					establishConnection();
+				});
+			} else {
+				establishConnection();
+			}
 		};
 
 		// don't remove this, this.ocrPromise is used by the capture component T_T
