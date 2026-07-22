@@ -115,18 +115,16 @@ export class OcrPlayer extends Player {
 			};
 
 			if (peer.disconnected) {
-				console.log('Peer is disconnected. Reconnecting first...');
+				console.log('Peer is disconnected. Schedule connection for later...');
 				peer.once('open', () => {
 					console.log('Peer re-opened. Establishing connection...');
 					establishConnection();
 				});
-				peer.reconnect();
-			} else if (!peer.open) {
-				console.log('Peer is not open yet. Waiting for open event...');
-				peer.once('open', () => {
-					console.log('Peer opened. Establishing connection...');
-					establishConnection();
-				});
+
+				// note that we do not call peer.reconnect(),
+				// because peer reconnection is handled in player.js
+
+				// TODO: (somehow) remove the open handler if we give up on the remote calibration request
 			} else {
 				establishConnection();
 			}

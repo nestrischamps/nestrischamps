@@ -196,7 +196,7 @@ export class Player extends EventTarget {
 				this.#peer.reconnect();
 			});
 			this.#peer.on('error', err => {
-				console.log(`Peer error: ${err.message}`);
+				console.log(`Peer error: ${err.type} - ${err.message}`);
 				this.#peer.retryTO = clearTimeout(this.#peer.retryTO); // there should only be one retry scheduled
 				// this.#peer.retryTO = setTimeout(startSharingVideoFeed, 1500); // we assume this will succeed at some point?? 😰😅
 			});
