@@ -54,7 +54,7 @@ export default class GameTracker extends EventTarget {
 	_getLevelFromLines(lines, ocr_level_digits) {
 		if (lines === null || ocr_level_digits === null) return null;
 		if (!this.transition) return GameTracker.digitsToValue(ocr_level_digits);
-		// Transition trainer check
+		// Tetris Gym - Transition Trainer detection - mode G only
 		if (
 			lines < 14 &&
 			this.start_level != GameTracker.digitsToValue(ocr_level_digits)
@@ -72,7 +72,7 @@ export default class GameTracker extends EventTarget {
 		}
 
 		// TODO(?): Do we need to consider the frame buffer to detect the pause text "properly"
-		// TODO(?): check luma on level for better reliability (wity grey Gym rom)
+		// TODO(?): check luma on level for better reliability (with grey Gym rom)
 		last_frame.gym_pause_active = !!(
 			last_frame.gym_pause?.[1] &&
 			last_frame.score &&
@@ -266,7 +266,7 @@ export default class GameTracker extends EventTarget {
 			lines = this.cur_lines = GameTracker.digitsToValue(dispatch_frame.lines);
 		}
 
-		// lastly we matche the colors from the field to either the palette or the extracted colors
+		// lastly we match the colors from the field to either the palette or the extracted colors
 
 		const level = this._getLevelFromLines(lines, dispatch_frame.level); // this is no longer OCR!
 
