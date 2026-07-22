@@ -92,6 +92,15 @@
 			.no-video .team {
 				top: 300px;
 			}
+
+			.no-video #team1 .player .board {
+				top: 0;
+			}
+
+			.no-video #team1 .player .score {
+				width: 557px;
+				left: -654px;
+			}
 		</style>
 	</head>
 	<body>
@@ -299,6 +308,10 @@
 								format_score: readableScoreFomatter,
 							}
 						);
+
+						if (QueryString.get('rtrt') === '0') {
+							player.dom.running_trt.remove();
+						}
 
 						player.onGameStart = function () {
 							this.dom.lines.hidden = false;
