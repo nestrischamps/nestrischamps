@@ -121,6 +121,12 @@ const config = convict({
 			default: false,
 			env: 'IN_SCRIPT',
 		},
+		max_page: {
+			doc: 'Maximum page size allowed for pagination',
+			format: 'nat',
+			default: 100,
+			env: 'SERVER_MAX_PAGE',
+		},
 	},
 	game: {
 		save_frames: {

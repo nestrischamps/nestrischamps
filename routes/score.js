@@ -229,7 +229,7 @@ router.get(
 	async (req, res) => {
 		console.log(`Fetching user scores for ${req.session.user.id}`);
 
-		const PAGE_SIZE = 100;
+		const PAGE_SIZE = config.get('server.max_page');
 		const ALLOWED_ORDER_FIELDS = [
 			'datetime',
 			'lines',
@@ -244,6 +244,7 @@ router.get(
 		const options = {
 			sort_field: 'datetime',
 			sort_order: 'desc',
+			page_size: PAGE_SIZE,
 			page_idx: 0,
 			competition: null,
 			level: null,

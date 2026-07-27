@@ -1,4 +1,5 @@
 import dbPool from '../modules/db.js';
+import config from '../modules/config.js';
 
 const SESSION_BREAK_MS = 2 * 60 * 58 * 1000; // 2hours - 2s for the time check query
 
@@ -332,41 +333,63 @@ class ScoreDAO {
 		options = {
 			sort_field: 'datetime',
 			sort_order: 'desc',
-			page_size: 100,
+			page_size: config.get('server.max_page'),
 			page_idx: 0,
 
 			...options,
 		};
 
+		const ALLOWED_ORDER_FIELDS = [
+			'datetime',
+			'lines',
+			'score',
+			'tetris_rate',
+			'num_droughts',
+			'max_drought',
+		];
+		const sort_field = ALLOWED_ORDER_FIELDS.includes(options.sort_field)
+			? options.sort_field
+			: 'datetime';
+		const sort_order =
+			String(options.sort_order).toLowerCase() === 'asc' ? 'asc' : 'desc';
+
 		const args = [user.id];
 
 		let null_handling = '';
 
-		if (options.sort_field === 'tetris_rate') {
-			null_handling =
-				options.sort_order === 'desc' ? 'NULLS last' : 'NULLS first';
+		if (sort_field === 'tetris_rate') {
+			null_handling = sort_order === 'desc' ? 'NULLS LAST' : 'NULLS FIRST';
 		}
 
 		let additional_conditions = '';
 
 		if ([true, false].includes(options.competition)) {
 			args.push(options.competition);
-			additional_conditions = ` AND competition=$${args.length} `;
+			additional_conditions += ` AND competition=$${args.length} `;
 		}
 
-		if ('level' in options && options.level !== null) {
+		if (
+			'level' in options &&
+			options.level !== null &&
+			options.level !== undefined
+		) {
 			args.push(options.level);
 			additional_conditions += ` AND start_level=$${args.length} `;
 		}
 
-		// WARNING: this query uses plain JS variable interpolation, parameters MUST be sane
+		const page_size = Math.max(
+			1,
+			parseInt(options.page_size, 10) || config.get('server.max_page')
+		);
+		const page_idx = Math.max(0, parseInt(options.page_idx, 10) || 0);
+
 		const result = await dbPool.query(
 			`
 				SELECT id, datetime, start_level, end_level, score, lines, tetris_rate, num_droughts, max_drought, das_avg, duration, frame_file, competition
 				FROM scores
 				WHERE player_id=$1 ${additional_conditions}
-				ORDER BY ${options.sort_field} ${options.sort_order} ${null_handling}
-				LIMIT ${options.page_size} OFFSET ${options.page_size * options.page_idx}
+				ORDER BY ${sort_field} ${sort_order} ${null_handling}
+				LIMIT ${page_size} OFFSET ${page_size * page_idx}
 			`,
 			args
 		);
