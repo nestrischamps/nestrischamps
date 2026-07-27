@@ -5,6 +5,7 @@ import express from 'express';
 import got from 'got';
 import ScoreDAO from '../daos/ScoreDAO.js';
 import UserDAO from '../daos/UserDAO.js';
+import ScoreQuery from '../domains/ScoreQuery.js';
 import config from '../modules/config.js';
 
 const STACKRABBIT_URL = 'https://stackrabbit.herokuapp.com/get-move';
@@ -136,94 +137,23 @@ async function checkUser(req, res, next) {
 	next();
 }
 
-const ALLOWED_ORDER_FIELDS = [
-	'datetime',
-	'lines',
-	'score',
-	'tetris_rate',
-	'num_droughts',
-	'max_drought',
-];
-const ALLOWED_ORDER_DIRS = ['desc', 'asc'];
-
 async function handleGetScores(req, res) {
-	let sort_field = 'datetime';
-	if (ALLOWED_ORDER_FIELDS.includes(req.query.sort_field)) {
-		sort_field = req.query.sort_field;
-	}
-
-	let sort_order = 'desc';
-	if (ALLOWED_ORDER_DIRS.includes(req.query.sort_order)) {
-		sort_order = req.query.sort_order;
-	}
-
-	const max_page_size = config.get('server.max_page');
-	let page_size = max_page_size;
-	if (/^\d+$/.test(req.query.page_size)) {
-		const tentative_page_size = parseInt(req.query.page_size, 10);
-		if (tentative_page_size >= 20 && tentative_page_size <= max_page_size) {
-			page_size = tentative_page_size;
-		}
-	}
-
-	let page_idx = 0;
-	if (/^\d+$/.test(req.query.page_idx)) {
-		page_idx = parseInt(req.query.page_idx, 10);
-	}
-
-	let level = null;
-	if (/^[12]?\d$/.test(req.query.level)) {
-		level = parseInt(req.query.level, 10);
-	}
-
-	let competition = null;
-	if (/^(true|1)$/i.test(req.query.competition)) {
-		competition = true;
-	} else if (/^(false|0)$/i.test(req.query.competition)) {
-		competition = false;
-	}
-
-	const options = {
-		sort_field,
-		sort_order,
-		page_size,
-		page_idx,
-		level,
-		competition,
-	};
-
-	const total_scores = await ScoreDAO.getNumberOfScores(req.user, options);
-	const num_pages = Math.ceil(total_scores / page_size) || 1;
-
-	options.page_idx = Math.max(0, Math.min(options.page_idx, num_pages - 1));
-
-	const scores = await ScoreDAO.getScorePage(req.user, options);
-
-	scores.forEach(score => {
-		if (score.frame_file) {
-			if (config.get('game.frames_bucket')) {
-				const base_url = `https://${config.get('game.frames_bucket')}.s3-${config.get('game.frames_region')}.amazonaws.com/`;
-				score.frame_url = `${base_url}${score.frame_file}`;
-			} else {
-				score.frame_url = `${req.protocol}://${req.headers.host}/api/files/${score.frame_file}`;
-			}
-		}
-	});
+	const { scores, total_scores, num_pages, options } =
+		await ScoreQuery.fetchPage(req.user, req.query, req);
 
 	res.json({
 		scores,
 		pagination: {
 			total_scores,
 			page_idx: options.page_idx,
-			page_size,
+			page_size: options.page_size,
 			num_pages,
-			max_page_size,
 		},
 		query: {
-			sort_field,
-			sort_order,
-			level,
-			competition,
+			sort_field: options.sort_field,
+			sort_order: options.sort_order,
+			level: options.level,
+			competition: options.competition,
 		},
 	});
 }

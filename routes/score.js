@@ -3,6 +3,7 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import middlewares from '../modules/middlewares.js';
 import UserDAO from '../daos/UserDAO.js';
 import ScoreDAO from '../daos/ScoreDAO.js';
+import ScoreQuery from '../domains/ScoreQuery.js';
 import config from '../modules/config.js';
 
 const router = express.Router();
@@ -229,57 +230,14 @@ router.get(
 	async (req, res) => {
 		console.log(`Fetching user scores for ${req.session.user.id}`);
 
-		const PAGE_SIZE = config.get('server.max_page');
-		const ALLOWED_ORDER_FIELDS = [
-			'datetime',
-			'lines',
-			'score',
-			'tetris_rate',
-			'num_droughts',
-			'max_drought',
-			'level',
-		];
-		const ALLOWED_ORDER_DIRS = ['desc', 'asc'];
-
-		const options = {
-			sort_field: 'datetime',
-			sort_order: 'desc',
-			page_size: PAGE_SIZE,
-			page_idx: 0,
-			competition: null,
-			level: null,
-		};
-
-		// validate and get args from query
-		if (ALLOWED_ORDER_FIELDS.includes(req.query.sort_field)) {
-			options.sort_field = req.query.sort_field;
-		}
-
-		if (ALLOWED_ORDER_DIRS.includes(req.query.sort_order)) {
-			options.sort_order = req.query.sort_order;
-		}
-
-		if (/^\d+$/.test(req.query.page_idx)) {
-			options.page_idx = parseInt(req.query.page_idx, 10);
-		}
-
-		if (/^[12]?\d$/.test(req.query.level)) {
-			options.level = parseInt(req.query.level, 10);
-		}
-
-		options.competition = req.ntc.filter.competition;
-
-		const num_scores = await ScoreDAO.getNumberOfScores(
+		const { scores, num_pages, options } = await ScoreQuery.fetchPage(
 			req.session.user,
-			options
+			{
+				...req.query,
+				competition: req.ntc.filter.competition,
+			},
+			req
 		);
-
-		const num_pages = Math.ceil(num_scores / PAGE_SIZE) || 1;
-
-		options.page_idx = Math.max(0, Math.min(options.page_idx, num_pages - 1));
-
-		// WARNING: when we supply pagination parameters here, all field MUST be sanitized because getScorePage() interpolates them to construct the SQL query
-		const scores = await ScoreDAO.getScorePage(req.session.user, options);
 
 		res.render('scores', {
 			scores,

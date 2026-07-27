@@ -131,7 +131,6 @@ describe('Score History API & Configuration', () => {
 					page_idx: 0,
 					page_size: 100,
 					num_pages: 1,
-					max_page_size: 100,
 				},
 				query: {
 					sort_field: 'datetime',
@@ -189,7 +188,6 @@ describe('Score History API & Configuration', () => {
 						page_idx: 1,
 						page_size: 50,
 						num_pages: 24,
-						max_page_size: 100,
 					}),
 					query: {
 						sort_field: 'score',
