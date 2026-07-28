@@ -8,7 +8,6 @@ const ALLOWED_ORDER_FIELDS = [
 	'tetris_rate',
 	'num_droughts',
 	'max_drought',
-	'level',
 ];
 const ALLOWED_ORDER_DIRS = ['desc', 'asc'];
 
