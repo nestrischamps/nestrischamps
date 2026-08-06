@@ -5,7 +5,9 @@
 // id to [address, num_bytes]
 const gym6_data_maps = {
 	gameMode: [0xc0, 1], // gameMode
-	playState: [0x48, 1], // gameModeState
+	playState: [0x48, 1], // playState
+	// For future use
+	// gameModeState: [0xA7, 1], // gameModeState
 	completedRowXClear: [0x52, 1], // rowY (rowY is a terrible name in Rom)
 	completedRows: [0x4a, 4], // completedRow
 	lines: [0x50, 2], // lines
