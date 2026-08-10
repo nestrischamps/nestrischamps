@@ -3,8 +3,9 @@ import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import middlewares from '../modules/middlewares.js';
 import UserDAO from '../daos/UserDAO.js';
 import ScoreDAO from '../daos/ScoreDAO.js';
-import ScoreQuery from '../domains/ScoreQuery.js';
-import { handleUpdateScoreCompetition } from '../domains/ScoreService.js';
+import ScoreService, {
+	handleUpdateScoreCompetition,
+} from '../domains/ScoreService.js';
 import config from '../modules/config.js';
 
 const router = express.Router();
@@ -231,7 +232,7 @@ router.get(
 	async (req, res) => {
 		console.log(`Fetching user scores for ${req.session.user.id}`);
 
-		const { scores, num_pages, options } = await ScoreQuery.fetchPage(
+		const { scores, num_pages, options } = await ScoreService.fetchPage(
 			req.session.user,
 			{
 				...req.query,

@@ -5,8 +5,9 @@ import express from 'express';
 import got from 'got';
 import ScoreDAO from '../daos/ScoreDAO.js';
 import UserDAO from '../daos/UserDAO.js';
-import ScoreQuery from '../domains/ScoreQuery.js';
-import { handleUpdateScoreCompetition } from '../domains/ScoreService.js';
+import ScoreService, {
+	handleUpdateScoreCompetition,
+} from '../domains/ScoreService.js';
 import config from '../modules/config.js';
 
 const STACKRABBIT_URL = 'https://stackrabbit.herokuapp.com/get-move';
@@ -140,7 +141,7 @@ async function checkUser(req, res, next) {
 
 async function handleGetScores(req, res) {
 	const { scores, total_scores, num_pages, options } =
-		await ScoreQuery.fetchPage(req.user, req.query, req);
+		await ScoreService.fetchPage(req.user, req.query, req);
 
 	res.json({
 		scores,
