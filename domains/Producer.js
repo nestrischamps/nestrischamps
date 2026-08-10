@@ -1,6 +1,15 @@
 import EventEmitter from 'events';
 import Game from '../modules/Game.js';
 
+function parseBoolean(val) {
+	if (typeof val === 'string') {
+		const lower = val.trim().toLowerCase();
+		if (lower === 'true' || lower === '1') return true;
+		if (lower === 'false' || lower === '0') return false;
+	}
+	return !!val;
+}
+
 class Producer extends EventEmitter {
 	constructor(user) {
 		super();
@@ -21,7 +30,7 @@ class Producer extends EventEmitter {
 		this.kick('concurrency_limit');
 
 		this.is_match_connection = !!match;
-		this.is_competition = !!competition;
+		this.is_competition = !!match || !!competition;
 		this.remote_calibration = !!remote_calibration;
 
 		connection.on('message', this._handleMessage);
@@ -54,13 +63,20 @@ class Producer extends EventEmitter {
 		return this.is_match_connection;
 	}
 
+	setCompetition(competition) {
+		this.is_competition = parseBoolean(competition);
+		if (this.game && !this.game.over) {
+			this.game.setCompetition(this.is_competition);
+		}
+	}
+
 	setGame() {
 		if (this.game) {
 			delete this.game.onNewGame;
 		}
 
 		this.game = new Game(this.user, {
-			competition: this.is_match_connection || this.is_competition,
+			competition: this.is_competition,
 		});
 
 		this.game.onNewGame = frame => {
@@ -102,6 +118,10 @@ class Producer extends EventEmitter {
 	}
 
 	_handleMessage(message) {
+		if (Array.isArray(message) && message[0] === 'setCompetition') {
+			this.setCompetition(message[1]);
+		}
+
 		if (!this.game) {
 			this.setGame();
 		}

@@ -81,6 +81,10 @@ class Game {
 		}
 	}
 
+	setCompetition(competition) {
+		this.competition = !!competition;
+	}
+
 	setFrame(frame) {
 		const data = BinaryFrame.parse(frame);
 
