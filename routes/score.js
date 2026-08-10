@@ -4,6 +4,7 @@ import middlewares from '../modules/middlewares.js';
 import UserDAO from '../daos/UserDAO.js';
 import ScoreDAO from '../daos/ScoreDAO.js';
 import ScoreQuery from '../domains/ScoreQuery.js';
+import { handleUpdateScoreCompetition } from '../domains/ScoreService.js';
 import config from '../modules/config.js';
 
 const router = express.Router();
@@ -317,26 +318,7 @@ router.put(
 	'/scores/:id/competition/:mode',
 	middlewares.assertSession,
 	middlewares.checkToken,
-	async (req, res) => {
-		console.log(`Updating score ${req.params.id}`);
-
-		if (!['0', '1'].includes(req.params.mode)) {
-			res.status(400).send('Invalid value for competition mode');
-			return;
-		}
-
-		try {
-			await ScoreDAO.updateScore(
-				req.session.user,
-				req.params.id,
-				req.params.mode === '1'
-			);
-			res.json({ status: 'ok' });
-		} catch (err) {
-			console.error(err);
-			res.status(500).send('Unable to update score');
-		}
-	}
+	handleUpdateScoreCompetition
 );
 
 router.get(

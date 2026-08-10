@@ -6,6 +6,7 @@ import got from 'got';
 import ScoreDAO from '../daos/ScoreDAO.js';
 import UserDAO from '../daos/UserDAO.js';
 import ScoreQuery from '../domains/ScoreQuery.js';
+import { handleUpdateScoreCompetition } from '../domains/ScoreService.js';
 import config from '../modules/config.js';
 
 const STACKRABBIT_URL = 'https://stackrabbit.herokuapp.com/get-move';
@@ -183,6 +184,13 @@ router.get('/user/scores/:id', extractSecret, checkUser, async (req, res) => {
 
 	res.json(score);
 });
+
+router.put(
+	'/user/scores/:id/competition/:mode',
+	extractSecret,
+	checkUser,
+	handleUpdateScoreCompetition
+);
 
 function validateRpcBody(req, res, next) {
 	// We validate against the exact same message format for rpc commands as the websocket

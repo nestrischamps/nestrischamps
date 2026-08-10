@@ -230,4 +230,106 @@ describe('Score History API & Configuration', () => {
 			);
 		});
 	});
+
+	describe('Score Competition Toggle API', () => {
+		const mockUser = { id: 42, login: 'testplayer' };
+
+		it('should update competition flag to true via PUT /user/scores/:id/competition/:mode', async () => {
+			const updateSpy = jest
+				.spyOn(ScoreDAO, 'updateScore')
+				.mockResolvedValue(true);
+
+			const routeLayer = apiRouter.stack.find(
+				s => s.route && s.route.path === '/user/scores/:id/competition/:mode'
+			).route.stack[2].handle;
+
+			const req = {
+				user: mockUser,
+				params: { id: '101', mode: '1' },
+			};
+			const res = {
+				status: jest.fn().mockReturnThis(),
+				send: jest.fn(),
+				json: jest.fn(),
+			};
+
+			await routeLayer(req, res);
+
+			expect(updateSpy).toHaveBeenCalledWith(mockUser, '101', true);
+			expect(res.json).toHaveBeenCalledWith({ status: 'ok' });
+		});
+
+		it('should update competition flag to false via PUT /user/scores/:id/competition/:mode', async () => {
+			const updateSpy = jest
+				.spyOn(ScoreDAO, 'updateScore')
+				.mockResolvedValue(true);
+
+			const routeLayer = apiRouter.stack.find(
+				s => s.route && s.route.path === '/user/scores/:id/competition/:mode'
+			).route.stack[2].handle;
+
+			const req = {
+				user: mockUser,
+				params: { id: '101', mode: '0' },
+			};
+			const res = {
+				status: jest.fn().mockReturnThis(),
+				send: jest.fn(),
+				json: jest.fn(),
+			};
+
+			await routeLayer(req, res);
+
+			expect(updateSpy).toHaveBeenCalledWith(mockUser, '101', false);
+			expect(res.json).toHaveBeenCalledWith({ status: 'ok' });
+		});
+
+		it('should reject invalid mode with 400', async () => {
+			const routeLayer = apiRouter.stack.find(
+				s => s.route && s.route.path === '/user/scores/:id/competition/:mode'
+			).route.stack[2].handle;
+
+			const req = {
+				user: mockUser,
+				params: { id: '101', mode: '5' },
+			};
+			const res = {
+				status: jest.fn().mockReturnThis(),
+				send: jest.fn(),
+				json: jest.fn(),
+			};
+
+			await routeLayer(req, res);
+
+			expect(res.status).toHaveBeenCalledWith(400);
+			expect(res.send).toHaveBeenCalledWith(
+				'Invalid value for competition mode'
+			);
+		});
+
+		it('should return 500 if update fails', async () => {
+			jest
+				.spyOn(ScoreDAO, 'updateScore')
+				.mockRejectedValue(new Error('DB error'));
+
+			const routeLayer = apiRouter.stack.find(
+				s => s.route && s.route.path === '/user/scores/:id/competition/:mode'
+			).route.stack[2].handle;
+
+			const req = {
+				user: mockUser,
+				params: { id: '101', mode: '1' },
+			};
+			const res = {
+				status: jest.fn().mockReturnThis(),
+				send: jest.fn(),
+				json: jest.fn(),
+			};
+
+			await routeLayer(req, res);
+
+			expect(res.status).toHaveBeenCalledWith(500);
+			expect(res.send).toHaveBeenCalledWith('Unable to update score');
+		});
+	});
 });
