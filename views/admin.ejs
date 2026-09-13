@@ -204,11 +204,17 @@
 		<div class="box" id="show_match_controls">
 			Show Match:
 			<input type="radio" id="match_both" name="selected_match" value="" checked />
-			<label for="match_both">Both</label>
+			<label for="match_both" id="match_both_label">Both</label>
 			<input type="radio" id="match_1" name="selected_match" value="0" />
 			<label for="match_1">Match 1</label>
 			<input type="radio" id="match_2" name="selected_match" value="1" />
 			<label for="match_2">Match 2</label>
+			<span id="extra_match_radios" style="display: none;">
+				<input type="radio" id="match_3" name="selected_match" value="2" />
+				<label for="match_3">Match 3</label>
+				<input type="radio" id="match_4" name="selected_match" value="3" />
+				<label for="match_4">Match 4</label>
+			</span>
 		</div>
 
 		<div class="box" id="show_profile_cards_controls">
@@ -218,6 +224,12 @@
 				<label for="pc_match_1">Match 1</label>
 				<input type="checkbox" id="pc_match_2" name="selected_match" value="1" />
 				<label for="pc_match_2">Match 2</label>
+				<span id="extra_pc_matches" style="display: none;">
+					<input type="checkbox" id="pc_match_3" name="selected_match" value="2" />
+					<label for="pc_match_3">Match 3</label>
+					<input type="checkbox" id="pc_match_4" name="selected_match" value="3" />
+					<label for="pc_match_4">Match 4</label>
+				</span>
 				<button id="hide_all_profile_cards" style="margin-left: 2em;">Hide All Profile Cards</button>
 			</span>
 		</div>

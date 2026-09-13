@@ -72,6 +72,14 @@ Caveat: global args apply to **MOST** layouts, but some layouts may not understa
 | `srabbit_rate` | `0`: No placement ratings<br>`1`: Show placement ratings | `0` | This only works if `srabbit=1` is added |
 | `bracket` | Controls the seed shimmer effect, box border color, and CTWC curtaib logo. Value can be:<br>`gold`: for gold bracket<br>`silver`: for silver bracket<br>`bronze`: for bronze bracket | `{not set}` | When not set, shows the main CTWC logo |
 
+### CTWC23x4
+
+Same query string arguments as CTWC23, with `match` updated for 4 concurrent matches:
+
+| Argument  | Possible values | Default | Notes |
+| --- | --- | --- | --- |
+| `match` | `{not set}`: show match 1 and wait for admin command to switch view<br>`0`: always show match 1<br>`1`: always show match 2<br>`2`: always show match 3<br>`3`: always show match 4<br>`all`: always show all 4 matches | `{not set}` | Warning: Setting `match` ignores admin commands to switch view!|
+
 ### League
 
 | Argument  | Possible values | Default | Notes |

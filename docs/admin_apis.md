@@ -55,8 +55,10 @@ Sets the "Best Of" target for the match (e.g., Best of 5, Best of 7).
 #### `setMatch`
 Controls which match is displayed in the view, primarily used when concurrent matches are active.
 - **Format:** `["setMatch", <match_config>]`
-  - Valid `<match_config>` values: `0` (Match 1), `1` (Match 2), `"both"` (Show both matches).
-- **Example:** `["setMatch", "both"]`
+  - Valid `<match_config>` values:
+    - 2-match layouts: `0` (Match 1), `1` (Match 2), `"both"` (Show both matches).
+    - 4-match layouts: `0` (Match 1), `1` (Match 2), `2` (Match 3), `3` (Match 4), `"all"` (Show all 4 matches).
+- **Example:** `["setMatch", "both"]` or `["setMatch", "all"]`
 
 ---
 

@@ -577,11 +577,29 @@ function setState(_room_data) {
 		player.setState(room_data.players[idx]);
 	});
 
-	dom.show_match_controls.style.display = room_data.concurrent_2_matches
+	const has_concurrent_matches =
+		room_data.concurrent_matches === 4 ||
+		room_data.concurrent_matches === 2 ||
+		room_data.concurrent_2_matches;
+
+	dom.show_match_controls.style.display = has_concurrent_matches
 		? null
 		: 'none';
 
-	if (room_data.concurrent_2_matches) {
+	const is_4_matches = room_data.concurrent_matches === 4;
+	const extra_matches = dom.show_match_controls.querySelector(
+		'#extra_match_radios'
+	);
+	if (extra_matches) {
+		extra_matches.style.display = is_4_matches ? null : 'none';
+	}
+	const match_both_label =
+		dom.show_match_controls.querySelector('#match_both_label');
+	if (match_both_label) {
+		match_both_label.textContent = is_4_matches ? 'All' : 'Both';
+	}
+
+	if (has_concurrent_matches) {
 		switch (room_data.selected_match) {
 			case 0:
 				dom.show_match_controls.querySelector('#match_1').checked = true;
@@ -589,14 +607,30 @@ function setState(_room_data) {
 			case 1:
 				dom.show_match_controls.querySelector('#match_2').checked = true;
 				break;
+			case 2:
+				if (dom.show_match_controls.querySelector('#match_3')) {
+					dom.show_match_controls.querySelector('#match_3').checked = true;
+				}
+				break;
+			case 3:
+				if (dom.show_match_controls.querySelector('#match_4')) {
+					dom.show_match_controls.querySelector('#match_4').checked = true;
+				}
+				break;
 			default:
 				dom.show_match_controls.querySelector('#match_both').checked = true;
 				break;
 		}
 	}
 
+	const extra_pc =
+		dom.show_profile_cards_controls.querySelector('#extra_pc_matches');
+	if (extra_pc) {
+		extra_pc.style.display = is_4_matches ? null : 'none';
+	}
+
 	dom.show_profile_cards_controls.querySelector('.matches').style.display =
-		room_data.concurrent_2_matches ? null : 'none';
+		has_concurrent_matches ? null : 'none';
 
 	dom.allow_autojoin.checked = !!room_data.autojoin;
 }
@@ -687,7 +721,13 @@ function bootstrap() {
 		radio.addEventListener('click', () => {
 			const value =
 				dom.show_match_controls.querySelector('input:checked').value;
-			remoteAPI.setMatch(value ? parseInt(value, 10) : null);
+			if (value === 'all' || value === 'both' || value === '') {
+				remoteAPI.setMatch(
+					room_data?.concurrent_matches === 4 ? 'all' : 'both'
+				);
+			} else {
+				remoteAPI.setMatch(parseInt(value, 10));
+			}
 		})
 	);
 
@@ -695,13 +735,15 @@ function bootstrap() {
 		.querySelectorAll('input')
 		.forEach(checkbox => {
 			checkbox.addEventListener('click', function () {
-				remoteAPI.showProfileCard(this.checked, this.value);
+				remoteAPI.showProfileCard(this.checked, parseInt(this.value, 10));
 			});
 		});
 
 	dom.hide_all_profile_cards.addEventListener('click', () => {
-		remoteAPI.showProfileCard(false, 0);
-		remoteAPI.showProfileCard(false, 1);
+		const num = room_data?.concurrent_matches || 2;
+		for (let i = 0; i < num; i++) {
+			remoteAPI.showProfileCard(false, i);
+		}
 
 		dom.show_profile_cards_controls
 			.querySelectorAll('input')

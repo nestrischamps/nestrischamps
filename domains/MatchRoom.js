@@ -41,7 +41,8 @@ class MatchRoom extends Room {
 		this.state = {
 			bestof: 5,
 			concurrent_2_matches: undefined, // undefined|true|false
-			selected_match: null, // 0|1|null
+			concurrent_matches: 0, // 0|2|4
+			selected_match: null, // 0|1|2|3|'both'|'all'|null
 			curtain_logo: null, // url to image or null
 			autojoin: false,
 			players: [
@@ -198,18 +199,42 @@ class MatchRoom extends Room {
 				view_meta._concurrent_2_matches =
 					view_meta._concurrent_2_matches === 'true';
 			}
+			if ('_concurrent_4_matches' in view_meta) {
+				view_meta._concurrent_4_matches =
+					view_meta._concurrent_4_matches === 'true';
+			}
+			if ('_concurrent_matches' in view_meta) {
+				view_meta._concurrent_matches = parseInt(
+					view_meta._concurrent_matches,
+					10
+				);
+			}
 			if ('_players' in view_meta) {
 				view_meta._players = parseInt(view_meta._players, 10);
 			}
 
-			if (this.state.concurrent_2_matches !== view_meta._concurrent_2_matches) {
-				this.state.concurrent_2_matches = view_meta._concurrent_2_matches;
+			let num_concurrent_matches = 0;
+			if (view_meta._concurrent_matches) {
+				num_concurrent_matches = view_meta._concurrent_matches;
+			} else if (view_meta._concurrent_4_matches) {
+				num_concurrent_matches = 4;
+			} else if (view_meta._concurrent_2_matches) {
+				num_concurrent_matches = 2;
+			}
+
+			const is_2_matches = num_concurrent_matches === 2;
+			if (
+				this.state.concurrent_2_matches !== is_2_matches ||
+				this.state.concurrent_matches !== num_concurrent_matches
+			) {
+				this.state.concurrent_2_matches = is_2_matches;
+				this.state.concurrent_matches = num_concurrent_matches;
 				this.state.selected_match = null;
 				this.sendStateToAdmin();
 			}
 		}
 
-		if (this.state.concurrent_2_matches) {
+		if (this.state.concurrent_2_matches || this.state.concurrent_matches) {
 			connection.send(['setMatch', this.state.selected_match]);
 		}
 
