@@ -33,7 +33,7 @@ sudo apt install -y nodejs
 npm install
 sudo npm install peer -g
 
-HOSTNAME=nestrischamps.local
+FQDN=${HOSTNAME}.local
 
 # generate the server keys
 openssl req -x509 \
@@ -41,21 +41,21 @@ openssl req -x509 \
   -nodes \
   -newkey rsa:2048 \
   -days 3650 \
-  -subj "/C=SG/O=Yobi/OU=Nestrischamps/CN=${HOSTNAME}/" \
-  -keyout ${HOSTNAME}.key \
-  -out ${HOSTNAME}.crt
+  -subj "/C=SG/O=Yobi/OU=Nestrischamps/CN=${FQDN}/" \
+  -keyout ${FQDN}.key \
+  -out ${FQDN}.crt
 
 tee public/js/peerjsOptions.js > /dev/null << EOF
 export const peerServerOptions = {
-	host: '${HOSTNAME}',
+	host: '${FQDN}',
 	path: '/',
 	port: 9000,
 	secure: true,
 	config: {
 		iceServers: [
-			{ urls: ['stun:${HOSTNAME}:3478'] },
+			{ urls: ['stun:${FQDN}:3478'] },
 			{
-				urls: ['turn:${HOSTNAME}:3478'],
+				urls: ['turn:${FQDN}:3478'],
 				username: 'ntc',
 				credential: 'ntc',
 			},
@@ -67,8 +67,8 @@ EOF
 
 SESSION_SECRET=$(echo "console.log(require('ulid').ulid())" | node)
 PORT=5443
-TLS_KEY_PATH=/home/yobi/src/nestrischamps/${HOSTNAME}.key
-TLS_CERT_PATH=/home/yobi/src/nestrischamps/${HOSTNAME}.crt
+TLS_KEY_PATH=${HOME}/src/nestrischamps/${FQDN}.key
+TLS_CERT_PATH=${HOME}/src/nestrischamps/${FQDN}.crt
 
 tee .env > /dev/null << EOF
 TLS_KEY=${TLS_KEY_PATH}
@@ -89,11 +89,11 @@ Description=NesTrisChamps Service
 Requires=postgresql.service
 
 [Service]
-User=yobi
+User=${USER}
 Type=simple
-WorkingDirectory=/home/yobi/src/nestrischamps
-ExecStart=/usr/bin/node -r dotenv/config /home/yobi/src/nestrischamps/server.js
-StandardOutput=file:/home/yobi/src/nestrischamps/logs/stdouterr.log
+WorkingDirectory=${HOME}/src/nestrischamps
+ExecStart=/usr/bin/node -r dotenv/config ${HOME}/src/nestrischamps/server.js
+StandardOutput=file:${HOME}/src/nestrischamps/logs/stdouterr.log
 Restart=always
 
 [Install]
@@ -105,10 +105,10 @@ sudo tee /etc/systemd/system/peerjs.service > /dev/null << EOF
 Description=PeerJS Service
 
 [Service]
-User=yobi
+User=${USER}
 Type=simple
 ExecStart=/usr/bin/peerjs --port 9000 --key peerjs --path / --sslkey ${TLS_KEY_PATH} --sslcert ${TLS_CERT_PATH}
-StandardOutput=file:/home/yobi/src/nestrischamps/logs/peerjs.log
+StandardOutput=file:${HOME}/src/nestrischamps/logs/peerjs.log
 Restart=always
 
 [Install]
@@ -122,10 +122,10 @@ After=systemd-networkd-wait-online.service
 Wants=systemd-networkd-wait-online.service
 
 [Service]
-User=yobi
+User=${USER}
 Type=simple
 ExecStart=/usr/bin/turnserver --log-file stdout --cert ${TLS_CERT_PATH} --pkey ${TLS_KEY_PATH}
-StandardOutput=file:/home/yobi/src/nestrischamps/logs/coturn.log
+StandardOutput=file:${HOME}/src/nestrischamps/logs/coturn.log
 Restart=always
 
 [Install]
