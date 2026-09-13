@@ -51,6 +51,11 @@ export default class GameTracker extends EventTarget {
 		this.palette = Array(10).fill();
 	}
 
+	dumpGame() {
+		this.in_game = false;
+		this.cur_lines = undefined;
+	}
+
 	_getLevelFromLines(lines, ocr_level_digits) {
 		if (lines === null || ocr_level_digits === null) return null;
 		if (!this.transition) return GameTracker.digitsToValue(ocr_level_digits);

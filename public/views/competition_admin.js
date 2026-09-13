@@ -179,6 +179,10 @@ class Player {
 			remoteAPI.restartCamera(this.idx);
 		};
 
+		this.dom.restart_ocr_btn.onclick = () => {
+			remoteAPI.restartOcr(this.idx);
+		};
+
 		this.dom.camera_mirror_btn.onclick = () => {
 			remoteAPI.mirrorCamera(this.idx);
 		};
@@ -626,6 +630,7 @@ function addPlayer() {
 		remove_btn: player_node.querySelector('.remove_player'),
 		camera_restart_btn: player_node.querySelector('.camera_restart'),
 		camera_mirror_btn: player_node.querySelector('.camera_mirror'),
+		restart_ocr_btn: player_node.querySelector('.restart_ocr'),
 		focus_player_btn: player_node.querySelector('.focus_player'),
 		remote_calibration_btn: player_node.querySelector('.remote_calibration'),
 		vdo_ninja_url: player_node.querySelector('.vdo_ninja_url'),
