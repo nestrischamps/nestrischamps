@@ -390,7 +390,7 @@
 
 			/* 4-match quadrant layout */
 			.match.small {
-				--scale: 0.5;
+				--scale: 0.5605;
 				--player-width: calc(var(--width) / 4 / var(--scale));
 				transform: scale(var(--scale));
 			}
@@ -413,6 +413,80 @@
 			#match4.small {
 				left: 75%;
 				top: calc((1080px - 57px) / 2);
+			}
+
+			.match.small .runways {
+				display: none;
+			}
+
+			.match.small .score {
+				height: 124px;
+			}
+
+			.match.small .score .header {
+				display: none;
+			}
+
+			.match.small .score .box {
+				padding: 10px 14px 8px 14px;
+			}
+
+			.match.small .score .aligner {
+				line-height: 38px;
+			}
+
+			.match.small .score .tetris_diff {
+				margin-top: -38px;
+				line-height: 38px;
+			}
+
+			.match.small .board {
+				top: 115px;
+			}
+
+			.match.small .lines,
+			.match.small .next_piece {
+				--offset: var(--board-offset);
+			}
+
+			.match.small .lines {
+				top: 0;
+				width: 151px;
+			}
+
+			.match.small .next_piece {
+				top: 86px;
+				width: 151px;
+			}
+
+			.match.small .hearts {
+				bottom: unset;
+				top: 538px;
+				flex-direction: column;
+			}
+
+			.match.small .level {
+				top: 650px;
+				width: 78px;
+			}
+
+			.match.small .tetris_rate,
+			.match.small .drought {
+				top: 731px;
+			}
+
+			.match.small .name,
+			.match.small .flag {
+				top: 812px;
+			}
+
+			.match.small .player_vid {
+				height: 912px;
+			}
+
+			.match.small .p2 > * {
+				right: unset;
+				left: var(--offset);
 			}
 		</style>
 		<template id="hearts_1">
