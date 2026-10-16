@@ -56,6 +56,10 @@ export class Player extends EventTarget {
 				this.dispatchEvent(new CustomEvent('drop_player'));
 			},
 
+			restartOcr() {
+				this.dispatchEvent(new CustomEvent('restart_ocr'));
+			},
+
 			setVdoNinjaURL: () => {},
 		};
 	}
