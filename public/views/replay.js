@@ -249,8 +249,11 @@ function registerKeybinds() {
 				break;
 
 			default:
-				break;
+				return;
 		}
+
+		// prevent default browser behaviour (scrolling, activating focused button or slider, etc.)
+		event.preventDefault();
 	});
 }
 
