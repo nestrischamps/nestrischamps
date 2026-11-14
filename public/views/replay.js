@@ -217,34 +217,34 @@ function registerKeybinds() {
 		// > faster, < slower
 		switch (keyName) {
 			case '>':
-				faster();
+				refs.faster.click();
 				break;
 			case '<':
-				slower();
+				refs.slower.click();
 				break;
 			case 'ArrowRight':
 				if (event.shiftKey) {
-					getNextByType('clears')();
+					refs.nextclear.click();
 				} else if (event.altKey) {
-					nextFrame();
+					refs.nextframe.click();
 				} else {
-					getNextByType('pieces')();
+					refs.nextpiece.click();
 				}
 				break;
 			case 'ArrowLeft':
 				if (event.shiftKey) {
-					getPrevByType('clears')();
+					refs.prevclear.click();
 				} else if (event.altKey) {
-					prevFrame();
+					refs.prevframe.click();
 				} else {
-					getPrevByType('pieces')();
+					refs.prevpiece.click();
 				}
 				break;
 			case ' ':
 				if (playing) {
-					pause();
+					refs.pause.click();
 				} else {
-					play();
+					refs.play.click();
 				}
 				break;
 
