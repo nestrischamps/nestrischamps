@@ -205,7 +205,53 @@ async function startReplay(_showFrame) {
 	refs.faster.onclick = faster;
 	refs.getlink.onclick = getLink;
 
+	registerKeybinds();
+
 	if (autoplay) play();
+}
+
+function registerKeybinds() {
+	document.addEventListener('keydown', event => {
+		const keyName = event.key;
+
+		// > faster, < slower
+		switch (keyName) {
+			case '>':
+				faster();
+				break;
+			case '<':
+				slower();
+				break;
+			case 'ArrowRight':
+				if (event.shiftKey) {
+					getNextByType('clears')();
+				} else if (event.altKey) {
+					nextFrame();
+				} else {
+					getNextByType('pieces')();
+				}
+				break;
+			case 'ArrowLeft':
+				if (event.shiftKey) {
+					getPrevByType('clears')();
+				} else if (event.altKey) {
+					prevFrame();
+				} else {
+					getPrevByType('pieces')();
+				}
+				break;
+			case ' ':
+				if (playing) {
+					pause();
+				} else {
+					play();
+				}
+				break;
+
+			default:
+				break;
+		}
+	});
 }
 
 function addReplayControl() {
