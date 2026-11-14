@@ -279,21 +279,22 @@ function addReplayControl() {
 	replay_timeline.className = 'timeline';
 
 	[
-		['prevclear', '<< Clear'],
-		['prevpiece', '<< Piece'],
-		['prevframe', '< Frame'],
-		['slower', 'Slower'],
-		['play', 'Play'],
-		['pause', 'Pause'],
-		['faster', 'Faster'],
-		['nextframe', 'Frame >'],
-		['nextpiece', 'Piece >>'],
-		['nextclear', 'Clear >>'],
+		['prevclear', '<< Clear', 'Shift + ←'],
+		['prevpiece', '<< Piece', '←'],
+		['prevframe', '< Frame', 'Alt + ←'],
+		['slower', 'Slower', '<'],
+		['play', 'Play', 'Space'],
+		['pause', 'Pause', 'Space'],
+		['faster', 'Faster', '>'],
+		['nextframe', 'Frame >', 'Alt + →'],
+		['nextpiece', 'Piece >>', '→'],
+		['nextclear', 'Clear >>', 'Shift + →'],
 		['getlink', 'Get Link'],
-	].forEach(([id, text]) => {
+	].forEach(([id, text, shortcut]) => {
 		const button = document.createElement('button');
 		button.classList.add(id);
 		button.innerText = text;
+		if (shortcut) button.title = `Shortcut: ${shortcut}`;
 
 		dom_refs[id] = button;
 
