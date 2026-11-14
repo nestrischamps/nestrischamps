@@ -212,6 +212,9 @@ async function startReplay(_showFrame) {
 
 function registerKeybinds() {
 	document.addEventListener('keydown', event => {
+		// leave browser and OS shortcuts alone
+		if (event.ctrlKey || event.metaKey) return;
+
 		const keyName = event.key;
 
 		// > faster, < slower
