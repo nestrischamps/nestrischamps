@@ -205,7 +205,59 @@ async function startReplay(_showFrame) {
 	refs.faster.onclick = faster;
 	refs.getlink.onclick = getLink;
 
+	registerKeybinds();
+
 	if (autoplay) play();
+}
+
+function registerKeybinds() {
+	document.addEventListener('keydown', event => {
+		// leave browser and OS shortcuts alone
+		if (event.ctrlKey || event.metaKey) return;
+
+		const keyName = event.key;
+
+		// > faster, < slower
+		switch (keyName) {
+			case '>':
+				refs.faster.click();
+				break;
+			case '<':
+				refs.slower.click();
+				break;
+			case 'ArrowRight':
+				if (event.shiftKey) {
+					refs.nextclear.click();
+				} else if (event.altKey) {
+					refs.nextframe.click();
+				} else {
+					refs.nextpiece.click();
+				}
+				break;
+			case 'ArrowLeft':
+				if (event.shiftKey) {
+					refs.prevclear.click();
+				} else if (event.altKey) {
+					refs.prevframe.click();
+				} else {
+					refs.prevpiece.click();
+				}
+				break;
+			case ' ':
+				if (playing) {
+					refs.pause.click();
+				} else {
+					refs.play.click();
+				}
+				break;
+
+			default:
+				return;
+		}
+
+		// prevent default browser behaviour (scrolling, activating focused button or slider, etc.)
+		event.preventDefault();
+	});
 }
 
 function addReplayControl() {
@@ -227,21 +279,22 @@ function addReplayControl() {
 	replay_timeline.className = 'timeline';
 
 	[
-		['prevclear', '<< Clear'],
-		['prevpiece', '<< Piece'],
-		['prevframe', '< Frame'],
-		['slower', 'Slower'],
-		['play', 'Play'],
-		['pause', 'Pause'],
-		['faster', 'Faster'],
-		['nextframe', 'Frame >'],
-		['nextpiece', 'Piece >>'],
-		['nextclear', 'Clear >>'],
+		['prevclear', '<< Clear', 'Shift + ←'],
+		['prevpiece', '<< Piece', '←'],
+		['prevframe', '< Frame', 'Alt + ←'],
+		['slower', 'Slower', '<'],
+		['play', 'Play', 'Space'],
+		['pause', 'Pause', 'Space'],
+		['faster', 'Faster', '>'],
+		['nextframe', 'Frame >', 'Alt + →'],
+		['nextpiece', 'Piece >>', '→'],
+		['nextclear', 'Clear >>', 'Shift + →'],
 		['getlink', 'Get Link'],
-	].forEach(([id, text]) => {
+	].forEach(([id, text, shortcut]) => {
 		const button = document.createElement('button');
 		button.classList.add(id);
 		button.innerText = text;
+		if (shortcut) button.title = `Shortcut: ${shortcut}`;
 
 		dom_refs[id] = button;
 
