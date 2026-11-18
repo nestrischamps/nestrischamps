@@ -132,6 +132,12 @@ export class NTC_Producer_Capture extends NtcComponent {
 			this.#domrefs.room.loadRoomView(detail.view_meta);
 		});
 
+		player.addEventListener('restart_ocr', () => {
+			if (this.#player.gameTracker) {
+				this.#player.gameTracker.dumpGame();
+			}
+		});
+
 		if (QueryString.get('tts') === '1') {
 			player.addEventListener('chat_message', ({ detail: msg }) => {
 				msg && speak(msg);
